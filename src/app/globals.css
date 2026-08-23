@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* Tokens carried across from the Geo One design system so this reads as part of
+   the same product family. */
+@theme inline {
+  --color-navy: #0d1b2a;
+  --color-surface: #152538;
+  --color-surface-2: #1c2f45;
+  --color-line: #2a3a52;
+  --color-accent: #4e78ff;
+  --color-accent-hover: #3d63e6;
+  --color-success: #3ddc97;
+  --color-warning: #f4b740;
+  --color-danger: #ef4444;
+  --color-ink: #ffffff;
+  --color-ink-2: #b8c2d6;
+  --color-ink-3: #7f8ca8;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background: #0d1b2a;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*:focus-visible {
+  outline: 2px solid #4e78ff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.card {
+  background: #152538;
+  border: 1px solid #2a3a52;
+  border-radius: 0.875rem;
+}
+
+.prose-article h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 1.75rem 0 0.6rem;
+}
+.prose-article h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 1.25rem 0 0.4rem;
+}
+.prose-article p {
+  color: #b8c2d6;
+  line-height: 1.75;
+  margin-bottom: 0.9rem;
+}
+.prose-article a {
+  color: #4e78ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.prose-article strong {
+  color: #fff;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(78, 120, 255, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(78, 120, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(78, 120, 255, 0); }
+}
+.running-dot {
+  animation: pulse-ring 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
