@@ -27,6 +27,7 @@ const SECTIONS: Record<string, Array<{ slug: string; label: string }>> = {
     { slug: "", label: "Blog queue" },
     { slug: "plan", label: "Plan the day" },
     { slug: "pillars", label: "Pillars" },
+    { slug: "integration", label: "Integration" },
     { slug: "style", label: "Blog style" },
   ],
 };
@@ -35,6 +36,7 @@ const SECTIONS: Record<string, Array<{ slug: string; label: string }>> = {
 const WORKSPACE = [
   { slug: "workflow", label: "Agent workflow" },
   { slug: "costs", label: "API costs" },
+  { slug: "resources", label: "Resources" },
   { slug: "settings", label: "Settings" },
 ];
 

@@ -11,7 +11,14 @@ import { MODELS } from "../models";
 import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
 import { exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
-import { BLOG_PLAYBOOK, BLOG_STYLE, CONTENT_TYPES, PILLARS } from "../blog";
+import {
+  BLOG_ARCHIVE_ID,
+  BLOG_PLAYBOOK,
+  BLOG_PUBLICATION,
+  BLOG_STYLE,
+  CONTENT_TYPES,
+  PILLARS,
+} from "../blog";
 import type { Brief, Draft, ResearchBrief, ReviewFinding } from "../types";
 
 function styleBlock(): string {
@@ -91,6 +98,23 @@ async function writeBlog(input: WriterInput): Promise<{
 }> {
   const { brief, research, fixes, previous } = input;
   const pillar = PILLARS.find((x) => x.id === brief.pillar);
+
+  // Real posts from coinpresso.io, imported through the WordPress integration.
+  // A description of a voice gets you a piece that obeys the description; two
+  // real posts get you a piece that sounds like the site. Empty until someone
+  // runs the import, and the prompt says so rather than pretending otherwise.
+  const exemplars = await styleExemplars(BLOG_ARCHIVE_ID, {
+    publication: BLOG_PUBLICATION,
+    excludeAngle: brief.pillar,
+    // Three rather than two: on this track the exemplars are the whole point of
+    // the archive, and a wider sample of the house voice is worth the tokens.
+    limit: 3,
+  });
+  const voiceBlock = exemplars.length
+    ? `\n\n${exemplarBlock(exemplars)}\n`
+    : `\n\nNo published examples have been imported from coinpresso.io yet, so you
+are working from the style description alone. Stay closer to it than you
+otherwise would, and do not invent house conventions it does not state.\n`;
   const type = brief.contentType
     ? CONTENT_TYPES[brief.contentType as keyof typeof CONTENT_TYPES]
     : undefined;
@@ -115,7 +139,7 @@ async function writeBlog(input: WriterInput): Promise<{
       : "";
 
   const user = `${BLOG_STYLE}
-
+${voiceBlock}
 ---
 
 FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}

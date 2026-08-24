@@ -1,32 +1,39 @@
 // ---------------------------------------------------------------------------
-// Model tiering per stage.
+// Model resolution and key checking.
 //
-// Strategy runs on Claude with the server-side web_search tool, because the
-// research quality is what everything downstream depends on — a weak brief
-// produces a well-written article about nothing.
+// The reasoning behind the tiering — which model runs which stage and why —
+// lives in `model-registry.ts`, along with the prices and the date they were
+// verified. This file only resolves that register against the environment and
+// answers whether the keys are real.
 //
-// Writer is deliberately mid-tier Claude, as specified. Given a good brief the
-// writing task is constrained enough that the frontier tier buys little.
-//
-// Reviewer is a GPT model, deliberately a different family from the writer. A
-// reviewer that shares the writer's blind spots is decoration. Cross-family
-// review catches the failure modes one lineage is prone to.
+// Anything that used to be a second copy of the register is now derived from
+// it. The price table is the cautionary tale: it drifted from the real prices
+// and quietly overstated one tier by 3x.
 // ---------------------------------------------------------------------------
 
+import { pricingTable, STAGE_MODELS } from "./model-registry";
+
+function assigned(stage: string): string {
+  return (
+    STAGE_MODELS.find((s) => s.stage === stage)?.modelId ?? "claude-sonnet-4-5"
+  );
+}
+
 export const MODELS = {
-  strategy: process.env.STRATEGY_MODEL || "claude-sonnet-4-5",
-  writer: process.env.WRITER_MODEL || "claude-sonnet-4-5",
-  reviewer: process.env.REVIEWER_MODEL || "gpt-4.1",
+  strategy: process.env.STRATEGY_MODEL || assigned("strategy"),
+  writer: process.env.WRITER_MODEL || assigned("writer"),
+  reviewer: process.env.REVIEWER_MODEL || assigned("reviewer"),
 } as const;
 
-/** Rough USD per million tokens, for the cost readout in the dashboard. */
-export const PRICING: Record<string, { in: number; out: number }> = {
-  "claude-sonnet-4-5": { in: 3, out: 15 },
-  "claude-opus-4-5": { in: 15, out: 75 },
-  "claude-haiku-4-5": { in: 1, out: 5 },
-  "gpt-4.1": { in: 2, out: 8 },
-  "gpt-4.1-mini": { in: 0.4, out: 1.6 },
-};
+/**
+ * USD per million tokens, DERIVED from the register.
+ *
+ * It used to be a second hand-maintained copy, and it drifted — Opus was listed
+ * at three times its real price for long enough to make the cost forecast lie.
+ * One table, one date on it, one place to correct.
+ */
+export const PRICING: Record<string, { in: number; out: number }> =
+  pricingTable();
 
 export function estimateCost(model: string, tin: number, tout: number): number {
   const p = PRICING[model];

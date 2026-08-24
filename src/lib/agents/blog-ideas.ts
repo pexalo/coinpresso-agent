@@ -24,7 +24,8 @@
 
 import { callClaude, extractJson } from "../providers/anthropic";
 import { MODELS } from "../models";
-import { CONTENT_TYPE_LIST, PILLARS } from "../blog";
+import { BLOG_ARCHIVE_ID, CONTENT_TYPE_LIST, PILLARS } from "../blog";
+import { allArticles } from "../archive-store";
 import { listRuns } from "../store";
 import type { ContentTypeId } from "../blog";
 
@@ -90,12 +91,20 @@ export interface BlogIdeaRequest {
   steer?: string;
 }
 
-/** Titles already planned or published on the blog, so the day does not repeat. */
+/**
+ * Everything already on the blog, from both directions: posts this system has
+ * planned, and posts already live on coinpresso.io imported through the
+ * WordPress integration.
+ *
+ * The second source is the one that matters. Without it the planner only knows
+ * what it has proposed itself, and confidently suggests a guide to crypto PR
+ * for a site that published one two years ago.
+ */
 async function priorBlogWork(clientRef: string): Promise<
-  Array<{ title: string; pillar?: string; contentType?: string; at: string }>
+  Array<{ title: string; pillar?: string; contentType?: string; at: string; live?: boolean }>
 > {
   const runs = await listRuns(clientRef);
-  return runs
+  const planned = runs
     .filter((r) => r.brief.track === "blog")
     .slice(0, 120)
     .map((r) => ({
@@ -104,6 +113,16 @@ async function priorBlogWork(clientRef: string): Promise<
       contentType: r.brief.contentType,
       at: r.createdAt.slice(0, 10),
     }));
+
+  const live = (await allArticles(BLOG_ARCHIVE_ID)).slice(0, 250).map((a) => ({
+    title: a.title,
+    pillar: a.angle === "unmapped" ? undefined : a.angle,
+    contentType: undefined,
+    at: a.publishedAt,
+    live: true,
+  }));
+
+  return [...planned, ...live];
 }
 
 export async function runBlogIdeas(req: BlogIdeaRequest): Promise<{
@@ -140,14 +159,21 @@ ${CONTENT_TYPE_LIST.map(
     `- ${t.id} — ${t.name}. ${t.shape} ${t.words[0]}-${t.words[1]} words. Job: ${t.job} Used ${typeCount.get(t.id) ?? 0}× so far.`
 ).join("\n")}
 
---- ALREADY PLANNED OR PUBLISHED ON THIS BLOG (${prior.length}) ---
+--- ALREADY ON THIS BLOG (${prior.length}: ${prior.filter((p) => p.live).length} live on coinpresso.io, ${prior.filter((p) => !p.live).length} planned here) ---
+
+This list is context, not a list of banned topics. The published posts are on the
+site mainly as evidence of how Coinpresso writes; the writer studies them for
+voice. Use them here only to avoid proposing a straight re-run of something that
+already exists — and if the right move IS a new version of an old post, propose
+it and say in the rationale which post it replaces and what has changed.
+
 ${
   prior.length
     ? prior
-        .slice(0, 60)
-        .map((p) => `- ${p.at} · ${p.pillar ?? "?"} · ${p.contentType ?? "?"} · ${p.title}`)
+        .slice(0, 90)
+        .map((p) => `- ${p.at} · ${p.live ? "LIVE" : "planned"} · ${p.pillar ?? "?"} · ${p.title}`)
         .join("\n")
-    : "- nothing yet. This is day one, so lead with the pillars that carry the most commercial weight: GEO, presale marketing and crypto PR."
+    : "- nothing yet, and nothing imported from coinpresso.io. Say so in your rationale: without the live archive you cannot tell whether these already exist. Lead with the pillars that carry the most commercial weight: GEO, presale marketing and crypto PR."
 }
 
 ---

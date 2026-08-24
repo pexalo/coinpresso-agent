@@ -26,7 +26,7 @@ export interface StoredArticle extends PublishedArticle {
   /** Full article text. Absent on seeded rows until someone imports it. */
   body?: string;
   wordCount?: number;
-  source: "seed" | "paste" | "fetch" | "run";
+  source: "seed" | "paste" | "fetch" | "run" | "wordpress";
   addedAt?: string;
 }
 

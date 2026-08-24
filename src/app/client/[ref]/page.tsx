@@ -64,7 +64,7 @@ export default async function ClientOverviewPage({
         )}
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           {
             href: `/client/${client.ref}/workflow`,
@@ -75,6 +75,11 @@ export default async function ClientOverviewPage({
             href: `/client/${client.ref}/costs`,
             title: "API costs",
             note: "Model spend to date, where it goes by stage, and what a given cadence costs per month.",
+          },
+          {
+            href: `/client/${client.ref}/resources`,
+            title: "Resources",
+            note: "The model register, the operating guide and the step-by-step workflow for each track.",
           },
           {
             href: `/client/${client.ref}/settings`,

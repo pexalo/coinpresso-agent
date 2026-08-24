@@ -36,6 +36,9 @@ export default function RunDetail({
   const [notFound, setNotFound] = useState(false);
   const [approving, setApproving] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [pushing, setPushing] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+  const [pushOk, setPushOk] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/clients/${ref}/runs/${id}`);
@@ -97,6 +100,30 @@ export default function RunDetail({
       setExportMsg(e instanceof Error ? e.message : String(e));
     } finally {
       setApproving(false);
+    }
+  }
+
+  /** Create this post in WordPress as a draft. Blog track only. */
+  async function sendToWordPress() {
+    setPushing(true);
+    setPushMsg(null);
+    try {
+      const res = await fetch(`/api/clients/${ref}/runs/${id}/publish`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      setPushOk(Boolean(data.ok));
+      setPushMsg(
+        [data.detail ?? data.error, ...(data.warnings ?? [])]
+          .filter(Boolean)
+          .join(" ")
+      );
+      await load();
+    } catch (e) {
+      setPushOk(false);
+      setPushMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPushing(false);
     }
   }
 
@@ -180,6 +207,16 @@ export default function RunDetail({
               Approved
             </span>
           )}
+          {isBlog && run.draft && (
+            <button
+              onClick={sendToWordPress}
+              disabled={pushing}
+              title="Creates a draft in WordPress. Never publishes."
+              className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-50 transition-colors"
+            >
+              {pushing ? "Sending…" : "Send to WordPress"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -188,6 +225,31 @@ export default function RunDetail({
           This run executed in mock mode — no search was performed and no figure
           in it is real. Add <code>ANTHROPIC_API_KEY</code> and{" "}
           <code>OPENAI_API_KEY</code> to <code>.env.local</code> for live runs.
+        </div>
+      )}
+
+      {pushMsg && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-[12px] ${
+            pushOk
+              ? "border-[var(--success)]/30 bg-[var(--success)]/10 text-[var(--success)]"
+              : "border-[var(--danger)]/30 bg-[var(--danger)]/10 text-[var(--danger)]"
+          }`}
+        >
+          {pushMsg}
+          {pushOk && run.docUrl && (
+            <>
+              {" "}
+              <a
+                href={run.docUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline font-semibold"
+              >
+                Open it in WordPress
+              </a>
+            </>
+          )}
         </div>
       )}
 

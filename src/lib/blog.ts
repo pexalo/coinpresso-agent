@@ -20,6 +20,19 @@
 // why the quality bar is higher: this is the work the client is judging you by.
 // ---------------------------------------------------------------------------
 
+/**
+ * Where the blog archive lives in the article store.
+ *
+ * The store is keyed by campaign because the wire programme is campaign-shaped.
+ * The blog is not a campaign — it is the agency's own domain — so it gets its
+ * own key rather than a fake campaign record, and the seeded Moonberg rows never
+ * leak into it.
+ */
+export const BLOG_ARCHIVE_ID = "coinpresso-blog";
+
+/** How posts on coinpresso.io are labelled in the archive's publication field. */
+export const BLOG_PUBLICATION = "coinpresso.io";
+
 /** A pillar is a service Coinpresso sells. Clusters hang off it. */
 export interface Pillar {
   id: string;
@@ -30,11 +43,22 @@ export interface Pillar {
   buyerQuestion: string;
   /** Seed sub-topics. The ideas agent extends these, it is not limited to them. */
   clusters: string[];
+  /**
+   * The real WordPress category this pillar publishes into.
+   *
+   * These ids came off coinpresso.io's live category list, and the mapping is
+   * deliberately one-way: the six pillars are the planning unit because 34
+   * categories cannot be spread across a day, but a draft has to land somewhere
+   * a human would have filed it. An id that stops matching is visible on the
+   * Integration page rather than silently dropping posts into Uncategorised.
+   */
+  wp?: { id: number; slug: string };
 }
 
 export const PILLARS: Pillar[] = [
   {
     id: "geo",
+    wp: { id: 40, slug: "crypto-ai-seo" },
     name: "Generative Engine Optimisation",
     hub: "/services/geo",
     buyerQuestion:
@@ -49,6 +73,7 @@ export const PILLARS: Pillar[] = [
   },
   {
     id: "presale-marketing",
+    wp: { id: 38, slug: "crypto-presale-marketing" },
     name: "Presale marketing",
     hub: "/services/presale-marketing",
     buyerQuestion:
@@ -63,6 +88,7 @@ export const PILLARS: Pillar[] = [
   },
   {
     id: "crypto-pr",
+    wp: { id: 25, slug: "crypto-pr" },
     name: "Crypto PR",
     hub: "/services/crypto-pr",
     buyerQuestion:
@@ -77,6 +103,7 @@ export const PILLARS: Pillar[] = [
   },
   {
     id: "clipping",
+    wp: { id: 46, slug: "crypto-clipping" },
     name: "Crypto clipping",
     hub: "/services/crypto-clipping",
     buyerQuestion:
@@ -90,6 +117,7 @@ export const PILLARS: Pillar[] = [
   },
   {
     id: "community",
+    wp: { id: 33, slug: "crypto-social-media" },
     name: "Community management",
     hub: "/services/community-management",
     buyerQuestion:
@@ -103,6 +131,7 @@ export const PILLARS: Pillar[] = [
   },
   {
     id: "paid",
+    wp: { id: 43, slug: "crypto-programmatic-ads" },
     name: "PPC and programmatic",
     hub: "/services/ppc",
     buyerQuestion:
@@ -200,6 +229,11 @@ export const CONTENT_TYPES: Record<ContentTypeId, ContentType> = {
 };
 
 export const CONTENT_TYPE_LIST = Object.values(CONTENT_TYPES);
+
+/** The WordPress category a pillar's drafts go into, if one is mapped. */
+export function wpCategoryFor(pillarId: string | undefined): number | undefined {
+  return PILLARS.find((p) => p.id === pillarId)?.wp?.id;
+}
 
 /**
  * The rule that keeps this from becoming a content farm.

@@ -4,10 +4,12 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { ClientSettings } from "@/lib/settings";
 
+/** What the API actually returns: secrets replaced by a mask plus a has-it flag. */
 type Masked = ClientSettings & {
   delivery: ClientSettings["delivery"] & {
     telegram: ClientSettings["delivery"]["telegram"] & { hasToken?: boolean };
   };
+  wordpress: ClientSettings["wordpress"] & { hasAppPassword?: boolean };
 };
 
 const DAYS = [
@@ -103,6 +105,7 @@ export default function SettingsPage() {
   const { ref } = useParams<{ ref: string }>();
   const [s, setS] = useState<Masked | null>(null);
   const [token, setToken] = useState("");
+  const [appPw, setAppPw] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -137,6 +140,17 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveWordPress() {
+    if (!s) return;
+    await save({
+      wordpress: {
+        ...s.wordpress,
+        ...(appPw ? { appPassword: appPw } : {}),
+      },
+    });
+    setAppPw("");
   }
 
   async function testTelegram() {
@@ -431,6 +445,102 @@ export default function SettingsPage() {
             className={field}
           />
         </div>
+      </Section>
+
+
+      <Section
+        title="WordPress — coinpresso.io"
+        blurb="Where approved blog posts are created, and where the published archive is imported from. Reading needs no credentials; writing does."
+      >
+        <div className="grid sm:grid-cols-3 gap-4">
+          <div>
+            <label className={label} htmlFor="wp-url">
+              Site URL
+            </label>
+            <input
+              id="wp-url"
+              value={s.wordpress.siteUrl}
+              onChange={(e) =>
+                setS({
+                  ...s,
+                  wordpress: { ...s.wordpress, siteUrl: e.target.value },
+                })
+              }
+              placeholder="https://coinpresso.io"
+              className={field}
+            />
+            <p className="text-[10.5px] text-[var(--ink-4)] mt-1.5 leading-relaxed">
+              No trailing slash needed. The REST API is found at{" "}
+              <code className="text-[var(--accent)]">/wp-json</code>.
+            </p>
+          </div>
+          <div>
+            <label className={label} htmlFor="wp-user">
+              Username
+            </label>
+            <input
+              id="wp-user"
+              value={s.wordpress.username}
+              onChange={(e) =>
+                setS({
+                  ...s,
+                  wordpress: { ...s.wordpress, username: e.target.value },
+                })
+              }
+              placeholder="pexalo-agent"
+              className={field}
+              autoComplete="off"
+            />
+            <p className="text-[10.5px] text-[var(--ink-4)] mt-1.5 leading-relaxed">
+              The WordPress account posts will be authored by. Author or Editor.
+            </p>
+          </div>
+          <div>
+            <label className={label} htmlFor="wp-pass">
+              Application password
+            </label>
+            <input
+              id="wp-pass"
+              type="password"
+              value={appPw}
+              onChange={(e) => setAppPw(e.target.value)}
+              placeholder={
+                s.wordpress.hasAppPassword
+                  ? s.wordpress.appPassword
+                  : "xxxx xxxx xxxx xxxx xxxx xxxx"
+              }
+              className={field}
+              autoComplete="off"
+            />
+            <p className="text-[10.5px] text-[var(--ink-4)] mt-1.5 leading-relaxed">
+              {s.wordpress.hasAppPassword
+                ? "A password is saved. Leave blank to keep it; type a new one to replace it."
+                : "WP Admin → Users → Profile → Application Passwords. Not the account password — revoking it locks out only this integration."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={saveWordPress}
+            disabled={saving}
+            className="text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
+          >
+            {saving ? "Saving…" : "Save connection"}
+          </button>
+          <a
+            href={`/client/${ref}/own-blog/integration`}
+            className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 transition-colors"
+          >
+            Test it and import the archive
+          </a>
+        </div>
+
+        <p className="text-[11px] text-[var(--ink-3)] leading-relaxed">
+          Posts are only ever created as <strong>drafts</strong>. There is no
+          publish setting here because there is no publish path in the code —
+          whoever publishes does it in WordPress, having read the post.
+        </p>
       </Section>
 
       <Section

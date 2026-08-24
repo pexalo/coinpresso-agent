@@ -55,8 +55,21 @@ function esc(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
+export interface HtmlOptions {
+  /** WordPress renders the title from its own field, so the body must not
+   *  carry an H1 of its own or the post shows the headline twice. */
+  includeH1?: boolean;
+  includeTagLine?: boolean;
+  includePublicationComment?: boolean;
+}
+
 /** Small, dependency-free markdown-to-HTML pass. Handles what the writer emits. */
-export function renderHtml(run: Run): string {
+export function renderHtml(run: Run, opts: HtmlOptions = {}): string {
+  const {
+    includeH1 = true,
+    includeTagLine = true,
+    includePublicationComment = true,
+  } = opts;
   const d = run.draft;
   if (!d) return "";
   const pub = PUBLICATIONS[run.brief.publication];
@@ -85,11 +98,15 @@ export function renderHtml(run: Run): string {
     : "";
 
   return [
-    `<h1>${esc(d.headline)}</h1>`,
+    includeH1 ? `<h1>${esc(d.headline)}</h1>` : "",
     ...blocks,
     faqs,
-    d.tags.length ? `<p><strong>Tags:</strong> ${esc(d.tags.join(", "))}</p>` : "",
-    `<!-- ${pub.name} — ${pub.linkStyle} link style -->`,
+    includeTagLine && d.tags.length
+      ? `<p><strong>Tags:</strong> ${esc(d.tags.join(", "))}</p>`
+      : "",
+    includePublicationComment
+      ? `<!-- ${pub.name} — ${pub.linkStyle} link style -->`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");

@@ -27,6 +27,27 @@ export interface TelegramSettings {
   lastTestOk?: boolean;
 }
 
+/**
+ * WordPress on coinpresso.io.
+ *
+ * The application password is a credential and is handled exactly like the
+ * Telegram token: stored server-side, masked on every read, and preserved when a
+ * partial save arrives without it. Reading the blog needs none of this — the
+ * site serves its REST API publicly — so an unconfigured install can still
+ * import the archive, which is why the connection test reports reachable and
+ * authenticated separately.
+ */
+export interface WordPressSettings {
+  enabled: boolean;
+  siteUrl: string;
+  username: string;
+  /** Never returned by the API. */
+  appPassword: string;
+  connectedAt?: string;
+  lastImportAt?: string;
+  lastImportCount?: number;
+}
+
 export interface ClientSettings {
   delivery: {
     telegram: TelegramSettings;
@@ -54,6 +75,7 @@ export interface ClientSettings {
     metaAdAccountId: string;
     contentCalendarSheetId: string;
   };
+  wordpress: WordPressSettings;
 }
 
 export const DEFAULT_SETTINGS: ClientSettings = {
@@ -82,6 +104,12 @@ export const DEFAULT_SETTINGS: ClientSettings = {
     metaAdAccountId: "",
     contentCalendarSheetId: "",
   },
+  wordpress: {
+    enabled: true,
+    siteUrl: "https://coinpresso.io",
+    username: "",
+    appPassword: "",
+  },
 };
 
 function keyFor(clientRef: string): string {
@@ -98,6 +126,7 @@ function merge(base: ClientSettings, patch: Partial<ClientSettings>): ClientSett
     notify: { ...base.notify, ...patch.notify },
     approvals: { ...base.approvals, ...patch.approvals },
     integrations: { ...base.integrations, ...patch.integrations },
+    wordpress: { ...base.wordpress, ...patch.wordpress },
   };
 }
 
@@ -126,6 +155,14 @@ export async function writeSettings(
     next.delivery.telegram.connectedAt = new Date().toISOString();
   }
 
+  // Same rule for the WordPress application password.
+  const wpIncoming = patch.wordpress?.appPassword;
+  if (!wpIncoming || wpIncoming.includes("•")) {
+    next.wordpress.appPassword = current.wordpress.appPassword;
+  } else if (wpIncoming !== current.wordpress.appPassword) {
+    next.wordpress.connectedAt = new Date().toISOString();
+  }
+
   await fs.mkdir(DIR, { recursive: true });
   await fs.writeFile(keyFor(clientRef), JSON.stringify(next, null, 2), "utf8");
   return next;
@@ -145,6 +182,13 @@ export function maskSettings(s: ClientSettings) {
           : "",
         hasToken: Boolean(t.botToken),
       },
+    },
+    wordpress: {
+      ...s.wordpress,
+      appPassword: s.wordpress.appPassword
+        ? `••••••••${s.wordpress.appPassword.slice(-4)}`
+        : "",
+      hasAppPassword: Boolean(s.wordpress.appPassword),
     },
   };
 }
