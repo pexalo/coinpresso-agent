@@ -35,10 +35,24 @@ export interface Brief {
   title: string;
   keywords: string[];
   publication: PublicationId;
+  /** Wire PR for a campaign, or a post on Coinpresso's own blog. The two share
+   *  the pipeline and share almost nothing else. */
+  track?: "wire" | "blog";
+  /** Blog track only. */
+  contentType?: string;
+  pillar?: string;
+  pillarHub?: string;
   /** Optional overrides. Left blank, the strategy agent researches them. */
   presaleRaised?: string;
   presaleStage?: string;
   notes?: string;
+  /** Snapshot of the campaign at the moment the brief was submitted, so a run
+   *  records what was true then rather than what the fact sheet says today. */
+  campaignId?: string;
+  campaignName?: string;
+  campaignTicker?: string;
+  tokenPrice?: string;
+  bannedClaims?: string[];
 }
 
 /** One externally verifiable source the strategy agent found. */
@@ -86,6 +100,11 @@ export interface ResearchBrief {
   faqCandidates: string[];
   riskNotes: string[];
   sources: Source[];
+  /** Blog track only — the prediction fields above go unused there. */
+  buyerQuestion?: string;
+  competingContent?: string[];
+  proofPoints?: string[];
+  internalLinks?: string[];
 }
 
 /** The writer agent's structured output. */

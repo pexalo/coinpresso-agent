@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import ClientHeader from "@/components/ClientHeader";
+import ClientSidebar, { MobileSectionTabs } from "@/components/ClientSidebar";
+import { CampaignProvider } from "@/components/CampaignContext";
+import { PoweredBy } from "@/components/Brand";
 import { clientModules, getClient } from "@/lib/clients";
 
 export default async function ClientLayout({
@@ -14,11 +17,19 @@ export default async function ClientLayout({
   if (!client) notFound();
 
   return (
-    <>
-      <ClientHeader client={client} modules={clientModules(client)} />
-      <div className="max-w-[1240px] mx-auto px-5 md:px-8 pb-24 pt-6">
-        {children}
+    <CampaignProvider clientRef={client.ref} campaigns={client.campaigns}>
+      <ClientHeader client={client} />
+      <div
+        className="max-w-[1240px] mx-auto px-5 md:px-8 pb-12 lg:flex lg:gap-8"
+        style={{ paddingTop: "var(--top-gap)" }}
+      >
+        <ClientSidebar client={client} modules={clientModules(client)} />
+        <div className="min-w-0 flex-1">
+          <MobileSectionTabs clientRef={client.ref} />
+          {children}
+        </div>
       </div>
-    </>
+      <PoweredBy />
+    </CampaignProvider>
   );
 }

@@ -9,7 +9,7 @@ const AGENTS = [
     role: "Researches the market and builds the source ledger",
     model: MODELS.strategy,
     tools: ["web search"],
-    tone: "#4E78FF",
+    tone: "var(--accent)",
     does: [
       "Finds a real, dated news catalyst from the last week or so",
       "Retrieves at least two independent third-party price forecasts, deliberately spread between bullish and cautious",
@@ -24,7 +24,7 @@ const AGENTS = [
     role: "Drafts to house style and the wire's format",
     model: MODELS.writer,
     tools: [],
-    tone: "#3DDC97",
+    tone: "var(--success)",
     does: [
       "Works only from the source ledger — no external URL, publisher, analyst or figure may be introduced",
       "Follows the parasitic-SEO framework: market event first, Moonberg as the conclusion the analysis produces",
@@ -39,7 +39,7 @@ const AGENTS = [
     role: "Verifies every citation",
     model: "deterministic — not a model",
     tools: ["HTTP"],
-    tone: "#F4B740",
+    tone: "var(--warning)",
     does: [
       "Extracts every URL from the draft, including inside FAQ answers",
       "Compares each against the research ledger, ignoring tracking parameters",
@@ -53,7 +53,7 @@ const AGENTS = [
     role: "Judges the draft against the house style profile",
     model: MODELS.reviewer,
     tools: [],
-    tone: "#B8C2D6",
+    tone: "var(--ink-2)",
     does: [
       "Scores style match, sourcing, structure, SEO and compliance",
       "Checks the primary keyword in each required position",
@@ -70,14 +70,14 @@ export default function AgentsPage() {
     <div className="space-y-6 pt-2">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Agents</h1>
-        <p className="text-[#7F8CA8] text-sm mt-1 max-w-2xl">
+        <p className="text-[var(--ink-3)] text-sm mt-1 max-w-2xl">
           Four stages between a title and a wire-ready draft. Each one exists
           because of a specific way this kind of content goes wrong.
         </p>
       </div>
 
       <div className="card p-5">
-        <div className="text-[10px] uppercase tracking-wider text-[#7F8CA8] mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-[var(--ink-3)] mb-3">
           Pipeline
         </div>
         <div className="flex items-center gap-2 flex-wrap text-[11px]">
@@ -87,18 +87,18 @@ export default function AgentsPage() {
                 <span
                   className={`px-2.5 py-1 rounded-md border ${
                     s === "Brief" || s === "Liam"
-                      ? "border-[#2A3A52] bg-[#0D1B2A] text-[#7F8CA8]"
-                      : "border-[#4E78FF]/30 bg-[#4E78FF]/10 text-[#4E78FF]"
+                      ? "border-[var(--line)] bg-[var(--bg)] text-[var(--ink-3)]"
+                      : "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]"
                   }`}
                 >
                   {s}
                 </span>
-                {i < arr.length - 1 && <span className="text-[#2A3A52]">→</span>}
+                {i < arr.length - 1 && <span className="text-[var(--line)]">→</span>}
               </span>
             )
           )}
         </div>
-        <p className="text-[11px] text-[#7F8CA8] mt-3 leading-relaxed max-w-2xl">
+        <p className="text-[11px] text-[var(--ink-3)] mt-3 leading-relaxed max-w-2xl">
           The revision loop is bounded at two passes. Two models disagreeing on
           taste will otherwise argue until the budget is gone — when the bound is
           hit the run lands in review with its outstanding findings attached, and
@@ -116,15 +116,15 @@ export default function AgentsPage() {
               />
               <h2 className="font-bold text-sm">{a.name}</h2>
             </div>
-            <p className="text-[12px] text-[#B8C2D6]">{a.role}</p>
+            <p className="text-[12px] text-[var(--ink-2)]">{a.role}</p>
             <div className="flex flex-wrap gap-1.5 mt-2.5">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0D1B2A] border border-[#2A3A52] text-[#7F8CA8]">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg)] border border-[var(--line)] text-[var(--ink-3)]">
                 {a.model}
               </span>
               {a.tools.map((t) => (
                 <span
                   key={t}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-[#0D1B2A] border border-[#2A3A52] text-[#7F8CA8]"
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg)] border border-[var(--line)] text-[var(--ink-3)]"
                 >
                   {t}
                 </span>
@@ -134,14 +134,14 @@ export default function AgentsPage() {
               {a.does.map((d) => (
                 <li
                   key={d}
-                  className="text-[11.5px] text-[#B8C2D6] leading-relaxed pl-3.5 relative"
+                  className="text-[11.5px] text-[var(--ink-2)] leading-relaxed pl-3.5 relative"
                 >
-                  <span className="absolute left-0 text-[#5A6884]">—</span>
+                  <span className="absolute left-0 text-[var(--ink-4)]">—</span>
                   {d}
                 </li>
               ))}
             </ul>
-            <p className="text-[11px] text-[#7F8CA8] leading-relaxed mt-4 pt-4 border-t border-[#2A3A52]">
+            <p className="text-[11px] text-[var(--ink-3)] leading-relaxed mt-4 pt-4 border-t border-[var(--line)]">
               {a.why}
             </p>
           </div>
@@ -149,9 +149,9 @@ export default function AgentsPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#2A3A52]">
+        <div className="px-5 py-4 border-b border-[var(--line)]">
           <h2 className="font-bold text-sm">Publication formats</h2>
-          <p className="text-[11px] text-[#7F8CA8] mt-0.5">
+          <p className="text-[11px] text-[var(--ink-3)] mt-0.5">
             Each wire has a house shape. Getting these wrong is the most visible
             failure mode.
           </p>
@@ -159,7 +159,7 @@ export default function AgentsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-[11.5px]">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-[#7F8CA8] border-b border-[#2A3A52]">
+              <tr className="text-[10px] uppercase tracking-wider text-[var(--ink-3)] border-b border-[var(--line)]">
                 <th className="text-left font-medium px-5 py-2.5">Wire</th>
                 <th className="text-left font-medium px-3 py-2.5">Links</th>
                 <th className="text-left font-medium px-3 py-2.5">Words</th>
@@ -167,22 +167,22 @@ export default function AgentsPage() {
                 <th className="text-left font-medium px-3 py-2.5">Structure</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2A3A52]">
+            <tbody className="divide-y divide-[var(--line)]">
               {PUBLICATION_LIST.map((p) => (
                 <tr key={p.id}>
                   <td className="px-5 py-2.5 font-medium whitespace-nowrap">
                     {p.name}
                   </td>
-                  <td className="px-3 py-2.5 text-[#B8C2D6] whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-[var(--ink-2)] whitespace-nowrap">
                     {p.linkStyle === "naked" ? "Naked URLs" : "Anchor text"}
                   </td>
-                  <td className="px-3 py-2.5 text-[#B8C2D6] whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-[var(--ink-2)] whitespace-nowrap">
                     {p.wordTarget[0]}–{p.wordTarget[1]}
                   </td>
-                  <td className="px-3 py-2.5 text-[#B8C2D6] whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-[var(--ink-2)] whitespace-nowrap">
                     {p.faqCount[0]}–{p.faqCount[1]}
                   </td>
-                  <td className="px-3 py-2.5 text-[#B8C2D6] whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-[var(--ink-2)] whitespace-nowrap">
                     {p.structure === "listicle"
                       ? "Listicle"
                       : p.structure === "single_asset"

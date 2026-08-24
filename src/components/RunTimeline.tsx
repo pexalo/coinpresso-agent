@@ -4,19 +4,19 @@ import { useState } from "react";
 import type { StageRecord, StageStatus } from "@/lib/types";
 
 const DOT: Record<StageStatus, string> = {
-  pending: "bg-[#2A3A52]",
-  running: "bg-[#4E78FF] running-dot",
-  done: "bg-[#3DDC97]",
-  failed: "bg-[#EF4444]",
-  skipped: "bg-[#2A3A52]",
+  pending: "bg-[var(--line)]",
+  running: "bg-[var(--accent)] running-dot",
+  done: "bg-[var(--success)]",
+  failed: "bg-[var(--danger)]",
+  skipped: "bg-[var(--line)]",
 };
 
 const TEXT: Record<StageStatus, string> = {
-  pending: "text-[#5A6884]",
-  running: "text-[#4E78FF]",
-  done: "text-white",
-  failed: "text-[#EF4444]",
-  skipped: "text-[#5A6884]",
+  pending: "text-[var(--ink-4)]",
+  running: "text-[var(--accent)]",
+  done: "text-[var(--ink)]",
+  failed: "text-[var(--danger)]",
+  skipped: "text-[var(--ink-4)]",
 };
 
 function duration(ms?: number): string {
@@ -46,14 +46,14 @@ export default function RunTimeline({ stages }: { stages: StageRecord[] }) {
 
   return (
     <div className="card overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#2A3A52]">
+      <div className="px-5 py-4 border-b border-[var(--line)]">
         <h2 className="font-bold text-sm">Agent workflow</h2>
-        <p className="text-[11px] text-[#7F8CA8] mt-0.5">
+        <p className="text-[11px] text-[var(--ink-3)] mt-0.5">
           Click a stage to see exactly what it received and produced.
         </p>
       </div>
 
-      <div className="divide-y divide-[#2A3A52]">
+      <div className="divide-y divide-[var(--line)]">
         {stages.map((s) => {
           const expanded = open === s.id;
           const hasDetail = s.output !== undefined || s.error;
@@ -62,7 +62,7 @@ export default function RunTimeline({ stages }: { stages: StageRecord[] }) {
               <button
                 onClick={() => hasDetail && setOpen(expanded ? null : s.id)}
                 className={`w-full flex items-center gap-3.5 px-5 py-3.5 text-left ${
-                  hasDetail ? "hover:bg-[#1C2F45] cursor-pointer" : "cursor-default"
+                  hasDetail ? "hover:bg-[var(--surface-2)] cursor-pointer" : "cursor-default"
                 } transition-colors`}
               >
                 <span className={`w-2 h-2 rounded-full shrink-0 ${DOT[s.status]}`} />
@@ -71,25 +71,25 @@ export default function RunTimeline({ stages }: { stages: StageRecord[] }) {
                     <span className={`text-[13px] font-semibold ${TEXT[s.status]}`}>
                       {s.label}
                     </span>
-                    <span className="text-[10px] text-[#5A6884]">
+                    <span className="text-[10px] text-[var(--ink-4)]">
                       {s.agent} · {s.model}
                     </span>
                     {s.attempt && s.attempt > 1 && (
-                      <span className="text-[10px] text-[#F4B740]">
+                      <span className="text-[10px] text-[var(--warning)]">
                         pass {s.attempt}
                       </span>
                     )}
                   </div>
                   {s.inputSummary && (
-                    <div className="text-[11px] text-[#7F8CA8] mt-0.5 truncate">
+                    <div className="text-[11px] text-[var(--ink-3)] mt-0.5 truncate">
                       {s.inputSummary}
                     </div>
                   )}
                   {s.error && (
-                    <div className="text-[11px] text-[#EF4444] mt-1">{s.error}</div>
+                    <div className="text-[11px] text-[var(--danger)] mt-1">{s.error}</div>
                   )}
                 </div>
-                <div className="text-right shrink-0 text-[10px] text-[#5A6884] leading-relaxed">
+                <div className="text-right shrink-0 text-[10px] text-[var(--ink-4)] leading-relaxed">
                   {s.durationMs ? <div>{duration(s.durationMs)}</div> : null}
                   {s.tokensOut ? (
                     <div>
@@ -101,11 +101,11 @@ export default function RunTimeline({ stages }: { stages: StageRecord[] }) {
               </button>
 
               {expanded && (
-                <div className="px-5 pb-5 bg-[#0D1B2A]/60">
-                  <p className="text-[11px] text-[#7F8CA8] leading-relaxed mb-3 max-w-2xl">
+                <div className="px-5 pb-5 bg-[var(--bg)]/60">
+                  <p className="text-[11px] text-[var(--ink-3)] leading-relaxed mb-3 max-w-2xl">
                     {PURPOSE[s.id]}
                   </p>
-                  <pre className="text-[10.5px] leading-relaxed text-[#B8C2D6] bg-[#0D1B2A] border border-[#2A3A52] rounded-lg p-3.5 overflow-x-auto max-h-96">
+                  <pre className="text-[10.5px] leading-relaxed text-[var(--ink-2)] bg-[var(--bg)] border border-[var(--line)] rounded-lg p-3.5 overflow-x-auto max-h-96">
                     {s.error
                       ? s.error
                       : JSON.stringify(s.output, null, 2)}

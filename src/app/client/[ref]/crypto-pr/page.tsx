@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useCampaign } from "@/components/CampaignContext";
 import { PUBLICATIONS } from "@/lib/publications";
 import type { PublicationId, RunStatus, StageId, StageStatus } from "@/lib/types";
 
 interface RunSummary {
   id: string;
+  campaignId?: string;
   createdAt: string;
   status: RunStatus;
   brief: { title: string; keywords: string[]; publication: PublicationId };
@@ -21,11 +23,11 @@ interface RunSummary {
 }
 
 const STATUS_STYLE: Record<RunStatus, string> = {
-  queued: "text-[#7F8CA8] border-[#2A3A52] bg-[#152538]",
-  running: "text-[#4E78FF] border-[#4E78FF]/30 bg-[#4E78FF]/10",
-  needs_review: "text-[#F4B740] border-[#F4B740]/30 bg-[#F4B740]/10",
-  approved: "text-[#3DDC97] border-[#3DDC97]/30 bg-[#3DDC97]/10",
-  failed: "text-[#EF4444] border-[#EF4444]/30 bg-[#EF4444]/10",
+  queued: "text-[var(--ink-3)] border-[var(--line)] bg-[var(--surface)]",
+  running: "text-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/10",
+  needs_review: "text-[var(--warning)] border-[var(--warning)]/30 bg-[var(--warning)]/10",
+  approved: "text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10",
+  failed: "text-[var(--danger)] border-[var(--danger)]/30 bg-[var(--danger)]/10",
 };
 
 const STATUS_LABEL: Record<RunStatus, string> = {
@@ -39,14 +41,14 @@ const STATUS_LABEL: Record<RunStatus, string> = {
 function StageDots({ stages }: { stages: RunSummary["stages"] }) {
   const color = (s: StageStatus) =>
     s === "done"
-      ? "bg-[#3DDC97]"
+      ? "bg-[var(--success)]"
       : s === "running"
-        ? "bg-[#4E78FF] running-dot"
+        ? "bg-[var(--accent)] running-dot"
         : s === "failed"
-          ? "bg-[#EF4444]"
+          ? "bg-[var(--danger)]"
           : s === "skipped"
-            ? "bg-[#2A3A52]"
-            : "bg-[#2A3A52]";
+            ? "bg-[var(--line)]"
+            : "bg-[var(--line)]";
   return (
     <div className="flex items-center gap-1">
       {stages.map((s) => (
@@ -63,15 +65,16 @@ function StageDots({ stages }: { stages: RunSummary["stages"] }) {
 export default function QueuePage() {
   const { ref } = useParams<{ ref: string }>();
   const base = `/client/${ref}/crypto-pr`;
-  const [runs, setRuns] = useState<RunSummary[] | null>(null);
+  const { selected, campaigns } = useCampaign();
+  const [allRuns, setAllRuns] = useState<RunSummary[] | null>(null);
 
   useEffect(() => {
     let alive = true;
     const load = () =>
       fetch(`/api/clients/${ref}/runs`)
         .then((r) => r.json())
-        .then((d) => alive && setRuns(d))
-        .catch(() => alive && setRuns([]));
+        .then((d) => alive && setAllRuns(d))
+        .catch(() => alive && setAllRuns([]));
     load();
     // Poll while anything is in flight so the queue advances without a refresh.
     const t = setInterval(load, 4000);
@@ -80,6 +83,15 @@ export default function QueuePage() {
       clearInterval(t);
     };
   }, [ref]);
+
+  // Filtered by the campaign picked in the header. "All campaigns" shows
+  // everything, which is what a Monday morning triage view wants.
+  const runs =
+    allRuns === null
+      ? null
+      : selected
+        ? allRuns.filter((r) => r.campaignId === selected.id)
+        : allRuns;
 
   const active = runs?.filter((r) => r.status === "running").length ?? 0;
   const ready = runs?.filter((r) => r.status === "needs_review").length ?? 0;
@@ -93,13 +105,15 @@ export default function QueuePage() {
           <h1 className="text-2xl font-extrabold tracking-tight">
             Article queue
           </h1>
-          <p className="text-[#7F8CA8] text-sm mt-1">
-            Every run, from brief to wire-ready draft.
+          <p className="text-[var(--ink-3)] text-sm mt-1">
+            {selected
+              ? `${selected.name} ${selected.ticker} — every run, from brief to wire-ready draft.`
+              : "Every campaign, every run, from brief to wire-ready draft."}
           </p>
         </div>
         <Link
           href={`${base}/new`}
-          className="text-[13px] font-semibold px-4 py-2.5 rounded-lg bg-[#4E78FF] hover:bg-[#3D63E6] transition-colors"
+          className="text-[13px] font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-colors"
         >
           New article
         </Link>
@@ -107,17 +121,17 @@ export default function QueuePage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "In progress", value: active, tone: "#4E78FF" },
-          { label: "Ready for review", value: ready, tone: "#F4B740" },
-          { label: "Approved", value: approved, tone: "#3DDC97" },
+          { label: "In progress", value: active, tone: "var(--accent)" },
+          { label: "Ready for review", value: ready, tone: "var(--warning)" },
+          { label: "Approved", value: approved, tone: "var(--success)" },
           {
             label: "Model spend",
             value: `$${spend.toFixed(2)}`,
-            tone: "#B8C2D6",
+            tone: "var(--ink-2)",
           },
         ].map((k) => (
           <div key={k.label} className="card p-4">
-            <div className="text-[10px] uppercase tracking-wider text-[#7F8CA8]">
+            <div className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
               {k.label}
             </div>
             <div
@@ -131,7 +145,7 @@ export default function QueuePage() {
       </div>
 
       {runs === null && (
-        <div className="card p-8 text-center text-[#7F8CA8] text-sm">
+        <div className="card p-8 text-center text-[var(--ink-3)] text-sm">
           Loading…
         </div>
       )}
@@ -139,14 +153,14 @@ export default function QueuePage() {
       {runs !== null && runs.length === 0 && (
         <div className="card p-10 text-center">
           <p className="font-semibold">Nothing in the queue yet.</p>
-          <p className="text-[#7F8CA8] text-sm mt-1.5 max-w-md mx-auto">
+          <p className="text-[var(--ink-3)] text-sm mt-1.5 max-w-md mx-auto">
             Give the strategy agent a title, the target keywords and the wire it
             is going to. It researches the market, the writer drafts to house
             style, and the reviewer sends it back until it matches.
           </p>
           <Link
             href={`${base}/new`}
-            className="inline-block mt-5 text-[13px] font-semibold px-4 py-2.5 rounded-lg bg-[#4E78FF] hover:bg-[#3D63E6]"
+            className="inline-block mt-5 text-[13px] font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]"
           >
             Start the first one
           </Link>
@@ -154,12 +168,12 @@ export default function QueuePage() {
       )}
 
       {runs && runs.length > 0 && (
-        <div className="card divide-y divide-[#2A3A52] overflow-hidden">
+        <div className="card divide-y divide-[var(--line)] overflow-hidden">
           {runs.map((r) => (
             <Link
               key={r.id}
               href={`${base}/runs/${r.id}`}
-              className="flex items-center gap-4 p-4 hover:bg-[#1C2F45] transition-colors"
+              className="flex items-center gap-4 p-4 hover:bg-[var(--surface-2)] transition-colors"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -168,25 +182,31 @@ export default function QueuePage() {
                   >
                     {STATUS_LABEL[r.status]}
                   </span>
-                  <span className="text-[11px] text-[#7F8CA8]">
+                  <span className="text-[11px] text-[var(--ink-3)]">
                     {PUBLICATIONS[r.brief.publication]?.name ??
                       r.brief.publication}
                   </span>
+                  {!selected && r.campaignId && (
+                    <span className="text-[10px] text-[var(--ink-2)]">
+                      {campaigns.find((c) => c.id === r.campaignId)?.name ??
+                        r.campaignId}
+                    </span>
+                  )}
                   {r.mock && (
-                    <span className="text-[10px] text-[#F4B740]">mock</span>
+                    <span className="text-[10px] text-[var(--warning)]">mock</span>
                   )}
                 </div>
                 <div className="font-semibold text-sm mt-1.5 truncate">
                   {r.brief.title}
                 </div>
-                <div className="text-[11px] text-[#7F8CA8] mt-1 truncate">
+                <div className="text-[11px] text-[var(--ink-3)] mt-1 truncate">
                   {r.brief.keywords.join(" · ")}
                 </div>
               </div>
 
               <div className="hidden md:flex flex-col items-end gap-1.5 shrink-0">
                 <StageDots stages={r.stages} />
-                <div className="text-[11px] text-[#7F8CA8] flex items-center gap-2">
+                <div className="text-[11px] text-[var(--ink-3)] flex items-center gap-2">
                   {r.wordCount ? <span>{r.wordCount}w</span> : null}
                   {r.revisions > 0 && (
                     <span title="Reviewer sent it back">
@@ -194,7 +214,7 @@ export default function QueuePage() {
                     </span>
                   )}
                   {r.linkCheckPassed === false && (
-                    <span className="text-[#EF4444]">links flagged</span>
+                    <span className="text-[var(--danger)]">links flagged</span>
                   )}
                 </div>
               </div>

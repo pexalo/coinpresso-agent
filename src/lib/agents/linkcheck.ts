@@ -12,8 +12,13 @@
 
 import type { Draft, LinkCheckResult, ResearchBrief } from "../types";
 
-/** Domains the article is always allowed to link without a ledger entry. */
+/**
+ * Domains a piece may link without a ledger entry — its own property, in other
+ * words. On the wire track that is the campaign's site; on the blog track it is
+ * Coinpresso's own domain, where internal cluster links are the entire point.
+ */
 const ALWAYS_ALLOWED = ["moonberg.com"];
+const BLOG_ALLOWED = ["coinpresso.io"];
 
 const URL_RE = /https?:\/\/[^\s)<>\]"'`]+/g;
 
@@ -84,15 +89,17 @@ async function head(url: string, timeoutMs = 8000): Promise<number | null> {
 export async function runLinkCheck(
   draft: Draft,
   research: ResearchBrief,
-  opts: { verifyReachable?: boolean } = {}
+  opts: { verifyReachable?: boolean; track?: "wire" | "blog" } = {}
 ): Promise<LinkCheckResult> {
   const ledger = new Set(research.sources.map((s) => normalise(s.url)));
   const urls = extractUrls(draft);
+  const allowed =
+    opts.track === "blog" ? BLOG_ALLOWED : ALWAYS_ALLOWED;
 
   const unsourced: string[] = [];
   for (const u of urls) {
     const host = hostOf(u);
-    if (ALWAYS_ALLOWED.some((d) => host === d || host.endsWith(`.${d}`))) continue;
+    if (allowed.some((d) => host === d || host.endsWith(`.${d}`))) continue;
     if (!ledger.has(normalise(u))) unsourced.push(u);
   }
 

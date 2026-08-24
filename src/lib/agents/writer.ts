@@ -10,6 +10,8 @@ import { callClaude, extractJson } from "../providers/anthropic";
 import { MODELS } from "../models";
 import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
+import { exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
+import { BLOG_PLAYBOOK, BLOG_STYLE, CONTENT_TYPES, PILLARS } from "../blog";
 import type { Brief, Draft, ResearchBrief, ReviewFinding } from "../types";
 
 function styleBlock(): string {
@@ -61,11 +63,142 @@ export interface WriterInput {
   previous?: Draft;
 }
 
+const BLOG_SYSTEM = `You write for Coinpresso's own blog. Coinpresso is a crypto
+marketing agency; this is their domain, and the reader is a founder deciding
+whether to hire them.
+
+THE ONE RULE THAT OVERRIDES EVERYTHING: you may not introduce any URL, publisher,
+statistic or figure that does not appear in the research brief. Inventing a
+plausible-looking source is worse than omitting the claim, because this is the
+agency's own domain and a broken citation is a credibility failure they cannot
+delete from someone's memory.
+
+Second rule: if the brief gives you nothing genuinely original — no named
+example, no figure Coinpresso holds, no honest limitation, no argued position —
+then say so in the piece rather than padding it with generalities. A post that
+only reassembles what already ranks is the exact thing that gets a domain
+demoted at this publishing rate.
+
+This is NOT a wire release. No dateline, no boilerplate, no investment
+disclaimer, no presale figures, no price predictions.
+
+${BLOG_PLAYBOOK}`;
+
+async function writeBlog(input: WriterInput): Promise<{
+  draft: Draft;
+  tokensIn: number;
+  tokensOut: number;
+}> {
+  const { brief, research, fixes, previous } = input;
+  const pillar = PILLARS.find((x) => x.id === brief.pillar);
+  const type = brief.contentType
+    ? CONTENT_TYPES[brief.contentType as keyof typeof CONTENT_TYPES]
+    : undefined;
+
+  const sourceLedger = research.sources
+    .map(
+      (x) =>
+        `[${x.id}] ${x.publisher} — "${x.title}"\n     URL: ${x.url}\n     Supports: ${x.claim}${
+          x.figures?.length ? `\n     Figures: ${x.figures.join(" | ")}` : ""
+        }`
+    )
+    .join("\n");
+
+  const revisionBlock =
+    fixes && previous
+      ? `\n\nTHIS IS A REVISION. Fix every item below and change nothing else.\n\n${fixes
+          .map(
+            (f, i) =>
+              `${i + 1}. [${f.severity}/${f.category}] ${f.detail}\n   FIX: ${f.fix}`
+          )
+          .join("\n")}\n\nYOUR PREVIOUS DRAFT:\n${previous.body}`
+      : "";
+
+  const user = `${BLOG_STYLE}
+
+---
+
+FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}
+${pillar ? `PILLAR: ${pillar.name}. Link to the hub at ${pillar.hub} using descriptive anchor text.` : ""}
+
+WORKING TITLE (improve it if it is clumsy, keep the keyword):
+${brief.title}
+
+PRIMARY KEYWORD: ${research.primaryKeyword}
+SECONDARY: ${research.secondaryKeywords.join(", ")}
+
+THE READER'S ACTUAL QUESTION:
+${research.buyerQuestion ?? "not supplied"}
+
+WHAT IS ALREADY RANKING, AND THE GAP:
+${research.marketContext}
+${(research.competingContent ?? []).map((c) => `- ${c}`).join("\n")}
+
+WHY THIS POST EXISTS:
+${research.opportunityGap}
+
+COINPRESSO'S ANGLE:
+${research.moonbergAngle}
+
+WHAT WOULD MAKE IT ORIGINAL — use what is true, and where something is missing,
+write around the gap honestly rather than inventing it:
+${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- nothing supplied"}
+
+INTERNAL LINKS TO WORK IN:
+${(research.internalLinks ?? []).map((l) => `- ${l}`).join("\n") || "- the pillar hub"}
+
+SUGGESTED H2s:
+${research.suggestedHeadings.map((h) => `- ${h}`).join("\n")}
+
+FAQ CANDIDATES:
+${research.faqCandidates.map((f) => `- ${f}`).join("\n")}
+
+RISK NOTES YOU MUST RESPECT:
+${research.riskNotes.map((r) => `- ${r}`).join("\n") || "- none"}
+
+---
+
+SOURCE LEDGER — the ONLY URLs you may cite:
+${sourceLedger || "(empty — write without external citations and say so where a figure would have gone)"}
+${revisionBlock}
+
+---
+
+Return ONLY a JSON object:
+{
+  "headline": "the final H1",
+  "dateline": null,
+  "body": "the full post in markdown with ## H2 sections. No boilerplate, no disclaimer. Do NOT include the FAQs here.",
+  "faqs": [{ "q": "...", "a": "..." }],
+  "tags": ["..."]
+}`;
+
+  const r = await callClaude({
+    model: MODELS.writer,
+    system: BLOG_SYSTEM,
+    user,
+    maxTokens: 8000,
+    temperature: 0.65,
+  });
+
+  const parsed = extractJson<Omit<Draft, "wordCount">>(r.text);
+  const draft: Draft = {
+    ...parsed,
+    dateline: null,
+    faqs: parsed.faqs || [],
+    tags: parsed.tags || [],
+    wordCount: (parsed.body || "").split(/\s+/).filter(Boolean).length,
+  };
+  return { draft, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+}
+
 export async function runWriter(input: WriterInput): Promise<{
   draft: Draft;
   tokensIn: number;
   tokensOut: number;
 }> {
+  if (input.brief.track === "blog") return writeBlog(input);
+
   const { brief, research, fixes, previous } = input;
   const pub = PUBLICATIONS[brief.publication];
 
@@ -98,7 +231,35 @@ YOUR PREVIOUS DRAFT:
 ${previous.body}`
       : "";
 
-  const user = `${styleBlock()}
+  const campaignBlock = brief.bannedClaims?.length
+    ? `CAMPAIGN LIMITS — ${brief.campaignName ?? "this campaign"} ${brief.campaignTicker ?? ""}
+
+These sit above the house style and above this brief. A breach is not a style
+problem, it is a reason the piece cannot be published:
+${brief.bannedClaims.map((c) => `- ${c}`).join("\n")}
+
+---
+
+`
+    : "";
+
+  // Prior work stops repetition. Exemplars teach voice — a rules list produces a
+  // piece that obeys the rules; two real articles produce one that sounds like
+  // the client.
+  const priorWork = brief.campaignId
+    ? await priorWorkFromStore(brief.campaignId, 20)
+    : "";
+
+  const exemplars = brief.campaignId
+    ? await styleExemplars(brief.campaignId, {
+        publication: brief.publication,
+        excludeAngle: research.featuredAsset,
+        limit: 2,
+      })
+    : [];
+  const examples = exemplarBlock(exemplars);
+
+  const user = `${campaignBlock}${examples ? examples + "\n\n---\n\n" : ""}${priorWork ? priorWork + "\n\n---\n\n" : ""}${styleBlock()}
 
 ---
 

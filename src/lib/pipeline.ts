@@ -197,6 +197,7 @@ export async function executeRun(run: Run): Promise<Run> {
       await begin(run, "linkcheck", `${run.draft!.wordCount} words`);
       run.linkCheck = await runLinkCheck(run.draft!, run.research!, {
         verifyReachable: !mock,
+        track: run.brief.track === "blog" ? "blog" : "wire",
       });
       const lc = stage(run, "linkcheck");
       lc.attempt = attempt + 1;

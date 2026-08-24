@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EntityLogo, ModeBadge, PoweredBy, ThemeToggle } from "@/components/Brand";
 import { CLIENT_LIST, clientModules } from "@/lib/clients";
 
 export const dynamic = "force-dynamic";
@@ -9,14 +10,24 @@ export const dynamic = "force-dynamic";
  */
 export default function HqPage() {
   return (
-    <div className="max-w-[1240px] mx-auto px-5 md:px-8 pb-24 pt-8 space-y-6">
-      <div>
+    <>
+    <div
+      className="max-w-[1240px] mx-auto px-5 md:px-8 pb-12 space-y-6"
+      style={{ paddingTop: "var(--top-gap)" }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Clients</h1>
-        <p className="text-[#7F8CA8] text-sm mt-1 max-w-2xl">
+        <p className="text-[var(--ink-3)] text-sm mt-1 max-w-2xl">
           Each client gets their own workspace. The modules on their record
           decide what is in it — these two share an account model and a job
           queue, and almost no screens.
         </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <ModeBadge />
+          <ThemeToggle />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
@@ -27,25 +38,29 @@ export default function HqPage() {
             <Link
               key={c.ref}
               href={`/client/${c.ref}`}
-              className="card p-5 hover:border-[#4E78FF]/50 transition-colors block"
+              className="card p-5 hover:border-[var(--accent)]/50 transition-colors block"
             >
               <div className="flex items-center gap-2.5 mb-1">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: c.accent }}
+                <EntityLogo
+                  name={c.name}
+                  logo={c.logo}
+                  accent={c.accent}
+                  size={22}
                 />
-                <h2 className="font-bold text-sm">{c.name}</h2>
-                <span className="ml-auto text-[10px] text-[#5A6884] font-mono">
+                {!(c.logo && c.logoIncludesName) && (
+                  <h2 className="font-bold text-sm">{c.name}</h2>
+                )}
+                <span className="ml-auto text-[10px] text-[var(--ink-4)] font-mono">
                   /{c.ref}
                 </span>
               </div>
-              <p className="text-[12px] text-[#B8C2D6]">{c.engagement}</p>
+              <p className="text-[12px] text-[var(--ink-2)]">{c.engagement}</p>
 
-              {c.campaigns && (
-                <p className="text-[11px] text-[#7F8CA8] mt-2">
+              {c.campaigns.length > 0 && (
+                <p className="text-[11px] text-[var(--ink-3)] mt-2">
                   {c.campaigns.length} campaign
                   {c.campaigns.length === 1 ? "" : "s"} ·{" "}
-                  {c.campaigns.map((x) => x.name).join(", ")}
+                  {c.campaigns.map((x) => `${x.name} ${x.ticker}`).join(", ")}
                 </p>
               )}
 
@@ -55,8 +70,8 @@ export default function HqPage() {
                     key={m.id}
                     className={`text-[10px] px-2 py-0.5 rounded-full border ${
                       m.built
-                        ? "bg-[#4E78FF]/10 border-[#4E78FF]/30 text-[#4E78FF]"
-                        : "bg-[#0D1B2A] border-[#2A3A52] text-[#5A6884]"
+                        ? "bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]"
+                        : "bg-[var(--bg)] border-[var(--line)] text-[var(--ink-4)]"
                     }`}
                   >
                     {m.name}
@@ -64,7 +79,7 @@ export default function HqPage() {
                 ))}
               </div>
 
-              <p className="text-[10.5px] text-[#5A6884] mt-3">
+              <p className="text-[10.5px] text-[var(--ink-4)] mt-3">
                 {built} of {mods.length} modules built in this prototype
               </p>
             </Link>
@@ -74,7 +89,7 @@ export default function HqPage() {
 
       <div className="card p-5">
         <h2 className="font-bold text-sm mb-2">Why this is a list and not a template</h2>
-        <p className="text-[12px] text-[#B8C2D6] leading-relaxed max-w-3xl">
+        <p className="text-[12px] text-[var(--ink-2)] leading-relaxed max-w-3xl">
           The tempting shape is one dashboard with fixed tabs and different data
           behind them. Coinpresso is the proof it does not hold: there is no site
           to publish to, no visibility score to track and no citations to match,
@@ -85,5 +100,7 @@ export default function HqPage() {
         </p>
       </div>
     </div>
+    <PoweredBy />
+    </>
   );
 }

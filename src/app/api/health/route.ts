@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MODELS, mockMode } from "@/lib/models";
+import { MODELS, keyStatus, mockMode } from "@/lib/models";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,9 +9,10 @@ export async function GET() {
     ok: true,
     mode: mockMode() ? "mock" : "live",
     models: MODELS,
+    // Reports whether each key is USABLE, not merely present — a placeholder
+    // left over from .env.example counts as missing.
     configured: {
-      anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
-      openai: Boolean(process.env.OPENAI_API_KEY),
+      ...keyStatus(),
       googleExport: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_B64),
       contentCalendar: Boolean(process.env.CONTENT_CALENDAR_SHEET_ID),
     },

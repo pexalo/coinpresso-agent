@@ -6,6 +6,8 @@
 
 import type { Brief, Draft, ResearchBrief, ReviewResult } from "../types";
 import { PUBLICATIONS, boilerplateFor } from "../publications";
+import { CONTENT_TYPES, PILLARS } from "../blog";
+import type { ContentTypeId } from "../blog";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -14,6 +16,7 @@ const title = (s: string) =>
 
 export async function mockStrategy(brief: Brief): Promise<ResearchBrief> {
   await sleep(1400);
+  if (brief.track === "blog") return mockStrategyBlog(brief);
   const asset = brief.keywords[0]?.replace(/price prediction/i, "").trim() || "Solana";
   return {
     featuredAsset: `${asset} (mock)`,
@@ -102,6 +105,7 @@ export async function mockWriter(
   revision: boolean
 ): Promise<Draft> {
   await sleep(1800);
+  if (brief.track === "blog") return mockWriterBlog(brief, research, revision);
   const pub = PUBLICATIONS[brief.publication];
   const body = `${pub.dateline ? `${pub.dateline}, ${new Date().toDateString()} (GLOBE NEWSWIRE) -- ` : ""}This is a mock draft generated without any model call, so the dashboard, the review loop and the export path can all be exercised before a key is added.
 
@@ -184,5 +188,97 @@ export async function mockReviewer(revision: boolean): Promise<ReviewResult> {
     ],
     summary:
       "Mock review, first pass. Deliberately returns findings so the revision loop is visible in the dashboard.",
+  };
+}
+
+// --- Blog track ------------------------------------------------------------
+//
+// A separate mock rather than the wire one with the branding swapped. A mock
+// blog post that opens with a dateline and closes with an investment disclaimer
+// would teach exactly the wrong thing about what this track produces.
+
+async function mockStrategyBlog(brief: Brief): Promise<ResearchBrief> {
+  const pillar = PILLARS.find((p) => p.id === brief.pillar);
+  return {
+    featuredAsset: pillar?.name ?? "Coinpresso blog",
+    primaryKeyword: brief.keywords[0] || "crypto marketing",
+    secondaryKeywords: brief.keywords.slice(1),
+    buyerQuestion: pillar?.buyerQuestion ?? "Mock — no research was performed.",
+    newsCatalyst: {
+      headline: "Evergreen (mock)",
+      date: new Date().toISOString().slice(0, 10),
+      summary:
+        "This run executed in mock mode. Nothing below was retrieved and no claim in it has been checked.",
+      sourceId: null,
+    },
+    marketContext:
+      "Mock. In a live run this says what is already ranking for the keyword and what those pages leave out — which is the reason to publish at all.",
+    competingContent: ["Mock — no competing pages were retrieved."],
+    predictions: [],
+    opportunityGap:
+      "Mock. In a live run this is the specific gap the post fills.",
+    moonbergAngle:
+      "Mock. On this track the field carries Coinpresso's own angle — the experience that makes the post theirs rather than anyone's.",
+    proofPoints: [
+      "Mock — the live planner names what would make the post original, and flags when that thing is a figure only Coinpresso holds.",
+    ],
+    internalLinks: [pillar?.hub ?? "/services"],
+    presaleState: { raised: "n/a", stage: "n/a", note: "blog track" },
+    comparisonAssets: [],
+    structureVariant: "single_asset",
+    suggestedHeadings: [
+      "What the short answer is",
+      "How this actually works",
+      "Where the approach stops working",
+    ],
+    faqCandidates: [
+      "How long does this take?",
+      "What does it cost?",
+      "How would I know it worked?",
+    ],
+    riskNotes: [
+      "Mock run — no source in this brief exists, so nothing here may be published.",
+    ],
+    sources: [],
+  };
+}
+
+async function mockWriterBlog(
+  brief: Brief,
+  research: ResearchBrief,
+  revision: boolean
+): Promise<Draft> {
+  const pillar = PILLARS.find((p) => p.id === brief.pillar);
+  const type = CONTENT_TYPES[brief.contentType as ContentTypeId];
+
+  const body = `This is a mock post, written without a model call so the queue, the review loop and the day view can be exercised before a key is added. Nothing in it has been researched.
+
+The shape is real even though the content is not. ${type ? type.shape : "A question-shaped H1, the direct answer first, then context."}
+
+## ${research.suggestedHeadings[0] || "What the short answer is"}
+
+The live writer answers in the first two sentences under each heading, before any context. That ordering is what makes a passage quotable by an AI model rather than merely readable.
+
+## ${research.suggestedHeadings[1] || "How this actually works"}
+
+${research.marketContext}
+
+## Where this stops working
+
+The live playbook requires a stated limitation. A post that claims an approach works everywhere is the one a founder stops trusting halfway down.
+
+${pillar ? `Read the full ${pillar.name.toLowerCase()} service page: ${pillar.hub}` : ""}
+${revision ? "\n_This draft is a revision pass — the reviewer's findings were applied._" : ""}`;
+
+  return {
+    headline: brief.title,
+    dateline: null,
+    body,
+    faqs: research.faqCandidates.slice(0, 3).map((q) => ({
+      q,
+      a: "Mock answer. In a live run this answers the question completely in two or three sentences.",
+    })),
+    tags: [...brief.keywords, pillar?.name ?? "Coinpresso"],
+    wordCount: body.split(/\s+/).filter(Boolean).length,
   };
 }

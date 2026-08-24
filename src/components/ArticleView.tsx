@@ -39,16 +39,16 @@ export default function ArticleView({
 
   return (
     <div className="card overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#2A3A52] flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-5 py-4 border-b border-[var(--line)] flex items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h2 className="font-bold text-sm">Draft</h2>
-          <p className="text-[11px] text-[#7F8CA8] mt-0.5">
+          <p className="text-[11px] text-[var(--ink-3)] mt-0.5">
             {draft.wordCount} words · {draft.faqs.length} FAQ
             {draft.faqs.length === 1 ? "" : "s"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-[#2A3A52] overflow-hidden">
+          <div className="flex rounded-lg border border-[var(--line)] overflow-hidden">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -56,8 +56,8 @@ export default function ArticleView({
                 title={t.hint}
                 className={`px-3 py-1.5 text-[11px] font-medium transition-colors ${
                   tab === t.id
-                    ? "bg-[#4E78FF] text-white"
-                    : "text-[#B8C2D6] hover:bg-[#1C2F45]"
+                    ? "bg-[var(--accent)] text-white"
+                    : "text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
                 }`}
               >
                 {t.label}
@@ -66,7 +66,7 @@ export default function ArticleView({
           </div>
           <button
             onClick={copy}
-            className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-[#2A3A52] hover:border-[#4E78FF]/50 transition-colors"
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 transition-colors"
           >
             {copied ? "Copied" : "Copy"}
           </button>
@@ -86,7 +86,7 @@ export default function ArticleView({
             />
           </article>
         ) : (
-          <pre className="text-[11.5px] leading-relaxed text-[#B8C2D6] whitespace-pre-wrap break-words">
+          <pre className="text-[11.5px] leading-relaxed text-[var(--ink-2)] whitespace-pre-wrap break-words">
             {raw}
           </pre>
         )}
@@ -97,7 +97,7 @@ export default function ArticleView({
           {draft.tags.map((t) => (
             <span
               key={t}
-              className="text-[10px] px-2 py-0.5 rounded-full bg-[#0D1B2A] border border-[#2A3A52] text-[#7F8CA8]"
+              className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg)] border border-[var(--line)] text-[var(--ink-3)]"
             >
               {t}
             </span>

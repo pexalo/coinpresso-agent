@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { executeRun, newRun } from "@/lib/pipeline";
 import { listRuns, newRunId, saveRun } from "@/lib/store";
 import { PUBLICATIONS } from "@/lib/publications";
-import { getClient, hasModule } from "@/lib/clients";
+import { defaultCampaign, getClient, hasModule } from "@/lib/clients";
+import { resolveCampaign } from "@/lib/campaign-store";
 import type { Brief, PublicationId } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -19,10 +20,10 @@ function gate(ref: string) {
   if (!client) {
     return { error: NextResponse.json({ error: "Unknown client" }, { status: 404 }) };
   }
-  if (!hasModule(client, "crypto-pr")) {
+  if (!hasModule(client, "crypto-pr") && !hasModule(client, "own-blog")) {
     return {
       error: NextResponse.json(
-        { error: "This client does not have the Crypto PR module" },
+        { error: "This client has no content module" },
         { status: 404 }
       ),
     };
@@ -47,6 +48,7 @@ export async function GET(
       createdAt: r.createdAt,
       status: r.status,
       brief: r.brief,
+      track: r.brief.track ?? "wire",
       revisions: r.revisions,
       mock: r.mock,
       totalCostUsd: r.totalCostUsd,
@@ -97,17 +99,29 @@ export async function POST(
   }
 
   const campaignId =
-    payload.campaignId && client.campaigns?.some((c) => c.id === payload.campaignId)
+    payload.campaignId && client.campaigns.some((c) => c.id === payload.campaignId)
       ? payload.campaignId
-      : client.campaigns?.[0]?.id;
+      : defaultCampaign(client)?.id;
+
+  // Snapshot the campaign as it stands now. A run should record the figures and
+  // limits that applied when it was briefed, not whatever the fact sheet says
+  // when someone opens the run three weeks later.
+  const campaign = campaignId ? await resolveCampaign(ref, campaignId) : null;
 
   const brief: Brief = {
     title,
     keywords,
     publication,
-    presaleRaised: payload.presaleRaised?.trim() || undefined,
-    presaleStage: payload.presaleStage?.trim() || undefined,
+    presaleRaised:
+      payload.presaleRaised?.trim() || campaign?.facts.raised || undefined,
+    presaleStage:
+      payload.presaleStage?.trim() || campaign?.facts.stage || undefined,
     notes: payload.notes?.trim() || undefined,
+    campaignId: campaign?.id,
+    campaignName: campaign?.name,
+    campaignTicker: campaign?.ticker,
+    tokenPrice: campaign?.facts.tokenPrice,
+    bannedClaims: campaign?.bannedClaims,
   };
 
   const run = newRun(newRunId(), ref, brief, campaignId);
