@@ -35,6 +35,39 @@ export function proxy(req: NextRequest) {
 
   const role = roleFromToken(req.cookies.get(PORTAL_COOKIE)?.value);
   if (role) {
+    // TENANT CONFINEMENT.
+    //
+    // This deployment belongs to one client. The client list at "/" and every
+    // /client/<ref> route are Pexalo's HQ surface, and serving them to a
+    // signed-in client shows them who else Pexalo works with and what those
+    // firms bought. Deleting the other client's record would hide it only
+    // until the next one is added, so the rule lives here instead: with
+    // PORTAL_CLIENT_REF set, a client-role session can reach exactly one
+    // workspace and nothing else.
+    //
+    // Enforced in the proxy rather than per page because it has to cover the
+    // API too — a workspace whose pages are blocked but whose /api/clients/...
+    // routes answer is not confined, it is merely inconvenient to browse.
+    //
+    // The env var is read directly rather than imported: proxy runs ahead of
+    // the app and should not depend on its modules.
+    const only = process.env.PORTAL_CLIENT_REF?.trim();
+    if (only && role !== "admin") {
+      const scoped =
+        pathname.match(/^\/client\/([^/]+)/) ??
+        pathname.match(/^\/api\/clients\/([^/]+)/);
+      if (scoped && decodeURIComponent(scoped[1]) !== only) {
+        // 404, not 403. "You may not see this" still confirms it exists.
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+        const home = req.nextUrl.clone();
+        home.pathname = `/client/${only}`;
+        home.search = "";
+        return NextResponse.redirect(home);
+      }
+    }
+
     // Carried as a header so server components could read it without
     // re-verifying; currentRole() re-verifies anyway, this is a convenience.
     const res = NextResponse.next();

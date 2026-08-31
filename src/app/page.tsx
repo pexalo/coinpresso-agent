@@ -1,14 +1,26 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { EntityLogo, ModeBadge, PoweredBy, ThemeToggle } from "@/components/Brand";
-import { CLIENT_LIST, clientModules } from "@/lib/clients";
+import { clientModules, tenantRef, visibleClients } from "@/lib/clients";
+import { isAdmin } from "@/lib/portal-session";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Pexalo HQ — the client list. Every client owns a workspace; what is inside it
  * is decided by the modules on their record, not by a shared template.
+ *
+ * On a single-tenant deployment a client never sees this page at all: they are
+ * sent straight into their own workspace, because the roster is Pexalo's
+ * commercial information, not theirs.
  */
-export default function HqPage() {
+export default async function HqPage() {
+  const admin = await isAdmin();
+  const only = tenantRef();
+  if (!admin && only) redirect(`/client/${only}`);
+
+  const clients = visibleClients(admin);
+
   return (
     <>
     <div
@@ -20,8 +32,8 @@ export default function HqPage() {
         <h1 className="text-2xl font-extrabold tracking-tight">Clients</h1>
         <p className="text-[var(--ink-3)] text-sm mt-1 max-w-2xl">
           Each client gets their own workspace. The modules on their record
-          decide what is in it — these two share an account model and a job
-          queue, and almost no screens.
+          decide what is in it — they share an account model and a job queue,
+          and almost no screens.
         </p>
         </div>
         <div className="flex items-center gap-3">
@@ -31,7 +43,7 @@ export default function HqPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
-        {CLIENT_LIST.map((c) => {
+        {clients.map((c) => {
           const mods = clientModules(c);
           const built = mods.filter((m) => m.built).length;
           return (

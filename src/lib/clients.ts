@@ -188,8 +188,47 @@ export const CLIENTS: Record<string, Client> = {
 
 export const CLIENT_LIST = Object.values(CLIENTS);
 
+/**
+ * The one client a client-role session is allowed to see, when the deployment
+ * is dedicated to them.
+ *
+ * WHY THIS EXISTS. The client list at "/" is Pexalo's own HQ view — every
+ * client, their engagement, and the modules they bought. Serving that to a
+ * signed-in client tells them who else Pexalo works with and what those firms
+ * are paying for. Liam opening his dashboard and reading Geo One's service
+ * scope is not a cosmetic problem, and deleting Geo One's record would only
+ * hide it until the next client is added.
+ *
+ * So: set PORTAL_CLIENT_REF on a single-tenant deployment. The client role is
+ * then confined to that one workspace and the roster is never rendered for
+ * them; the Pexalo role still sees everything, because for Pexalo the list is
+ * the point. Unset — as on a laptop — nothing changes.
+ */
+export function tenantRef(): string | null {
+  return process.env.PORTAL_CLIENT_REF?.trim() || null;
+}
+
+/** What a given role may see. Pexalo sees the roster; a client sees themselves. */
+export function visibleClients(isAdmin: boolean): Client[] {
+  const only = tenantRef();
+  if (isAdmin || !only) return CLIENT_LIST;
+  return CLIENT_LIST.filter((c) => c.ref === only);
+}
+
 export function getClient(ref: string): Client | null {
   return CLIENTS[ref] ?? null;
+}
+
+/**
+ * Reachable by THIS session, as opposed to merely existing. Routes use this so
+ * a client cannot open another client's workspace by typing the URL — the
+ * answer is a 404, the same as a client that does not exist, because "you are
+ * not allowed to see this" still confirms it is there.
+ */
+export function getVisibleClient(ref: string, isAdmin: boolean): Client | null {
+  const only = tenantRef();
+  if (!isAdmin && only && ref !== only) return null;
+  return getClient(ref);
 }
 
 export function clientModules(client: Client): ModuleDef[] {

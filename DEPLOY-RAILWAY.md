@@ -95,6 +95,7 @@ every call site, and the seam is one file.
 | `DATA_DIR` | **Yes on Railway** | Volume mount path, e.g. `/data` |
 | `PORTAL_PASSCODE` | **Yes in production** | Coinpresso team login |
 | `PORTAL_ADMIN_PASSCODE` | **Yes in production** | Pexalo login — billing figure, snapshot restore |
+| `PORTAL_CLIENT_REF` | **Yes on a client deployment** | Confines the client login to one workspace, e.g. `coinpresso`. Without it they can see the whole client roster. |
 | `BILLING_MARKUP_PCT` | No | Default 10; shown to the admin login only |
 | `BILLING_HOSTING_USD` | No | Flat monthly hosting allowance on the admin billing card; 0 = included in retainer |
 | `ANTHROPIC_API_KEY` | Direct mode | Shared, project level |
