@@ -11,6 +11,7 @@ import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
 import type { GateState } from "@/lib/approval";
+import { statusView, TONE_CLASS } from "@/lib/run-status";
 import type { ContentTypeId } from "@/lib/blog";
 
 interface RunResponse extends Run {
@@ -325,36 +326,44 @@ export default function RunDetail({
         </div>
       )}
 
+      {run.status === "failed" && (() => {
+        // One banner for both kinds of failure, worded by whether a draft
+        // exists, with the retry right here — it used to live only in the
+        // empty-article placeholder, so a run that HAD an article showed the
+        // article and no way to finish it.
+        const v = statusView("failed", Boolean(run.draft));
+        return (
+          <div className={`rounded-lg border px-4 py-3.5 ${TONE_CLASS[v.tone]}`}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="text-[12.5px] leading-relaxed max-w-3xl">
+                <strong className="font-semibold">{v.label}.</strong> {v.detail}
+              </div>
+              <div className="flex flex-col items-end gap-1 flex-none">
+                <button
+                  onClick={retry}
+                  disabled={retrying}
+                  className="text-[12.5px] font-semibold px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
+                >
+                  {retrying ? "Retrying…" : "Retry from where it failed"}
+                </button>
+                {retryMsg && (
+                  <span className="text-[11.5px] text-[var(--danger)]">{retryMsg}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <div className="space-y-5 min-w-0">
           {run.draft && run.rendered ? (
             <ArticleView draft={run.draft} rendered={run.rendered} />
           ) : (
-            <div className="card p-10 text-center text-[var(--ink-3)] text-sm space-y-4">
-              <div>
-                {run.status === "failed"
-                  ? "The pipeline failed before a draft was produced. The stage that failed is on the right."
-                  : "No draft yet."}
-              </div>
-              {run.status === "failed" && (
-                <div className="space-y-2">
-                  <button
-                    onClick={retry}
-                    disabled={retrying}
-                    className="text-[12.5px] font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
-                  >
-                    {retrying ? "Retrying…" : "Retry from where it failed"}
-                  </button>
-                  <p className="text-[11px] text-[var(--ink-4)] max-w-sm mx-auto">
-                    Stages that finished are kept, not re-bought — a writer
-                    failure retries only the writer, on research already paid
-                    for.
-                  </p>
-                  {retryMsg && (
-                    <p className="text-[11.5px] text-[var(--danger)]">{retryMsg}</p>
-                  )}
-                </div>
-              )}
+            <div className="card p-10 text-center text-[var(--ink-3)] text-sm">
+              {run.status === "failed"
+                ? "No article was produced. The stage that failed is in the timeline on the right."
+                : "No draft yet."}
             </div>
           )}
           <ReviewPanel review={run.review} linkCheck={run.linkCheck} />

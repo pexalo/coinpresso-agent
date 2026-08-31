@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CONTENT_TYPES, PILLARS } from "@/lib/blog";
 import type { ContentTypeId } from "@/lib/blog";
 import type { RunStatus, StageId, StageStatus } from "@/lib/types";
+import { statusView, TONE_CLASS } from "@/lib/run-status";
 import GateChip from "@/components/GateChip";
 import type { Approver, GateState } from "@/lib/approval";
 
@@ -28,21 +29,6 @@ interface RunSummary {
   stages: Array<{ id: StageId; status: StageStatus }>;
 }
 
-const STATUS_STYLE: Record<RunStatus, string> = {
-  queued: "text-[var(--ink-3)] border-[var(--line)] bg-[var(--surface)]",
-  running: "text-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/10",
-  needs_review: "text-[var(--warning)] border-[var(--warning)]/30 bg-[var(--warning)]/10",
-  approved: "text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10",
-  failed: "text-[var(--danger)] border-[var(--danger)]/30 bg-[var(--danger)]/10",
-};
-
-const STATUS_LABEL: Record<RunStatus, string> = {
-  queued: "Queued",
-  running: "Running",
-  needs_review: "Ready to read",
-  approved: "Approved",
-  failed: "Failed",
-};
 
 /** The cadence the module is built around. Below it the cluster stalls. */
 const TARGET_MIN = 5;
@@ -296,11 +282,20 @@ export default function BlogQueuePage() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLE[r.status]}`}
-                      >
-                        {STATUS_LABEL[r.status]}
-                      </span>
+                      {(() => {
+                        // A failed run that HAS a draft is a finished article
+                        // waiting on a cheap retry, not a lost one — see
+                        // run-status.ts for why this distinction earns its
+                        // own label and a non-red colour.
+                        const v = statusView(r.status, r.wordCount !== null);
+                        return (
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${TONE_CLASS[v.tone]}`}
+                          >
+                            {v.label}
+                          </span>
+                        );
+                      })()}
                       {pillar && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg)] border border-[var(--line)] text-[var(--ink-2)]">
                           {pillar.name}

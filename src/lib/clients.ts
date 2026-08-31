@@ -176,14 +176,12 @@ export const CLIENTS: Record<string, Client> = {
       },
     ],
   },
-  "geo-one": {
-    ref: "geo-one",
-    name: "Geo One",
-    engagement: "AI visibility and content for Malaysian SMEs",
-    accent: "#4E78FF",
-    modules: ["visibility", "content-feed", "citations", "authority"],
-    campaigns: [],
-  },
+  // Geo One's record lived here as a second client to prove the module
+  // composition was not a template. It had nothing built behind it, and this
+  // deployment is Coinpresso's — so it was a real client's name and service
+  // scope on another client's dashboard, for no benefit. Removed. When Geo
+  // One's tooling is built it gets its own deployment (or lives in HQ), and
+  // PORTAL_CLIENT_REF keeps a client from ever seeing a roster regardless.
 };
 
 export const CLIENT_LIST = Object.values(CLIENTS);

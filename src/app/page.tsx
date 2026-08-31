@@ -32,8 +32,7 @@ export default async function HqPage() {
         <h1 className="text-2xl font-extrabold tracking-tight">Clients</h1>
         <p className="text-[var(--ink-3)] text-sm mt-1 max-w-2xl">
           Each client gets their own workspace. The modules on their record
-          decide what is in it — they share an account model and a job queue,
-          and almost no screens.
+          decide what is in it.
         </p>
         </div>
         <div className="flex items-center gap-3">
@@ -99,18 +98,9 @@ export default async function HqPage() {
         })}
       </div>
 
-      <div className="card p-5">
-        <h2 className="font-bold text-sm mb-2">Why this is a list and not a template</h2>
-        <p className="text-[12px] text-[var(--ink-2)] leading-relaxed max-w-3xl">
-          The tempting shape is one dashboard with fixed tabs and different data
-          behind them. Coinpresso is the proof it does not hold: there is no site
-          to publish to, no visibility score to track and no citations to match,
-          because the output goes to third-party newswires. It needs a production
-          queue, and Geo One does not. Composing each workspace from the modules
-          a client actually bought is what stops every future client having to be
-          shaped like the first one.
-        </p>
-      </div>
+      {/* The design note that used to sit here compared Coinpresso against a
+          second client to make its point. With one client on this deployment
+          the comparison is gone and the note read as a lecture, so it went. */}
     </div>
     <PoweredBy />
     </>

@@ -8,6 +8,7 @@ import GateChip from "@/components/GateChip";
 import type { GateState } from "@/lib/approval";
 import { PUBLICATIONS } from "@/lib/publications";
 import type { PublicationId, RunStatus, StageId, StageStatus } from "@/lib/types";
+import { statusView, TONE_CLASS } from "@/lib/run-status";
 
 interface RunSummary {
   id: string;
@@ -24,21 +25,6 @@ interface RunSummary {
   stages: Array<{ id: StageId; status: StageStatus }>;
 }
 
-const STATUS_STYLE: Record<RunStatus, string> = {
-  queued: "text-[var(--ink-3)] border-[var(--line)] bg-[var(--surface)]",
-  running: "text-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/10",
-  needs_review: "text-[var(--warning)] border-[var(--warning)]/30 bg-[var(--warning)]/10",
-  approved: "text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10",
-  failed: "text-[var(--danger)] border-[var(--danger)]/30 bg-[var(--danger)]/10",
-};
-
-const STATUS_LABEL: Record<RunStatus, string> = {
-  queued: "Queued",
-  running: "Running",
-  needs_review: "Ready for review",
-  approved: "Approved",
-  failed: "Failed",
-};
 
 function StageDots({ stages }: { stages: RunSummary["stages"] }) {
   const color = (s: StageStatus) =>
@@ -195,11 +181,16 @@ export default function QueuePage() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_STYLE[r.status]}`}
-                  >
-                    {STATUS_LABEL[r.status]}
-                  </span>
+                  {(() => {
+                    const v = statusView(r.status, r.wordCount !== null);
+                    return (
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${TONE_CLASS[v.tone]}`}
+                      >
+                        {v.label}
+                      </span>
+                    );
+                  })()}
                   <span className="text-[11px] text-[var(--ink-3)]">
                     {PUBLICATIONS[r.brief.publication]?.name ??
                       r.brief.publication}
