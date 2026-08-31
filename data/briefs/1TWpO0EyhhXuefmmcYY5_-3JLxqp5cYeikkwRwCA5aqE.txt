@@ -1,0 +1,130 @@
+Entity Resolution for Tokens: Helping AI Tell Your Project Apart From Copycats and Scams
+1. SEO Brief
+Element
+Recommendation
+
+Exact title
+Entity Resolution for Tokens: Helping AI Tell Your Project Apart From Copycats and Scams
+
+Primary keyword
+crypto token entity resolution
+
+Secondary keywords
+token disambiguation AI, crypto ticker collision, contract address SEO, Web3 entity resolution, token identity manifest, AI crypto scams
+
+Search intent
+Technical and diagnostic
+
+Audience
+Token founders, technical marketers, protocol teams, wallet/explorer partners, and Web3 SEOs
+
+Recommended length
+2,100–2,600 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-token-entity-resolution
+
+Meta title
+Token Entity Resolution: Prevent AI Copycat Confusion
+
+Meta description
+Help AI distinguish your token from copycats by connecting its name and ticker to the correct chain ID, contract address, explorer, and official sources.
+
+2. SERP Landscape and Gap
+Most results discuss brand entities or GEO broadly. They do not solve the crypto-specific identity problem: a ticker is not a unique identifier. The same name or symbol may exist on multiple chains, a token may migrate to a new contract, bridged representations may coexist with the canonical asset, and scam deployments may copy the legitimate project’s metadata.
+
+Technical standards already provide components of a better identity key. CAIP-2 defines blockchain identifiers, while CAIP-19 defines asset identifiers that combine a chain identifier with an asset namespace and reference.1 2 The content gap is a marketer-friendly explanation of how to propagate these identifiers across owned and third-party surfaces so search and retrieval systems have less ambiguity to resolve.
+3. Unique Coinpresso Angle
+A token should be described as a coordinate, not a keyword: namespace + chain ID + contract address + version status.
+
+This article should introduce a Token Identity Manifest that distinguishes the canonical token from wrapped assets, bridged versions, deprecated contracts, testnet deployments, and impostors. Unlike the broader entity-footprint article, this piece is narrowly about asset-level resolution and the lifecycle of token identifiers.
+4. Why This Article Can Win
+The recommendation has strong information gain because it turns an abstract AI problem into a deterministic data-governance task. It should explain that better identity anchors can reduce ambiguity, but they cannot force an LLM to “mathematically verify” a token or eliminate hallucinations. AI-enabled scam activity also makes the subject commercially relevant, while reinforcing the need for careful, non-alarmist sourcing.3
+
+The article must not imply that a verified explorer contract proves safety, value, or regulatory approval. Verification typically establishes a relationship between deployed bytecode and published source; it does not guarantee the absence of vulnerabilities or malicious economics.
+5. Recommended Article Outline
+Article section
+What it should cover
+Target words
+
+1. Why Token Names and Tickers Fail as Identity Keys
+Explain collisions, clones, wrappers, migrations, and cross-chain duplicates.
+240
+
+2. Build the Canonical Token Coordinate
+Introduce chain namespace, chain ID, contract address, token standard, decimals, and network status.
+330
+
+3. Separate Canonical, Bridged, Wrapped, and Deprecated Assets
+Define explicit relationships and migration dates; show how vague “same token” language creates errors.
+320
+
+4. Create the Token Identity Manifest
+Provide required and optional fields, versioning rules, ownership, and public location.
+420
+
+5. Propagate the Manifest Across the Web
+Align website, docs, explorer profiles, repositories, token lists, data aggregators, and announcements.
+330
+
+6. Mark Contract Migrations Without Erasing History
+Use dated notices, redirects, status labels, canonical pages, and immutable release records.
+280
+
+7. Monitor Copycat and Misattribution Queries
+Test name/ticker prompts, document incorrect outputs, and prioritize source corrections.
+260
+
+8. What Identity Resolution Cannot Prove
+Separate identity, code verification, security, liquidity, and investment suitability.
+230
+
+9. Conclusion and FAQ
+Provide a practical launch and migration checklist.
+250
+
+6. Original Asset or Methodology
+Coinpresso can publish a copyable Token Identity Manifest in JSON and human-readable table formats. Recommended fields include:
+
+Field group
+Example contents
+
+Canonical identity
+Project name, token name, symbol, official domain, issuer or governing entity
+
+Network coordinate
+CAIP-2 chain ID, contract address, token standard, decimals, mainnet/testnet status
+
+Relationships
+Canonical asset, wrapped representation, bridge, predecessor, successor, deprecated contract
+
+Verification
+Explorer URL, source repository, audit URL, deployment transaction, multisig or governance address
+
+Lifecycle
+Launch date, migration date, status, last verified date, change-log URL
+
+Official surfaces
+Docs, repository, governance forum, social profiles, supported token lists
+
+The article should label this as a proposed publishing template—not an industry standard or a guarantee of AI recognition.
+7. FAQ Section
+Why can two unrelated tokens share the same ticker? Symbols are labels rather than globally unique identifiers; the network and contract address are needed to disambiguate assets.
+
+What is the safest canonical identifier for an EVM token? Recommend identifying the chain and checksummed contract address together, with links to the official project page and explorer record.
+
+How should a project describe bridged or wrapped tokens? State the canonical asset, origin chain, destination chain, bridge or wrapper, contract address, and whether the representation is officially supported.
+
+What happens after a contract migration? Keep the old contract page accessible, label it deprecated, link both directions, publish dates, and update every official and third-party surface.
+
+Will a manifest stop AI hallucinations or scams? No. It creates clearer source material and reduces ambiguity, but platforms can still retrieve stale or misleading information.
+8. Conversion and Linking Plan
+Position Coinpresso as the partner that can audit token-identity consistency, produce the manifest, map migration and wrapper relationships, and coordinate corrections across owned content and priority third-party profiles.
+
+CTA banner Section: “Can AI and search platforms distinguish your canonical token from clones and deprecated contracts? Ask Coinpresso for a token identity audit.”
+
+Recommended internal links are How to Optimize Your Crypto Project's Entity Footprint for AI Search Engines, Schema Markup Checklist for Crypto Exchanges, Wallets, and DeFi Protocols, and Why AI Models Are Skeptical of Crypto Projects (and How to Pass the Trust Gate).
+9. References

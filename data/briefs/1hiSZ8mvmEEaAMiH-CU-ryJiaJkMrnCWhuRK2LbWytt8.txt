@@ -1,0 +1,77 @@
+Fair Launch vs Presale vs Stealth Launch: Which Marketing Strategy Fits Which Model
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+fair launch vs presale vs stealth launch
+
+Semantic keywords
+crypto launch models, fair launch marketing, presale strategy, stealth launch Web3, token launch communication
+
+Intent and audience
+Informational/strategic; founders selecting a launch and communications model.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/fair-launch-vs-presale-vs-stealth-launch
+
+Meta title
+Fair Launch vs Presale vs Stealth Launch: Marketing Fit Guide
+
+Meta description
+Compare fair-launch, presale, and stealth-launch communication strategies by evidence, community readiness, access rules, disclosure needs, and post-launch obligations.
+
+2. SERP Gap
+Most explainers define the models but treat marketing as the same hype engine. They do not show how each model changes the promise, access process, proof burden, and post-launch relationship with the community.
+3. Unique Coinpresso Angle
+Match the marketing promise to the allocation mechanism. The article uses a launch-model fit matrix so no campaign claims fairness, access, scarcity, or decentralization beyond what the design actually supports.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Define the models without marketing spin
+Clarify allocation, disclosure, and access differences.
+
+2
+Map the promise to the mechanism
+Explain what a team can credibly say about fairness, access, community, and timing.
+
+3
+Fair-launch communication playbook
+Focus on rules, anti-sybil policies, readiness, and transparent documentation.
+
+4
+Presale communication playbook
+Focus on eligibility, allocation, terms, risk, and evidence hubs.
+
+5
+Stealth-launch communication playbook
+Focus on information asymmetry, disclosure timing, and safe community handover.
+
+6
+Plan the post-launch obligation
+Set expectations for support, updates, liquidity/product context, and community feedback.
+
+7
+Conclusion and FAQ
+Provide a launch-model fit matrix.
+
+5. FAQ Section
+Is a fair launch always fairer than a presale? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. When does a presale make strategic sense? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What are the risks of a stealth launch? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. How does launch model affect community management? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Can a project switch launch models? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential presale-marketing partner that can structure evidence, content, channel strategy, measurement, and communications workflows. Avoid promising a raise, listing, ROI, or token-performance outcome.
+
+CTA banner Section: “Your marketing claims must match the launch mechanics. Ask Coinpresso to align your token-launch narrative, evidence, and community plan.”
+
+Recommended internal links: Link to Presale Marketing Timeline, Whitelist and Allowlist Campaigns, and Presale Marketing for Layer-1s vs Memecoins vs RWA Tokens.
+
+Guardrails: Do not describe any model as inherently compliant, risk-free, or fair without facts that support the claim. Token-sale communications are jurisdiction- and design-dependent and require qualified legal review.

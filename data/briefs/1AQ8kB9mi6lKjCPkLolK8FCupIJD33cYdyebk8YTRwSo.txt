@@ -1,0 +1,109 @@
+How Coinbase & Kraken Dominate AI Citations — and What Smaller Projects Can Copy
+1. SEO Brief
+Element
+Recommendation
+
+Exact title
+How Coinbase & Kraken Dominate AI Citations — and What Smaller Projects Can Copy
+
+Primary keyword
+Coinbase Kraken AI citations
+
+Secondary keywords
+crypto AI visibility, crypto GEO case study, exchange AI citations, LLM citation strategy, Coinbase AI search, Kraken AI search
+
+Search intent
+Informational, comparative, and strategic
+
+Audience
+Crypto founders, exchange marketers, PR teams, SEO leads, and compliance-content owners
+
+Recommended length
+2,300–2,800 words
+
+Funnel stage
+Awareness to consideration
+
+Proposed slug
+/coinbase-kraken-ai-citations
+
+Meta title
+Why Coinbase & Kraken Lead Crypto AI Citations
+
+Meta description
+See how Coinbase and Kraken built different AI citation moats—and which evidence, query niches, and publishing practices smaller projects can realistically copy.
+
+2. SERP Landscape and Gap
+Current coverage reports that Coinbase and Kraken lead crypto AI citations, then jumps quickly to generic GEO advice. The 5W Crypto & Digital Assets AI Visibility Index tested more than 65 consumer-intent prompts across five AI surfaces and estimated Coinbase at 13% citation share and Kraken at 9% in Q1 2026.1 Those figures are useful but should be presented as results from one disclosed prompt panel—not as a universal market share measurement.
+
+The missing analysis is how the two moats differ. Coinbase is associated with scale, U.S. availability, regulatory and public-company evidence; Kraken is associated with longevity, security, and proof-of-reserves narratives in the 5W analysis.1 Smaller projects cannot reproduce those histories, but they can copy the publishing mechanics and target narrower recommendation contexts.
+3. Unique Coinpresso Angle
+Do not copy the giants’ breadth; copy their evidence architecture and find a prompt wedge they do not own.
+
+The article should decompose each brand’s citation moat into five layers—category association, verifiable evidence, third-party repetition, query coverage, and freshness—then show smaller projects how to win a narrow set of high-fit prompts. This is more actionable than another general article about how exchanges are evaluated.
+4. Why This Article Can Win
+The article combines a recognizable case study with a realistic challenger strategy. It should reproduce the source methodology clearly, including prompt count, platforms, time period, and the index’s own disclaimer that citation share is not a safety or investment ranking.1
+
+Coinpresso should avoid suggesting that machine-readable compliance documents alone create citations. The stronger argument is cumulative: clear first-party evidence gives journalists, reviewers, directories, and search-grounded systems something consistent to reference. The article should also distinguish what smaller projects can copy from structural advantages they cannot copy, such as age, market scale, or public-company reporting.
+5. Recommended Article Outline
+Article section
+What it should cover
+Target words
+
+1. What the 22% Figure Actually Measures
+Explain the 5W prompt panel, its scope, timing, platforms, and limits.
+260
+
+2. Coinbase’s Citation Moat
+Break down category recognition, public disclosures, regulatory footprint, educational coverage, and third-party repetition.
+350
+
+3. Kraken’s Different Citation Moat
+Analyze longevity, security narrative, proof-of-reserves content, comparison coverage, and niche ownership.
+350
+
+4. The Five-Layer Citation-Moat Model
+Category association, evidence, independent corroboration, prompt coverage, and freshness.
+360
+
+5. What Smaller Projects Cannot Copy
+Be explicit about structural advantages: history, licenses, user base, public-company reporting, and press volume.
+250
+
+6. Find a Winnable Prompt Wedge
+Target use case, chain, jurisdiction, audience, asset type, integration, or technical capability rather than “best exchange” broadly.
+380
+
+7. Build Evidence Modules Around That Wedge
+Create dated, extractable pages for fees, availability, security, audits, limitations, and eligibility.
+330
+
+8. Earn Independent Repetition
+Coordinate PR, reviews, partnerships, directories, and expert commentary without manufacturing consensus.
+300
+
+9. Measurement, Conclusion, and FAQ
+Track model-level mentions, citations, accuracy, and niche recommendation coverage.
+300
+
+6. Original Asset or Methodology
+Create a Crypto Citation Moat Decomposition Canvas. For each competitor and target prompt cluster, record category association, supporting first-party evidence, independent sources, content freshness, citation language, and unresolved weaknesses. Add a “copyable / non-copyable” column so smaller brands do not waste resources trying to imitate scale rather than strategy.
+
+A second original asset can be a small Prompt Wedge Map illustrating how a challenger narrows from “best crypto exchange” to more defensible contexts such as an eligible jurisdiction, a particular user type, or a verified product capability.
+7. FAQ Section
+Do Coinbase and Kraken really account for 22% of crypto AI citations? State that this is the estimate from 5W’s Q1 2026 test set of 65+ consumer prompts across several AI platforms, not a universal census.1
+
+Why might Coinbase and Kraken appear frequently? Discuss brand history, independently verifiable information, category association, regulatory/security narratives, and repeated third-party coverage without claiming access to proprietary model weights.
+
+Can a smaller token or exchange outrank Coinbase in AI answers? It may win narrower, better-matched prompts, but should not expect to reproduce broad incumbent recognition quickly.
+
+What is a prompt wedge? A focused recommendation context in which the smaller project has a documented, meaningful advantage and sufficient evidence.
+
+What should a project measure after publishing evidence modules? Track prompt-specific mentions, citations, recommendation context, accuracy, and model variance over repeated tests.
+8. Conversion and Linking Plan
+Position Coinpresso as the partner that can analyze the incumbent citation landscape, identify winnable prompt wedges, convert operational evidence into usable content, and build an ethical distribution plan.
+
+CTA banner Section: “You do not need Coinbase-scale authority to own a valuable AI query niche. Ask Coinpresso to identify your most defensible prompt wedge.”
+
+Recommended internal links are How AI Search Engines Evaluate DeFi and Exchange Websites, Share of Model Voice: The New KPI for Crypto Brands in ChatGPT, Gemini & Claude, and Web3 GEO for Exchanges: Getting Cited When Users Ask “Which Crypto Exchange Should I Use?”.
+9. References

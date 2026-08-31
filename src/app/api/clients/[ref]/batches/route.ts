@@ -12,6 +12,7 @@ import {
   saveBatch,
 } from "@/lib/batch";
 import type { Brief, PublicationId } from "@/lib/types";
+import type { ContentBrief } from "@/lib/content-brief";
 import type { ContentTypeId } from "@/lib/blog";
 
 export const runtime = "nodejs";
@@ -22,6 +23,25 @@ export const dynamic = "force-dynamic";
  * module that owns the track being asked for. A client with Crypto PR but not
  * the blog module gets a 404 on a blog batch even though the URL is the same.
  */
+/**
+ * Only http(s), and only if it parses.
+ *
+ * Both of these end up in a model prompt, and one of them is deliberately
+ * described there as something the model must not cite. Letting an arbitrary
+ * string through would put unparsed text in that position, which is the one
+ * place a fabricated "URL" would be hardest to spot.
+ */
+function httpUrl(raw: string | undefined): string | undefined {
+  const v = raw?.trim();
+  if (!v) return undefined;
+  try {
+    const u = new URL(v);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function gate(ref: string, track: "wire" | "blog") {
   const client = getClient(ref);
   if (!client) return { error: "Unknown client" as const };
@@ -65,6 +85,9 @@ export async function POST(
       pillar?: string;
       contentType?: string;
       notes?: string;
+      referenceUrl?: string;
+      linkTarget?: string;
+      contentBrief?: ContentBrief;
     }>;
   };
   try {
@@ -107,6 +130,9 @@ export async function POST(
         pillarHub: pillar?.hub,
         contentType: type?.id ?? "guide",
         notes: i.notes,
+        referenceUrl: httpUrl(i.referenceUrl),
+        linkTarget: httpUrl(i.linkTarget),
+        contentBrief: i.contentBrief,
       };
     });
   } else {

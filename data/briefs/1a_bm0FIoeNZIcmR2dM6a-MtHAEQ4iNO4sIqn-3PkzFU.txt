@@ -1,0 +1,77 @@
+How to Get a Journalist to Actually Read Your Crypto Pitch (Not Just Your PR Firm)
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto journalist pitching
+
+Semantic keywords
+how to pitch crypto reporters, Web3 media relations, crypto PR pitch, journalist source utility, crypto story angle
+
+Intent and audience
+Informational; founders and PR teams improving earned-media outreach.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/how-to-pitch-crypto-journalists
+
+Meta title
+How to Pitch Crypto Journalists: A Source-First Framework
+
+Meta description
+Help reporters verify a real crypto story with a source-first pitch: what changed, why it matters, who can speak, and where the evidence lives.
+
+2. SERP Gap
+Most pitching advice focuses on subject lines and follow-up cadence. It misses the crypto-specific need for verifiable source material: contract information, clear funding terms, data methodology, regulatory context, limitations, and access to a decision-maker.
+3. Unique Coinpresso Angle
+A pitch is read when it reduces reporting work. Build a “source utility” package that makes the event timely, verifiable, contextual, and easy to investigate—whether contact comes from a founder or a PR representative.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+What journalists need from a crypto pitch
+Explain relevance, novelty, evidence, context, and a responsive source.
+
+2
+The source-utility test
+Ask whether the pitch gives a reporter a reportable fact, a credible voice, and independent ways to verify.
+
+3
+Build the evidence shelf
+Link to primary documents, dated data, audit scope, official announcements, and caveats.
+
+4
+Write the 150-word brief
+Structure: news, significance, proof, source availability, and why this reporter.
+
+5
+Match the pitch to the beat
+Differentiate markets, regulation, DeFi, infrastructure, gaming, and culture reporters.
+
+6
+Follow up without creating noise
+Use a brief, useful update and respect a reporter’s stated preferences.
+
+7
+Conclusion and FAQ
+Offer a reusable source-utility checklist.
+
+5. FAQ Section
+What makes a crypto story newsworthy? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Should the founder send the pitch directly? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How long should a crypto pitch be? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What evidence should accompany a funding or partnership pitch? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How many follow-ups are appropriate? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “A credible crypto story needs more than a polished email. Ask Coinpresso to turn your evidence into a journalist-ready source package.”
+
+Recommended internal links: Link to Founder-Led PR vs Agency PR, Building a Crypto Media List, and Crypto PR Timing.
+7. Source and Production Guardrails
+Do not promise response or pickup rates. Journalist-preference surveys are directional and should not replace observing a reporter’s stated beat, submission rules, and current work.

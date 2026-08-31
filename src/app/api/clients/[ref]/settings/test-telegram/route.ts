@@ -21,11 +21,29 @@ export async function POST(
     return NextResponse.json({ error: "Unknown client" }, { status: 404 });
   }
 
+  // Which campaign's report to send, and therefore WHICH CHAT. A campaign id
+  // means the campaign's own configured chat, strictly — sendTelegram refuses
+  // rather than falling back, because the payload is that client's figures.
+  // No campaign id = a plain connectivity test to Coinpresso's internal chat,
+  // which never carries a report.
+  let campaignId: string | undefined;
+  try {
+    const body = (await req.json()) as { campaignId?: string };
+    campaignId = body.campaignId || undefined;
+  } catch {
+    // No body — internal-chat test.
+  }
+
   const origin = new URL(req.url).origin;
-  const campaign = client.campaigns[0];
+  const campaign = campaignId
+    ? client.campaigns.find((c) => c.id === campaignId)
+    : undefined;
+  if (campaignId && !campaign) {
+    return NextResponse.json({ error: "Unknown campaign" }, { status: 404 });
+  }
   const report = campaign ? reportsFor(campaign.id)[0] : null;
 
-  const text = report
+  const text = report && campaign
     ? telegramDigest({
         campaign: `${campaign.name} ${campaign.ticker}`,
         reportingDay: report.reportingDay,
@@ -40,11 +58,16 @@ export async function POST(
           owner: a.owner,
           due: a.due,
         })),
-        url: `${origin}/client/${ref}/daily-report`,
+        url: `${origin}/client/${ref}/daily-report?campaign=${campaign.id}`,
       })
-    : `<b>${client.name}</b>\nTelegram delivery is connected. No report to send yet.`;
+    : campaign
+      ? `<b>${campaign.name}</b>\nTelegram delivery is connected for this campaign. No report to send yet.`
+      : `<b>${client.name}</b>\nInternal Telegram delivery is connected. Campaign reports go to each campaign's own chat, never this one.`;
 
-  const result = await sendTelegram(ref, text);
+  const result = await sendTelegram(ref, text, {
+    campaignId: campaign?.id,
+    campaignName: campaign?.name,
+  });
 
   const current = await readSettings(ref);
   await writeSettings(ref, {

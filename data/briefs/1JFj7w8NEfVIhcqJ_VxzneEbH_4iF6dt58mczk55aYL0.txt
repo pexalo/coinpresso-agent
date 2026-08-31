@@ -1,0 +1,77 @@
+Presale Red Flags Investors Actually Search For — and How to Preempt Them in Your Marketing
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto presale red flags
+
+Semantic keywords
+presale trust signals, crypto token sale due diligence, presale scam concerns, tokenomics transparency, crypto project risk disclosure
+
+Intent and audience
+Informational; founders and marketing teams building a credible token-sale information architecture.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-presale-red-flags-marketing
+
+Meta title
+Crypto Presale Red Flags: How to Address Investor Questions
+
+Meta description
+Address the crypto presale red flags people research with verifiable evidence, transparent risk disclosure, and a clear Trust & Safety information architecture.
+
+2. SERP Gap
+Existing pages list warning signs for buyers or publish defensive sales copy for projects. They rarely show teams how to create the underlying evidence and answer skepticism without hiding limitations.
+3. Unique Coinpresso Angle
+Preempt skepticism with an evidence map, not a “trust us” page. Coinpresso can recommend a Trust & Safety hub that pairs each recurring concern with a dated, verifiable source and a plain-language limitation.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+What people mean by “presale red flags”
+Separate legitimate due diligence questions from rumor and hype.
+
+2
+Build the investor-question inventory
+Collect recurring questions about team, contracts, allocation, liquidity, audits, utility, and timing.
+
+3
+Map each concern to evidence
+Link every claim to a primary source, date, owner, and scope.
+
+4
+Explain technical controls in plain language
+Describe, rather than exaggerate, multisigs, pauses, vesting, audits, and contract verification.
+
+5
+Publish limitations visibly
+State what is not final, not audited, unavailable, or subject to change.
+
+6
+Keep the hub current
+Add change logs, version labels, and correction routes.
+
+7
+Conclusion and FAQ
+Provide a presale evidence-map checklist.
+
+5. FAQ Section
+Which presale red flags should a project address first? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Can a project market an anonymous team responsibly? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. How should audit findings be communicated? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Does locked liquidity remove all risk? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What belongs on a presale Trust & Safety page? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential presale-marketing partner that can structure evidence, content, channel strategy, measurement, and communications workflows. Avoid promising a raise, listing, ROI, or token-performance outcome.
+
+CTA banner Section: “Do not bury the hard questions. Ask Coinpresso to turn presale due diligence concerns into a verifiable Trust & Safety content system.”
+
+Recommended internal links: Link to Locked Liquidity, Vesting & Audits, Referral and Bonus Structures in Presales, and MiCA and Presale Marketing.
+
+Guardrails: Avoid “guaranteed,” “risk-free,” “safe,” or return-focused statements. All material claims need a verifiable source, clear scope, and appropriate legal review; do not present marketing content as investment advice.

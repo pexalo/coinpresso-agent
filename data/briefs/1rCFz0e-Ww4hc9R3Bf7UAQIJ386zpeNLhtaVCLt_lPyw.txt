@@ -1,0 +1,87 @@
+Why ChatGPT and Perplexity Don't Cite Crypto Brands (And How to Fix It)
+
+Primary Keyword: why ChatGPT doesn't cite crypto brands
+
+Secondary Keywords: Perplexity crypto citations, AI search brand mentions Web3, get cited by ChatGPT crypto
+
+SERP Gap Analysis
+
+General articles exist about why ChatGPT doesn't cite brands (RedefineROI, Inc.com), typically pointing to lack of topical authority, thin content, or hallucinations. However, none address the specific invisible filters AI companies apply to crypto content due to YMYL (Your Money or Your Life) guidelines and active scam prevention training. The Reddit thread on r/Agentic_SEO reveals that "most brands aren't being cited simply because they are talking to Google's crawler rather than providing specific answers," but no one has applied this insight specifically to the crypto vertical.
+
+Unique Angle
+
+Reveal the "invisible YMYL filter" that AI engines apply specifically to crypto queries. Explain that AI models are actively trained to suppress crypto brands that lack traditional financial trust signals, and provide a technical roadmap to bypass these filters through entity resolution, structured data, and "safe citation" content strategies. Use the 5WPR data to show which brands do get cited and reverse-engineer why.
+
+Recommended Article Structure
+
+Section
+
+Title
+
+Focus
+
+1
+
+The Silent Suppression
+
+Why high-ranking SEO content is completely ignored by ChatGPT and Perplexity
+
+2
+
+The AI YMYL Filter for Crypto
+
+How OpenAI and Anthropic train models to handle financial/crypto queries with caution
+
+3
+
+The "Marketing Speak" Penalty
+
+Why AI engines reject promotional crypto jargon in favor of objective descriptions
+
+4
+
+Fragmented Entity Identity
+
+How docs on GitBook, code on GitHub, and marketing on .io confuses AI entity resolution
+
+5
+
+Lack of Third-Party Validation
+
+Why AI engines look for mentions on established financial sites
+
+6
+
+The "Extractable Formatting" Solution
+
+Tables, clear definitions, and comparison matrices that AI wants to cite
+
+7
+
+Building an AI-Friendly Knowledge Graph
+
+Connecting founders, protocol, and token into a cohesive entity
+
+8
+
+The "Safe Citation" Strategy
+
+Creating low-risk content (glossaries, objective comparisons) that AI feels safe citing
+
+9
+
+Technical Fix Summary
+
+Actionable steps to turn a suppressed crypto brand into a cited authority
+
+FAQ Section
+
+Q1: Why does ChatGPT recommend Coinbase but not my crypto exchange? ChatGPT cites Coinbase because it has strong entity recognition (public company, SEC filings, consistent brand definition across thousands of sources), objective data pages (fee structures, supported assets), and extensive third-party validation from mainstream financial media. Your exchange likely lacks one or more of these trust signals.
+
+Q2: Does paying for SEO help with AI search visibility? Traditional SEO and AI visibility are increasingly divergent. A page can rank #1 on Google but never be cited by ChatGPT. However, some SEO fundamentals (structured data, clear content hierarchy, topical authority) do benefit both. The key difference is that AI engines prioritize extractable, objective content over keyword-optimized marketing copy.
+
+Q3: Can I "prompt engineer" my way into AI citations? No. AI citations are determined by the model's training data and retrieval-augmented generation (RAG) systems, not by user prompts. You cannot manipulate which brands appear in AI answers. Instead, you must make your content the most authoritative, well-structured, and trustworthy source for your category.
+
+Q4: How do I know if ChatGPT is citing my crypto brand? Use AI visibility monitoring tools like Profound, Goodie, or Daydream to track how your brand appears across AI platforms. Alternatively, manually test 20-30 category-relevant prompts across ChatGPT, Perplexity, Claude, and Gemini to establish a baseline citation share.
+
+Q5: Is there a way to report incorrect AI citations about my crypto project? Most AI platforms have feedback mechanisms, but they are not reliable for brand management. The better strategy is to create such authoritative, well-structured content that AI engines naturally prefer your version of the truth over incorrect sources.

@@ -14,14 +14,28 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dataDir } from "./data-dir";
+import { DEFAULT_APPROVERS, DEFAULT_REQUIRED, type Approver } from "./approval";
 
-const DIR = path.join(process.cwd(), ".data", "settings");
+const DIR = dataDir("settings");
 
 export interface TelegramSettings {
   enabled: boolean;
   /** Never returned by the API. */
   botToken: string;
+  /** Coinpresso's OWN chat — internal notifications, never client reports. */
   chatId: string;
+  /**
+   * Where each campaign's daily report goes: campaignId → chat id.
+   *
+   * One bot, many chats. Each report carries one end client's revenue and spend
+   * figures under Coinpresso's name, so routing is strict: a campaign report is
+   * sent to that campaign's chat or NOT SENT. There is deliberately no fallback
+   * to the internal chat or to another campaign's — the failure mode of a
+   * fallback is Moonberg's revenue landing in someone else's Telegram, which is
+   * not an inconvenience but a breach. A missing mapping fails loudly instead.
+   */
+  campaignChats: Record<string, string>;
   connectedAt?: string;
   lastTestAt?: string;
   lastTestOk?: boolean;
@@ -65,9 +79,18 @@ export interface ClientSettings {
     reviewBlockers: boolean;
     weeklyDigest: boolean;
   };
+  /**
+   * The gate. Nothing reaches coinpresso.io or a publisher until `required`
+   * named people have signed the exact draft.
+   *
+   * This replaced a placeholder pair — a boolean and a comma-separated string of
+   * names — that nothing ever read. A setting that appears to govern publishing
+   * and does not is worse than no setting: it reads as a control that is on.
+   */
   approvals: {
-    requireApprovalBeforeExport: boolean;
-    approvers: string;
+    approvers: Approver[];
+    /** How many of them must sign. Cannot exceed the number of approvers. */
+    required: number;
   };
   integrations: {
     lookerStudioUrl: string;
@@ -80,7 +103,7 @@ export interface ClientSettings {
 
 export const DEFAULT_SETTINGS: ClientSettings = {
   delivery: {
-    telegram: { enabled: false, botToken: "", chatId: "" },
+    telegram: { enabled: false, botToken: "", chatId: "", campaignChats: {} },
     email: { enabled: false, recipients: "" },
   },
   schedule: {
@@ -95,8 +118,8 @@ export const DEFAULT_SETTINGS: ClientSettings = {
     weeklyDigest: false,
   },
   approvals: {
-    requireApprovalBeforeExport: true,
-    approvers: "",
+    approvers: DEFAULT_APPROVERS,
+    required: DEFAULT_REQUIRED,
   },
   integrations: {
     lookerStudioUrl: "",
@@ -111,6 +134,29 @@ export const DEFAULT_SETTINGS: ClientSettings = {
     appPassword: "",
   },
 };
+
+/**
+ * The gate configuration, made safe to use.
+ *
+ * Clamped rather than validated on write, because a stored file can be edited by
+ * hand and a `required` of 9 against three approvers would make every piece
+ * unreleasable with no visible cause. An empty approver list falls back to the
+ * defaults for the same reason — a gate with nobody who can pass it is a
+ * publishing outage, not a strict policy.
+ */
+export function gateConfig(s: ClientSettings): {
+  approvers: Approver[];
+  required: number;
+} {
+  const approvers = s.approvals.approvers.length
+    ? s.approvals.approvers
+    : DEFAULT_APPROVERS;
+  const required = Math.min(
+    Math.max(Math.floor(s.approvals.required) || 1, 1),
+    approvers.length
+  );
+  return { approvers, required };
+}
 
 function keyFor(clientRef: string): string {
   return path.join(DIR, `${clientRef}.json`);
@@ -130,10 +176,60 @@ function merge(base: ClientSettings, patch: Partial<ClientSettings>): ClientSett
   };
 }
 
+/**
+ * Repair a settings file written by an older version of this app.
+ *
+ * `approvals` used to be `{ requireApprovalBeforeExport: boolean, approvers:
+ * string }` — a placeholder nothing read. It is now `{ approvers: Approver[],
+ * required: number }`. A file saved before the change therefore carries a STRING
+ * where the UI calls `.map`, and the Settings page crashed on load with a stack
+ * trace rather than degrading.
+ *
+ * `merge` cannot catch this on its own: spreading a stored object over a default
+ * preserves whatever type the stored value had. Any field whose SHAPE changes
+ * needs a step like this one, and it belongs at the read boundary so every
+ * caller — page, API and gate — sees the corrected value.
+ *
+ * Deliberately falls back to defaults rather than throwing. The alternative is a
+ * client whose entire settings page is unreachable because of a field they never
+ * set, and whose publishing gate cannot be read.
+ */
+function normalise(s: ClientSettings): ClientSettings {
+  const stored = s.approvals as unknown as {
+    approvers?: unknown;
+    required?: unknown;
+  };
+
+  const approvers = Array.isArray(stored?.approvers)
+    ? (stored.approvers as unknown[])
+        .filter(
+          (a): a is Approver =>
+            typeof a === "object" &&
+            a !== null &&
+            typeof (a as Approver).id === "string" &&
+            typeof (a as Approver).name === "string"
+        )
+        .map((a) => ({ ...a, role: a.role ?? "" }))
+    : DEFAULT_APPROVERS;
+
+  return {
+    ...s,
+    approvals: {
+      approvers: approvers.length ? approvers : DEFAULT_APPROVERS,
+      required:
+        typeof stored?.required === "number" && stored.required > 0
+          ? stored.required
+          : DEFAULT_REQUIRED,
+    },
+  };
+}
+
 export async function readSettings(clientRef: string): Promise<ClientSettings> {
   try {
     const raw = await fs.readFile(keyFor(clientRef), "utf8");
-    return merge(DEFAULT_SETTINGS, JSON.parse(raw) as Partial<ClientSettings>);
+    return normalise(
+      merge(DEFAULT_SETTINGS, JSON.parse(raw) as Partial<ClientSettings>)
+    );
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -203,12 +299,33 @@ export interface TelegramResult {
  *  scheduler exists, by the daily send. */
 export async function sendTelegram(
   clientRef: string,
-  text: string
+  text: string,
+  opts?: {
+    /** Route to this campaign's configured chat. Absent = the internal chat. */
+    campaignId?: string;
+    campaignName?: string;
+  }
 ): Promise<TelegramResult> {
   const s = await readSettings(clientRef);
-  const { botToken, chatId } = s.delivery.telegram;
+  const { botToken, chatId: internalChat, campaignChats } = s.delivery.telegram;
   if (!botToken) return { ok: false, detail: "No bot token saved." };
-  if (!chatId) return { ok: false, detail: "No chat ID saved." };
+
+  // Strict routing: a campaign's report goes to that campaign's chat or
+  // nowhere. See the note on campaignChats — no fallback, by design.
+  let chatId: string;
+  if (opts?.campaignId) {
+    const mapped = campaignChats?.[opts.campaignId]?.trim();
+    if (!mapped) {
+      return {
+        ok: false,
+        detail: `No Telegram chat is configured for ${opts.campaignName ?? opts.campaignId}. This report carries that client's figures, so it is not sent anywhere else — add the campaign's chat ID in Settings → Delivery.`,
+      };
+    }
+    chatId = mapped;
+  } else {
+    if (!internalChat) return { ok: false, detail: "No chat ID saved." };
+    chatId = internalChat;
+  }
 
   // A blocked network or a proxy returns an HTML error page, and calling .json()
   // on it throws a parse error that tells the operator nothing useful.

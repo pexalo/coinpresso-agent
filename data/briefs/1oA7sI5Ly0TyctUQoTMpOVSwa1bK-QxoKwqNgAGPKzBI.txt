@@ -1,0 +1,107 @@
+Share of Model Voice: The New KPI for Crypto Brands in ChatGPT, Gemini & Claude
+1. SEO Brief
+Element
+Recommendation
+
+Exact title
+Share of Model Voice: The New KPI for Crypto Brands in ChatGPT, Gemini & Claude
+
+Primary keyword
+share of model voice
+
+Secondary keywords
+crypto AI visibility, LLM share of voice, ChatGPT brand mentions, Gemini citations, Claude citations, crypto GEO metrics
+
+Search intent
+Informational and strategic
+
+Audience
+Crypto CMOs, founders, SEO leads, PR teams, and growth analysts
+
+Recommended length
+2,000–2,500 words
+
+Funnel stage
+Awareness to consideration
+
+Proposed slug
+/share-of-model-voice-crypto-brands
+
+Meta title
+Share of Model Voice for Crypto Brands: 2026 KPI Guide
+
+Meta description
+Learn how crypto brands can measure mentions, citations, sentiment, accuracy, and recommendation share across ChatGPT, Gemini, and Claude.
+
+2. SERP Landscape and Gap
+The emerging SERP defines AI share of voice but is still dominated by general B2B marketing explanations and software-led measurement pages. Academic GEO research confirms that visibility in generated answers is multidimensional: citation position, attributed word count, relevance, and influence can all matter, making a single rank-style metric inadequate.1
+
+The opportunity is to publish the first crypto-specific measurement standard. Current results rarely distinguish between a passing brand mention, a source citation, an explicit recommendation, and a negatively framed warning. They also understate response volatility: different runs, prompt phrasings, model versions, search modes, and locations can produce different answers. Finally, they seldom connect AI visibility to outcomes that matter to Web3 teams, such as qualified visits, sign-ups, wallet connections, developer activity, or retained users.
+3. Unique Coinpresso Angle
+Treat Share of Model Voice as a portfolio of model-level metrics, not one vanity percentage.
+
+Coinpresso should introduce a measurement model that separates mention share, citation share, recommendation share, sentiment, factual accuracy, and prominence. Each metric should be reported by platform and prompt class, with confidence intervals or repeat-run variance. The distinctive value is methodological discipline: the article explains how to build a representative crypto prompt panel and how to avoid claiming progress from a handful of favorable screenshots.
+4. Why This Article Can Win
+The article offers information gain by turning an immature marketing term into a reproducible measurement protocol. This matters because ChatGPT Search, Gemini grounding, and Claude web search can all retrieve and cite web sources, but their triggering, retrieval, and presentation workflows are not identical.2 3 4
+
+The article should not claim that Share of Model Voice proves causation, predicts token price, or guarantees revenue. It should also avoid publishing universal benchmarks such as “25% is good” without a comparable category, fixed prompt set, model mix, geography, and measurement window.
+5. Recommended Article Outline
+Article section
+What it should cover
+Target words
+
+1. What Share of Model Voice Measures
+Define the category denominator and distinguish mentions from citations and recommendations.
+220
+
+2. Why One AI Screenshot Is Not a KPI
+Explain stochastic outputs, prompt sensitivity, search-mode differences, and model updates.
+240
+
+3. Build a Representative Crypto Prompt Panel
+Segment prompts by awareness, safety, comparison, fees, use case, geography, and buyer maturity.
+340
+
+4. The Six-Metric Crypto SoMV Scorecard
+Measure mention share, citation share, recommendation share, prominence, sentiment, and factual accuracy.
+380
+
+5. Normalize Results Across ChatGPT, Gemini & Claude
+Report each model separately before producing a weighted portfolio view.
+260
+
+6. Add Repeat Runs and Confidence Bands
+Recommend repeated sampling and disclose date, model, mode, account state, and location.
+250
+
+7. Connect Model Voice to Business Outcomes
+Use tagged AI referrals, assisted conversions, sign-ups, wallet connections, or developer actions without implying causation.
+300
+
+8. Reporting Cadence and Decision Rules
+Define monthly baseline, change thresholds, issue flags, and what teams should do when visibility or accuracy falls.
+250
+
+9. Conclusion and FAQ
+Summarize SoMV as a diagnostic portfolio, not a standalone success metric.
+260
+
+6. Original Asset or Methodology
+Coinpresso can publish a downloadable Crypto Share of Model Voice Scorecard with four components: a prompt inventory, a run log, a model-by-model scoring sheet, and a downstream-outcome worksheet. The prompt inventory should tag every query by category, funnel stage, geography, and risk sensitivity. The run log should record date, model, search mode, and exact prompt. The scorecard should distinguish being named from being cited or recommended, while the outcome sheet should map AI referrals and assisted actions without pretending to prove attribution.
+7. FAQ Section
+What is Share of Model Voice? Explain it as the proportion of relevant AI answers in which a brand appears relative to a defined competitor set, while noting that the exact formula must be disclosed.
+
+Is an AI mention the same as a citation? No. A mention names the brand; a citation links or attributes information to a source; a recommendation explicitly presents the brand as an option.
+
+How many prompts should a crypto brand track? Recommend a representative panel large enough to cover key intents rather than a universal number; disclose the sample and update it as products and user questions change.
+
+Why should ChatGPT, Gemini, and Claude be reported separately? Their search triggers, retrieval systems, interfaces, and citation behavior can differ, so an aggregate can hide platform-specific weaknesses.2 3 4
+
+Can Share of Model Voice be tied to wallet activity? It can be compared with tagged referral and conversion data, but correlation should not be described as proof that AI visibility caused the on-chain action.
+8. Conversion and Linking Plan
+Position Coinpresso as the partner that can design the prompt panel, run repeatable audits, diagnose inaccurate brand representation, and prioritize content or authority work. Avoid claiming that Coinpresso already owns a proprietary benchmark unless such a system and evidence exist.
+
+CTA banner Section: “Do you know how often AI models mention, cite, or recommend your crypto brand? Ask Coinpresso for a model-by-model visibility baseline.”
+
+Recommended internal links are Generative Engine Optimization for Crypto Projects: The Complete 2026 Guide, Why ChatGPT and Perplexity Don't Cite Crypto Brands (And How to Fix It), and The Crypto GEO Prompt List: What People Are Actually Asking ChatGPT About Your Category.
+9. References

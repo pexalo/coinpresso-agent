@@ -1,0 +1,139 @@
+Wikidata, Crunchbase & GitHub: The Off-Site Signals That Build AI Trust for Web3 Brands
+1. SEO Brief
+Element
+Recommendation
+
+Exact title
+Wikidata, Crunchbase & GitHub: The Off-Site Signals That Build AI Trust for Web3 Brands
+
+Primary keyword
+Web3 AI trust signals
+
+Secondary keywords
+Wikidata for crypto, Crunchbase Web3 profile, GitHub credibility crypto, crypto entity verification, AI search trust signals, Web3 GEO off-site signals
+
+Search intent
+Informational and implementation-focused
+
+Audience
+Web3 founders, communications teams, developer-relations leads, and technical SEOs
+
+Recommended length
+2,000–2,500 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/web3-ai-trust-signals-wikidata-crunchbase-github
+
+Meta title
+Wikidata, Crunchbase & GitHub for Web3 AI Trust
+
+Meta description
+Learn how Wikidata, Crunchbase, and GitHub can support a consistent, evidence-led Web3 identity—without treating profiles as shortcuts to AI citations.
+
+2. SERP Landscape and Gap
+Most GEO content recommends “building external authority” but does not explain that different third-party properties corroborate different kinds of facts. It frequently treats a Wikidata item, a Crunchbase profile, and a GitHub repository as interchangeable citations. They are not.
+
+Wikidata is a structured, collaborative knowledge base built around items, statements, qualifiers, references, and connections to other databases.1 GitHub repositories retain code and file revision history, with public repositories accessible on the internet.2 A company profile can help communicate corporate facts, but it is not a substitute for a regulator record, audit, or independently reported evidence. The missing article is a practical triangulation model that tells Web3 teams which claim belongs on which surface and how to keep the evidence aligned.
+3. Unique Coinpresso Angle
+Use off-site properties as a triangulated verification system, not as a checklist of profiles to create.
+
+The article should define three distinct evidence roles: Wikidata for an openly structured entity record, Crunchbase for company and funding context, and GitHub for observable technical provenance. It should add a fourth, non-negotiable layer—independent editorial, audit, or regulatory evidence—to prevent a circular network of self-authored profiles from being mistaken for proof.
+4. Why This Article Can Win
+The article offers practical value because it combines entity consistency with governance and ethics. It should explain that a Wikidata item needs to meet community policies and should not be created as promotional material. Similarly, a dormant GitHub repository or an unverified self-reported company profile can create more questions than confidence.
+
+Avoid claiming that any model directly queries a named database or that profiles guarantee AI visibility. Search-grounded assistants draw on dynamic sources and can cite different material across responses.3 4 The defensible goal is to reduce identity ambiguity and make factual claims easier for people, publishers, and systems to corroborate.
+5. Recommended Article Outline
+Article section
+What it should cover
+Target words
+
+1. Why Off-Site Signals Matter in Web3
+Explain fragmented identity across token, protocol, company, community, and code.
+230
+
+2. The Triangulation Principle
+Define the three sources’ different verification roles and the need for independent evidence.
+330
+
+3. Wikidata: Build a Structured Entity Record Ethically
+Cover statements, qualifiers, citations, aliases, official website, identifiers, and notability/COI caution.
+350
+
+4. Crunchbase: Clarify Corporate Context
+Align legal name, founders, funding, location, category, dates, and official links; disclose what is self-reported.
+270
+
+5. GitHub: Demonstrate Technical Provenance
+Discuss public repositories, version history, release notes, SECURITY.md, verified organisation links, and provenance limits.
+360
+
+6. Connect Surfaces Without Creating Circular Proof
+Use a consistent canonical description and official links, but reserve high-risk claims for primary or independent evidence.
+320
+
+7. Maintenance: The 90-Day Evidence Hygiene Routine
+Define ownership, updates, link checks, stale data review, security disclosures, and change logs.
+280
+
+8. Eligibility, Ethics, and Failure Modes
+Cover paid profile inflation, undisclosed conflicts, edited promotional records, inactive repos, and data conflicts.
+300
+
+9. Conclusion and FAQ
+Summarize the verification stack and next audit step.
+230
+
+6. Original Asset or Methodology
+Create a Web3 Off-Site Trust Map that maps each claim to the best evidence location.
+
+Claim
+Primary evidence
+Supporting off-site source
+Maintenance owner
+
+Canonical project identity
+Official site and docs
+Wikidata item where eligible
+Communications lead
+
+Funding and corporate facts
+Company announcement or filing
+Crunchbase profile
+Founder or operations lead
+
+Code and releases
+Official GitHub organisation/repository
+Release tags, commit history, security policy
+Engineering lead
+
+Contract and deployment data
+Chain explorer and deployment transaction
+Audit report / repository
+Engineering and security
+
+Security or regulatory claim
+Auditor or regulator record
+Credible editorial explanation
+Compliance lead
+
+The map should include last-reviewed date, source authority, claim risk, discrepancy status, and next action. It is a governance tool, not a promise of citation performance.
+7. FAQ Section
+Does every Web3 project need a Wikidata item? No. Teams should respect notability, verifiability, and conflict-of-interest guidance; forcing an ineligible item can be counterproductive.
+
+Is a Crunchbase profile proof that a project is legitimate? No. It can help provide consistent corporate context, but material claims require their appropriate primary or independent evidence.
+
+Why does GitHub matter for a crypto brand? A public repository can demonstrate code provenance, release history, and maintenance activity, provided it is clearly official and relevant to the product.
+
+Should all three sites use identical text? Use consistent core identifiers and facts, but adapt the information to the platform. Do not copy promotional text or omit necessary context.
+
+Will this get a project cited by ChatGPT, Gemini, or Claude? It may reduce ambiguity and improve corroboration, but citations depend on the prompt, available sources, model behavior, and current retrieval results.
+8. Conversion and Linking Plan
+Position Coinpresso as the partner that can inventory off-site claims, identify conflicts, create an evidence map, strengthen canonical connections, and develop an ongoing maintenance workflow. Do not offer to create promotional encyclopedia entries or manipulate community-maintained databases.
+
+CTA banner Section: “Are your company facts, token identity, and code provenance consistent across the web? Ask Coinpresso for an off-site Web3 evidence audit.”
+
+Recommended internal links are How to Optimize Your Crypto Project's Entity Footprint for AI Search Engines, Entity Resolution for Tokens: Helping AI Tell Your Project Apart From Copycats and Scams, and E-E-A-T for Crypto Websites in the Age of AI Search.
+9. References

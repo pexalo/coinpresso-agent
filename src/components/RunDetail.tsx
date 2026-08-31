@@ -5,10 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import RunTimeline from "@/components/RunTimeline";
 import ReviewPanel from "@/components/ReviewPanel";
 import ArticleView from "@/components/ArticleView";
+import ApprovalGate from "@/components/ApprovalGate";
 import SourceLedger from "@/components/SourceLedger";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
+import type { GateState } from "@/lib/approval";
 import type { ContentTypeId } from "@/lib/blog";
 
 interface RunResponse extends Run {
@@ -39,6 +41,7 @@ export default function RunDetail({
   const [pushing, setPushing] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   const [pushOk, setPushOk] = useState(false);
+  const [gate, setGate] = useState<GateState | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/clients/${ref}/runs/${id}`);
@@ -74,6 +77,49 @@ export default function RunDetail({
     };
   }, [load]);
 
+  const onGate = useCallback((g: GateState) => setGate(g), []);
+
+  const [retrying, setRetrying] = useState(false);
+  const [retryMsg, setRetryMsg] = useState<string | null>(null);
+
+  // Fire the retry, then fall back into the normal polling loop: the run's
+  // status leaves "failed", the settled check stops matching, and the page
+  // updates itself exactly as it does on a first attempt.
+  const retry = useCallback(async () => {
+    setRetrying(true);
+    setRetryMsg(null);
+    try {
+      const res = await fetch(`/api/clients/${ref}/runs/${id}/retry`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Retry failed to start.");
+      const tick = async () => {
+        const d = await load();
+        if (
+          d &&
+          d.status !== "needs_review" &&
+          d.status !== "approved" &&
+          d.status !== "failed"
+        ) {
+          setTimeout(tick, 2500);
+        } else {
+          setRetrying(false);
+        }
+      };
+      setTimeout(tick, 1500);
+    } catch (e) {
+      setRetrying(false);
+      setRetryMsg(e instanceof Error ? e.message : String(e));
+    }
+  }, [ref, id, load]);
+
+  // Mirrored from the approval panel so the release button has one source of
+  // truth. The server checks the same gate independently — this only decides
+  // whether the button is offered, never whether the release is allowed.
+  const gateOpen = gate?.canRelease ?? false;
+  const releasedByName = gate?.valid.map((s) => s.name).join(", ") || "unknown";
+
   async function approve() {
     setApproving(true);
     setExportMsg(null);
@@ -81,9 +127,13 @@ export default function RunDetail({
       const res = await fetch(`/api/clients/${ref}/runs/${id}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ approvedBy: "Liam" }),
+        body: JSON.stringify({ approvedBy: releasedByName }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        setExportMsg(data.error ?? "Release refused.");
+        return;
+      }
       if (data.docUrl) {
         setExportMsg(
           `Google Doc created${data.sheetUpdated ? " and the content calendar updated" : ""}.`
@@ -196,23 +246,32 @@ export default function RunDetail({
           {run.draft && run.status !== "approved" && (
             <button
               onClick={approve}
-              disabled={approving}
-              className="text-[12px] font-semibold px-4 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+              disabled={approving || !gateOpen}
+              title={
+                gateOpen
+                  ? "Everyone required has signed this draft."
+                  : "Needs its approvals first — see the panel below."
+              }
+              className="text-[12px] font-semibold px-4 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
             >
-              {approving ? "Approving…" : "Approve & export"}
+              {approving ? "Releasing…" : "Release"}
             </button>
           )}
           {run.status === "approved" && (
             <span className="text-[11px] font-semibold px-3 py-2 rounded-lg text-[var(--success)] border border-[var(--success)]/30 bg-[var(--success)]/10">
-              Approved
+              Released
             </span>
           )}
           {isBlog && run.draft && (
             <button
               onClick={sendToWordPress}
-              disabled={pushing}
-              title="Creates a draft in WordPress. Never publishes."
-              className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-50 transition-colors"
+              disabled={pushing || !(gateOpen || run.status === "approved")}
+              title={
+                gateOpen || run.status === "approved"
+                  ? "Creates a draft in WordPress. Never publishes."
+                  : "Blocked until this has its approvals."
+              }
+              className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               {pushing ? "Sending…" : "Send to WordPress"}
             </button>
@@ -271,16 +330,43 @@ export default function RunDetail({
           {run.draft && run.rendered ? (
             <ArticleView draft={run.draft} rendered={run.rendered} />
           ) : (
-            <div className="card p-10 text-center text-[var(--ink-3)] text-sm">
-              {run.status === "failed"
-                ? "The pipeline failed before a draft was produced. The stage that failed is on the right."
-                : "No draft yet."}
+            <div className="card p-10 text-center text-[var(--ink-3)] text-sm space-y-4">
+              <div>
+                {run.status === "failed"
+                  ? "The pipeline failed before a draft was produced. The stage that failed is on the right."
+                  : "No draft yet."}
+              </div>
+              {run.status === "failed" && (
+                <div className="space-y-2">
+                  <button
+                    onClick={retry}
+                    disabled={retrying}
+                    className="text-[12.5px] font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
+                  >
+                    {retrying ? "Retrying…" : "Retry from where it failed"}
+                  </button>
+                  <p className="text-[11px] text-[var(--ink-4)] max-w-sm mx-auto">
+                    Stages that finished are kept, not re-bought — a writer
+                    failure retries only the writer, on research already paid
+                    for.
+                  </p>
+                  {retryMsg && (
+                    <p className="text-[11.5px] text-[var(--danger)]">{retryMsg}</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
           <ReviewPanel review={run.review} linkCheck={run.linkCheck} />
         </div>
 
         <div className="space-y-5 min-w-0">
+          {/* Above the timeline on purpose. The timeline is what the machine
+              did; this is what a person still has to do, and it is the reason
+              the piece is sitting here. */}
+          {run.draft && (
+            <ApprovalGate clientRef={ref} runId={id} onGate={onGate} />
+          )}
           <RunTimeline stages={run.stages} />
           {run.research && <SourceLedger research={run.research} />}
         </div>

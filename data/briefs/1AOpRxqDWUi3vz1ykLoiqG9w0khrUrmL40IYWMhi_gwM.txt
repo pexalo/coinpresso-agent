@@ -1,0 +1,77 @@
+Retargeting Crypto Presale Visitors: Ad Sequences That Convert Browsers Into Buyers
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto ad retargeting compliance
+
+Semantic keywords
+crypto presale retargeting, token sale ad policy, financial ads remarketing, consented audience strategy, crypto educational funnel
+
+Intent and audience
+Informational/compliance aware; teams assessing whether retargeting is eligible and what a safe nurture path looks like.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/retargeting-crypto-presale-visitors-compliance
+
+Meta title
+Crypto Presale Retargeting: Eligibility, Consent, and Safer Sequences
+
+Meta description
+Understand crypto presale retargeting limits, privacy requirements, educational nurture options, and why direct “buy now” sequences may be prohibited by platform policy or law.
+
+2. SERP Gap
+Most retargeting content begins with pixel installation and urgency sequences. It ignores whether the product can be advertised, whether remarketing is permitted for the financial category, and whether the collection/use of audience data is lawful.
+3. Unique Coinpresso Angle
+Eligibility precedes sequence design. The article should explain how to build an education-first, consented nurture path only where the offer, market, and platform rules allow it—and when to rely on owned channels instead.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Start with offer and audience eligibility
+Check product type, jurisdiction, platform restrictions, and age/consent requirements.
+
+2
+Separate owned nurture from paid retargeting
+Explain email, documentation, community, and help-center pathways versus platform audience targeting.
+
+3
+Design education-first creative
+Use accurate product explanations, risks, terms, milestones, and verified support routes—not purchase pressure.
+
+4
+Apply privacy and consent controls
+Define notice, consent, retention, opt-out, and sensitive-category limits.
+
+5
+Avoid prohibited urgency patterns
+Do not use false scarcity, price promises, countdown pressure, or claims that obscure risk.
+
+6
+Measure safe outcomes
+Track content engagement, eligibility checks, support quality, and consented actions instead of assuming buyer conversion.
+
+7
+Conclusion and FAQ
+Provide a retargeting eligibility checklist.
+
+5. FAQ Section
+Can a token presale use paid retargeting? Provide a concise answer focused on evidence, eligibility, safety, or measurement limits. Is a pixel enough to build a retargeting audience? Provide a concise answer focused on evidence, eligibility, safety, or measurement limits. What is an education-first ad sequence? Provide a concise answer focused on evidence, eligibility, safety, or measurement limits. Can retargeting use urgency or scarcity? Provide a concise answer focused on evidence, eligibility, safety, or measurement limits. When should a team use owned channels instead? Provide a concise answer focused on evidence, eligibility, safety, or measurement limits.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential paid-acquisition and content-distribution partner that can help with policy-aware strategy, documentation, landing-page review, measurement design, and campaign governance. Avoid promising approval, reinstatement, delivery, signups, ROI, or token-related outcomes.
+
+CTA banner Section: “Before building an ad sequence, confirm that the offer and audience are eligible. Ask Coinpresso to assess a consented, education-first nurture path for your crypto campaign.”
+
+Recommended internal links: Link to Whitelist and Allowlist Campaigns, MiCA and Presale Marketing, and Crypto PPC Landing Page Compliance.
+
+Guardrails: Do not advise retargeting for prohibited token-sale advertising, restricted audiences, or markets where the promotion is not permitted. Avoid price/return claims and high-pressure tactics; obtain privacy and legal review before audience activation.

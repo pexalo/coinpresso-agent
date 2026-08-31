@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCampaign } from "@/components/CampaignContext";
+import GateChip from "@/components/GateChip";
+import type { GateState } from "@/lib/approval";
 import { PUBLICATIONS } from "@/lib/publications";
 import type { PublicationId, RunStatus, StageId, StageStatus } from "@/lib/types";
 
@@ -68,6 +70,22 @@ export default function QueuePage() {
   const { selected, campaigns } = useCampaign();
   const [allRuns, setAllRuns] = useState<RunSummary[] | null>(null);
 
+  // Gate progress per run. A wire release goes to a third party and cannot be
+  // recalled, so "who still has to sign this" belongs in the list rather than
+  // only on the piece — it is what a Monday triage is actually deciding.
+  const [gates, setGates] = useState<Record<string, GateState>>({});
+
+  const loadGates = useCallback(async () => {
+    const res = await fetch(`/api/clients/${ref}/approvals?track=wire`);
+    if (!res.ok) return;
+    const data = await res.json();
+    setGates(data.gates ?? {});
+  }, [ref]);
+
+  useEffect(() => {
+    loadGates();
+  }, [loadGates]);
+
   useEffect(() => {
     let alive = true;
     const load = () =>
@@ -84,7 +102,7 @@ export default function QueuePage() {
     };
   }, [ref]);
 
-  // Filtered by the campaign picked in the header. "All campaigns" shows
+  // Filtered by the campaign picked in the bar above. "All campaigns" shows
   // everything, which is what a Monday morning triage view wants.
   const runs =
     allRuns === null
@@ -186,6 +204,7 @@ export default function QueuePage() {
                     {PUBLICATIONS[r.brief.publication]?.name ??
                       r.brief.publication}
                   </span>
+                  <GateChip gate={gates[r.id]} />
                   {!selected && r.campaignId && (
                     <span className="text-[10px] text-[var(--ink-2)]">
                       {campaigns.find((c) => c.id === r.campaignId)?.name ??

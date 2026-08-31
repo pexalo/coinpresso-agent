@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------
 
 import { estimateCost, MODELS, PRICING } from "./models";
+import { SEARCH_MAX_PER_CALL, SEARCH_PRICE_EACH, searchCost } from "./model-registry";
 import type { Run } from "./types";
 
 // Deliberately free of any node:fs import. The forecast controls on the costs
@@ -33,7 +34,10 @@ export interface StageCost {
   runs: number;
   tokensIn: number;
   tokensOut: number;
+  /** Tokens only. */
   costUsd: number;
+  searchRequests: number;
+  searchCostUsd: number;
 }
 
 export interface TrackCost {
@@ -44,6 +48,8 @@ export interface TrackCost {
   tokensIn: number;
   tokensOut: number;
   averageUsd: number | null;
+  searchRequests: number;
+  searchCostUsd: number;
   /** Revision passes across billable runs — the main driver of variance. */
   revisions: number;
 }
@@ -54,7 +60,29 @@ export interface DaySpend {
   runs: number;
 }
 
+/** One row per run — the line-item view, and what an invoice would itemise. */
+export interface RunCost {
+  id: string;
+  createdAt: string;
+  title: string;
+  track: Track;
+  campaignId?: string;
+  status: string;
+  tokensIn: number;
+  tokensOut: number;
+  tokenCostUsd: number;
+  searchRequests: number;
+  searchCostUsd: number;
+  totalUsd: number;
+  revisions: number;
+}
+
 export interface CostReport {
+  /** Every billable run, newest first. */
+  runsDetail: RunCost[];
+  tokenCostUsd: number;
+  searchCostUsd: number;
+  searchRequests: number;
   totalUsd: number;
   runs: number;
   billableRuns: number;
@@ -68,6 +96,14 @@ export interface CostReport {
   /** Cheapest and dearest real run, so the spread is visible not just the mean. */
   cheapest: { id: string; title: string; costUsd: number } | null;
   dearest: { id: string; title: string; costUsd: number } | null;
+  /**
+   * Tokens burned on models the register cannot price. They are in the token
+   * totals above but contribute $0 to every dollar figure — which means every
+   * dollar figure is UNDERSTATED while this list is non-empty. Shown as a
+   * warning rather than silently rolled up, because a too-cheap report reads
+   * as good news right up until the invoice.
+   */
+  unpriced: Array<{ model: string; tokensIn: number; tokensOut: number }>;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -92,10 +128,18 @@ export function buildReport(runs: Run[]): CostReport {
     { model: string; costUsd: number; tokensIn: number; tokensOut: number }
   >();
   const dayMap = new Map<string, DaySpend>();
+  const unpricedMap = new Map<
+    string,
+    { model: string; tokensIn: number; tokensOut: number }
+  >();
 
   let tokensIn = 0;
   let tokensOut = 0;
   let totalUsd = 0;
+  let tokenCostUsd = 0;
+  let searchCostUsd = 0;
+  let searchRequests = 0;
+  const runsDetail: RunCost[] = [];
 
   for (const run of billable) {
     const day = run.createdAt.slice(0, 10);
@@ -106,14 +150,26 @@ export function buildReport(runs: Run[]): CostReport {
 
     totalUsd += run.totalCostUsd || 0;
 
+    let rTokIn = 0;
+    let rTokOut = 0;
+    let rTokCost = 0;
+
     for (const s of run.stages) {
       const ti = s.tokensIn ?? 0;
       const to = s.tokensOut ?? 0;
       const c = s.costUsd ?? 0;
-      if (!ti && !to && !c) continue;
+      const sr = s.searchRequests ?? 0;
+      const sc = s.searchCostUsd ?? 0;
+      if (!ti && !to && !c && !sr) continue;
 
       tokensIn += ti;
       tokensOut += to;
+      tokenCostUsd += c;
+      searchRequests += sr;
+      searchCostUsd += sc;
+      rTokIn += ti;
+      rTokOut += to;
+      rTokCost += c;
 
       const key = `${s.id}:${s.model}`;
       const row =
@@ -126,12 +182,25 @@ export function buildReport(runs: Run[]): CostReport {
           tokensIn: 0,
           tokensOut: 0,
           costUsd: 0,
+          searchRequests: 0,
+          searchCostUsd: 0,
         };
       row.runs += 1;
       row.tokensIn += ti;
       row.tokensOut += to;
       row.costUsd += c;
+      row.searchRequests += sr;
+      row.searchCostUsd += sc;
       stageMap.set(key, row);
+
+      if (!PRICING[s.model] && (ti || to)) {
+        const u =
+          unpricedMap.get(s.model) ??
+          { model: s.model, tokensIn: 0, tokensOut: 0 };
+        u.tokensIn += ti;
+        u.tokensOut += to;
+        unpricedMap.set(s.model, u);
+      }
 
       if (PRICING[s.model]) {
         const m =
@@ -143,7 +212,25 @@ export function buildReport(runs: Run[]): CostReport {
         modelMap.set(s.model, m);
       }
     }
+
+    runsDetail.push({
+      id: run.id,
+      createdAt: run.createdAt,
+      title: run.brief.title,
+      track: trackOf(run),
+      campaignId: run.campaignId,
+      status: run.status,
+      tokensIn: rTokIn,
+      tokensOut: rTokOut,
+      tokenCostUsd: rTokCost,
+      searchRequests: run.totalSearchRequests ?? 0,
+      searchCostUsd: run.totalSearchCostUsd ?? 0,
+      totalUsd: run.totalCostUsd || 0,
+      revisions: run.revisions || 0,
+    });
   }
+
+  runsDetail.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const tracks: TrackCost[] = (["wire", "blog"] as Track[]).map((track) => {
     const all = runs.filter((r) => trackOf(r) === track);
@@ -165,6 +252,8 @@ export function buildReport(runs: Run[]): CostReport {
       tokensIn: ti,
       tokensOut: to,
       averageUsd: real.length ? cost / real.length : null,
+      searchRequests: real.reduce((a, r) => a + (r.totalSearchRequests ?? 0), 0),
+      searchCostUsd: real.reduce((a, r) => a + (r.totalSearchCostUsd ?? 0), 0),
       revisions: real.reduce((a, r) => a + (r.revisions || 0), 0),
     };
   });
@@ -177,6 +266,10 @@ export function buildReport(runs: Run[]): CostReport {
     r ? { id: r.id, title: r.brief.title, costUsd: r.totalCostUsd } : null;
 
   return {
+    runsDetail,
+    tokenCostUsd,
+    searchCostUsd,
+    searchRequests,
     totalUsd,
     runs: runs.length,
     billableRuns: billable.length,
@@ -189,6 +282,7 @@ export function buildReport(runs: Run[]): CostReport {
     days: [...dayMap.values()].sort((a, b) => a.date.localeCompare(b.date)),
     cheapest: asExtreme(priced[0]),
     dearest: asExtreme(priced[priced.length - 1]),
+    unpriced: [...unpricedMap.values()],
   };
 }
 
@@ -221,12 +315,46 @@ export const STAGE_SHAPE: Record<
   ],
 };
 
-/** Modelled cost of one article, before any measured history. */
-export function modelledUnitCost(track: Track, revisionRate = 0.6): number {
+/**
+ * Searches a research call typically makes. The tool ceiling is
+ * SEARCH_MAX_PER_CALL; assuming the ceiling every time overstates, assuming
+ * none understates by about a quarter. Two thirds is the honest middle, and it
+ * is labelled modelled wherever it appears.
+ */
+export const MODELLED_SEARCHES_PER_RUN = Math.round(SEARCH_MAX_PER_CALL * 0.66);
+
+/** Modelled search fee for one article. */
+export function modelledSearchCost(): number {
+  return searchCost(MODELLED_SEARCHES_PER_RUN);
+}
+
+/** Modelled cost of one article, before any measured history. Tokens only. */
+/**
+ * Priced a MONTH AHEAD, not today.
+ *
+ * The forecast is a claim about the coming month, and the register can carry an
+ * announced price change inside that window — Sonnet 5 steps from $2/$10 to
+ * $3/$15 on 1 Sep. Pricing the forecast at today's rate five days before a 50%
+ * step-up produces exactly the number someone budgets against and then misses.
+ * Thirty days out lands on the price most of the forecast month is billed at.
+ */
+export function modelledTokenCost(track: Track, revisionRate = 0.6): number {
+  const monthOut = new Date(Date.now() + 30 * 24 * 3600 * 1000);
   return STAGE_SHAPE[track].reduce((sum, s) => {
-    const c = estimateCost(s.model, s.tokensIn, s.tokensOut);
+    const c = estimateCost(s.model, s.tokensIn, s.tokensOut, monthOut);
     return sum + (s.stage === "revision" ? c * revisionRate : c);
   }, 0);
+}
+
+/**
+ * Tokens PLUS the search fee.
+ *
+ * Search was missing from this entirely, which understated true cost by roughly
+ * a quarter — fine for a rough sense of scale, and not fine at all as the basis
+ * for an invoice.
+ */
+export function modelledUnitCost(track: Track, revisionRate = 0.6): number {
+  return modelledTokenCost(track, revisionRate) + modelledSearchCost();
 }
 
 export interface Forecast {
@@ -276,3 +404,22 @@ export function tokens(n: number): string {
   if (n >= 1_000) return `${Math.round(n / 1000)}k`;
   return String(n);
 }
+
+// ---------------------------------------------------------------------------
+// Billing lives in Pexalo HQ, not here
+//
+// This file used to carry BillingTerms, buildBill() and billableMonths(), and
+// the API costs page rendered an invoice from them. That was the wrong place for
+// it: this dashboard is COINPRESSO'S, used every day by their own people, and
+// the markup is Pexalo's margin on Coinpresso. The page was showing a client the
+// agency's margin on themselves and letting them edit the rate.
+//
+// What this app owns is the COST BASE — what the providers actually charged,
+// measured from their own usage blocks rather than estimated. buildReport()
+// above produces it, split into tokens and search, per run and per stage. That
+// is the honest division: this app knows what the work cost because it made the
+// calls; HQ knows what the client pays because it holds the contract.
+//
+// The formulas, and the two things about them that are easy to get wrong, are
+// written up in PEXALO-HQ-BILLING.md so the reasoning survives the deletion.
+// ---------------------------------------------------------------------------

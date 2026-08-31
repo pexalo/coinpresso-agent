@@ -1,0 +1,77 @@
+Founder-Led PR vs Agency PR: Which Gets More Pickup for Early-Stage Web3 Projects
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+founder-led PR Web3
+
+Semantic keywords
+Web3 PR agency vs founder, early-stage crypto PR, founder media relations, crypto PR workflow, journalist source access
+
+Intent and audience
+Informational/comparative; early-stage teams deciding how to organize PR.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/founder-led-vs-agency-pr-web3
+
+Meta title
+Founder-Led PR vs Agency PR for Early-Stage Web3 Projects
+
+Meta description
+Compare founder-led and agency-led Web3 PR by source access, story quality, bandwidth, process, disclosure risk, and the stage at which a hybrid model works.
+
+2. SERP Gap
+The usual debate asks which side gets more pickup, with little evidence. It ignores the operating model: founders own insight and accountability; agencies add process, media intelligence, editorial discipline, and capacity.
+3. Unique Coinpresso Angle
+Compare operating systems, not mythical pickup rates. The right choice depends on source access, evidence maturity, message complexity, approval speed, and the repeatability required—not on whether the sender’s signature says founder or agency.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+The false pickup-rate question
+State why no universal founder-versus-agency benchmark should be claimed.
+
+2
+What founders uniquely contribute
+Offer subject-matter depth, accountability, and rapid access to product context.
+
+3
+What an agency uniquely contributes
+Offer story development, media mapping, process, reporting, and campaign capacity.
+
+4
+The five-factor operating model
+Assess source access, evidence, bandwidth, risk, and repeatability.
+
+5
+When a hybrid model works
+Let a founder lead technical insight while the agency manages preparation and follow-through.
+
+6
+The scale-up inflection point
+Identify when reactive outreach, approvals, and campaign volume exceed founder capacity.
+
+7
+Conclusion and FAQ
+Give a decision scorecard.
+
+5. FAQ Section
+Does a founder email get more replies than an agency email? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. When should a startup hire a crypto PR agency? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Can a founder and an agency pitch the same reporter? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Who should be the spokesperson? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How should early-stage teams measure PR quality? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “Choose the PR operating model that preserves founder expertise without losing discipline. Ask Coinpresso to assess your Web3 media-readiness workflow.”
+
+Recommended internal links: Link to How to Get a Journalist to Actually Read Your Crypto Pitch, Building a Crypto Media List, and PR for Anonymous Teams.
+7. Source and Production Guardrails
+Do not claim that founder-led or agency-led outreach guarantees coverage. Paid endorsements and commercial relationships require appropriate disclosure, and material crypto claims need legal/compliance review.

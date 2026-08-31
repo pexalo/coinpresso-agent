@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CONTENT_TYPES, PILLARS } from "@/lib/blog";
 import type { ContentTypeId } from "@/lib/blog";
 import type { RunStatus, StageId, StageStatus } from "@/lib/types";
+import GateChip from "@/components/GateChip";
+import type { Approver, GateState } from "@/lib/approval";
 
 interface RunSummary {
   id: string;
@@ -50,6 +52,58 @@ export default function BlogQueuePage() {
   const { ref } = useParams<{ ref: string }>();
   const base = `/client/${ref}/own-blog`;
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
+  const [gates, setGates] = useState<Record<string, GateState>>({});
+  const [approvers, setApprovers] = useState<Approver[]>([]);
+  const [signingAs, setSigningAs] = useState("");
+  const [busyDay, setBusyDay] = useState<string | null>(null);
+
+  const loadGates = useCallback(async () => {
+    const res = await fetch(`/api/clients/${ref}/approvals?track=blog`);
+    if (!res.ok) return;
+    const data = await res.json();
+    setGates(data.gates ?? {});
+    setApprovers(data.approvers ?? []);
+    setSigningAs((w) => w || data.approvers?.[0]?.id || "");
+  }, [ref]);
+
+  useEffect(() => {
+    loadGates();
+  }, [loadGates]);
+
+  /**
+   * One person signing a day in one action.
+   *
+   * Only the posts this person has not already signed are sent — re-signing
+   * would be a no-op in the record but would still write an audit line saying
+   * they approved it again, which makes the log read as more scrutiny than
+   * happened. Released posts are excluded server-side.
+   */
+  async function approveDay(day: string, items: RunSummary[]) {
+    const ids = items
+      .filter((r) => {
+        const g = gates[r.id];
+        return (
+          g &&
+          !g.released &&
+          !g.valid.some((sig) => sig.approverId === signingAs)
+        );
+      })
+      .map((r) => r.id);
+    if (!ids.length) return;
+
+    setBusyDay(day);
+    try {
+      const res = await fetch(`/api/clients/${ref}/approvals`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ runIds: ids, approverId: signingAs }),
+      });
+      const data = await res.json();
+      if (res.ok) setGates((g) => ({ ...g, ...data.gates }));
+    } finally {
+      setBusyDay(null);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -174,9 +228,18 @@ export default function BlogQueuePage() {
         </div>
       )}
 
-      {[...byDay.entries()].map(([day, items]) => (
+      {[...byDay.entries()].map(([day, items]) => {
+        const mine = items.filter((r) => {
+          const g = gates[r.id];
+          return (
+            g && !g.released && !g.valid.some((s) => s.approverId === signingAs)
+          );
+        });
+        const releasable = items.filter((r) => gates[r.id]?.canRelease).length;
+
+        return (
         <div key={day} className="space-y-2">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 flex-wrap">
             <h2 className="text-[13px] font-bold">
               {day === today ? "Today" : day}
             </h2>
@@ -186,7 +249,39 @@ export default function BlogQueuePage() {
               pillars ·{" "}
               {new Set(items.map((i) => i.brief.contentType).filter(Boolean)).size}{" "}
               formats
+              {releasable > 0 && (
+                <span className="text-[var(--success)]">
+                  {" "}
+                  · {releasable} ready to release
+                </span>
+              )}
             </span>
+
+            {approvers.length > 0 && mine.length > 0 && (
+              <span className="ml-auto flex items-center gap-2">
+                <select
+                  value={signingAs}
+                  onChange={(e) => setSigningAs(e.target.value)}
+                  className="bg-[var(--bg)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-[11.5px] focus:border-[var(--accent)] outline-none"
+                >
+                  {approvers.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => approveDay(day, items)}
+                  disabled={busyDay === day}
+                  title="Signs each post individually — the record stays per post, so revising one tomorrow voids only that one."
+                  className="text-[11.5px] font-semibold px-3 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--success)]/50 disabled:opacity-40 transition-colors"
+                >
+                  {busyDay === day
+                    ? "Signing…"
+                    : `Approve ${mine.length} as ${approvers.find((a) => a.id === signingAs)?.name}`}
+                </button>
+              </span>
+            )}
           </div>
 
           <div className="card divide-y divide-[var(--line)] overflow-hidden">
@@ -221,6 +316,7 @@ export default function BlogQueuePage() {
                           mock
                         </span>
                       )}
+                      <GateChip gate={gates[r.id]} />
                     </div>
                     <div className="font-semibold text-sm mt-1.5 truncate">
                       {r.brief.title}
@@ -243,7 +339,8 @@ export default function BlogQueuePage() {
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

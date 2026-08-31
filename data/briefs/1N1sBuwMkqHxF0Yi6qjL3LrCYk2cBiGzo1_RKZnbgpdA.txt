@@ -1,0 +1,109 @@
+Documentation as a GEO Asset: Why Your Whitepaper and Docs Matter More Than Your Landing Page
+1. SEO Brief
+Element
+Recommendation
+
+Exact title
+Documentation as a GEO Asset: Why Your Whitepaper and Docs Matter More Than Your Landing Page
+
+Primary keyword
+crypto documentation GEO
+
+Secondary keywords
+whitepaper AI optimization, Web3 docs SEO, GitBook GEO, LLM documentation optimization, crypto technical content, AI search documentation
+
+Search intent
+Informational and implementation-focused
+
+Audience
+Web3 founders, developer-relations teams, technical writers, product marketers, and SEOs
+
+Recommended length
+2,200–2,700 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-documentation-geo
+
+Meta title
+Crypto Documentation as a GEO Asset: Whitepapers & Docs
+
+Meta description
+Learn how canonical, versioned, extractable crypto documentation can provide better source material for AI answers than shallow landing-page copy.
+
+2. SERP Landscape and Gap
+Most GEO guides tell publishers to make content clear and quotable. Web3-specific pieces often mention whitepapers, GitBook, GitHub, schema, or llms.txt, but few treat documentation as an end-to-end knowledge supply chain with owners, release controls, canonical sources, change logs, and extraction QA.
+
+Generative engines synthesize answers from retrieved sources, and academic GEO research shows that citation, statistics, and presentation can affect source visibility.1 The gap is not another crawler-file tutorial. It is a practical system for ensuring that the factual material retrieved from a project’s docs is current, internally consistent, traceable to a product version, and easy to quote without losing critical limitations.
+3. Unique Coinpresso Angle
+Your documentation is the knowledge supply chain; the landing page is the conversion interface.
+
+The article should explain why deep technical queries often require evidence that a marketing page cannot responsibly hold: supported networks, contract versions, risk assumptions, fees, governance parameters, API behavior, audit scope, and upgrade history. The winning angle is documentation operations for GEO—canonicalization, versioning, passage-level extractability, provenance, and release QA—not a blanket claim that landing pages are obsolete.
+4. Why This Article Can Win
+The article offers a useful division of labor. Landing pages establish positioning and convert visitors; documentation supplies detailed facts that search-grounded systems and technical evaluators can retrieve. Official platform documentation confirms that ChatGPT Search, Gemini grounding, and Claude web search can incorporate current web sources and citations, although their workflows differ.2 3 4
+
+Claims should remain measured. Better documentation does not guarantee inclusion in an AI answer, and no evidence supports a universal rule that models always prefer docs over landing pages. The defensible claim is that well-governed docs can provide higher factual density, clearer scope, and stronger provenance for technical prompts.
+5. Recommended Article Outline
+Article section
+What it should cover
+Target words
+
+1. Landing Pages Convert; Documentation Explains
+Define the different jobs and show where marketing copy becomes insufficient for technical answers.
+240
+
+2. Map the Web3 Knowledge Supply Chain
+Inventory website, whitepaper, docs, GitHub, audit reports, governance forum, explorer records, and release notes.
+320
+
+3. Choose a Canonical Source for Every Fact
+Assign ownership for tokenomics, fees, networks, contracts, API behavior, security, and governance facts.
+320
+
+4. Version Whitepapers and Docs Without Creating Conflicts
+Use version labels, effective dates, archived pages, migration notices, and bidirectional links.
+330
+
+5. Design Passages for Safe Extraction
+Use descriptive headings, self-contained definitions, units, dates, scope statements, limitations, and source links.
+380
+
+6. Make Tables and Examples Machine-Readable
+Prefer semantic tables, text alternatives, copyable code, explicit field definitions, and accessible HTML.
+280
+
+7. Run the Documentation Extractability Test
+Test direct questions, citation accuracy, missing qualifiers, stale versions, and unsupported assertions.
+340
+
+8. Add Documentation GEO to Release QA
+Create owners, approval gates, monitoring, correction workflow, and update SLAs.
+280
+
+9. Conclusion and FAQ
+Provide a prioritized remediation checklist and connect it to Coinpresso’s GEO service.
+250
+
+6. Original Asset or Methodology
+Coinpresso can publish a Documentation Extractability Matrix with five scored dimensions: canonicality, version clarity, passage independence, evidence linkage, and qualifier preservation. Each tested question should record the expected answer, canonical source, retrieved answer, citation URL, factual errors, missing caveats, and recommended documentation change.
+
+A companion diagram can show the flow from product change to technical approval, documentation release, canonical linking, external communication, and model-monitoring checks. Present the matrix as an editorial QA tool, not as a predictor of guaranteed citations.
+7. FAQ Section
+Why can documentation be more useful than a landing page for GEO? Docs often contain the detailed, scoped facts required for technical questions, while landing pages are intentionally concise and conversion-oriented.
+
+Should a project rewrite its whitepaper for AI? Recommend preserving legal and technical integrity while adding clear summaries, version metadata, definitions, anchors, and links to current canonical specifications.
+
+How should old documentation be handled? Archive it with visible status and dates, link to the replacement, and avoid deleting historical context that explains migrations or changes.
+
+Does a project need llms.txt? Treat it as an optional discovery aid, not the core strategy; content quality, crawlability, canonicalization, and evidence remain more fundamental.
+
+How can a team test documentation extractability? Ask representative technical questions across multiple search-grounded systems, compare outputs with the canonical source, and record omissions or stale citations.
+8. Conversion and Linking Plan
+Position Coinpresso as the partner that can audit the complete documentation estate, define canonical sources, improve extractability, and add GEO checks to the release process. Avoid claiming that Coinpresso can control model citations.
+
+CTA banner Section: “If your whitepaper, docs, and product pages disagree, AI answers may repeat the wrong version. Ask Coinpresso for a documentation GEO audit.”
+
+Recommended internal links are llms.txt for Crypto & Web3 Sites: Do You Need One?, Schema Markup Checklist for Crypto Exchanges, Wallets, and DeFi Protocols, and How to Optimize Your Crypto Project's Entity Footprint for AI Search Engines.
+9. References

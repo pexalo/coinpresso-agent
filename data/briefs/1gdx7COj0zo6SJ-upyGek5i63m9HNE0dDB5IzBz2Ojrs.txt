@@ -1,0 +1,77 @@
+Presale KOL Marketing: Vetting Influencers So You Don't Fund a Pump-and-Dump
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto KOL vetting
+
+Semantic keywords
+crypto influencer due diligence, presale KOL marketing, influencer disclosure crypto, Web3 creator vetting, paid token promotion
+
+Intent and audience
+Informational/compliance aware; teams evaluating KOL partnerships for a presale campaign.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/presale-kol-marketing-vetting
+
+Meta title
+Crypto KOL Vetting: Safer Presale Influencer Marketing
+
+Meta description
+Vet crypto KOLs by audience fit, disclosure discipline, content history, incentives, risk controls, and measurement—not follower count or hype alone.
+
+2. SERP Gap
+Most KOL lists rank reach and engagement. They do not help a project screen for opaque compensation, paid-shill patterns, audience mismatch, conflict risk, poor disclosure, or campaign terms that reward destructive hype.
+3. Unique Coinpresso Angle
+Vetting is a governance process, not an audience spreadsheet. Coinpresso can recommend a KOL diligence file covering audience fit, content sample review, compensation disclosure, conflict checks, approval workflow, and post-campaign measurement.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Why follower count is weak due diligence
+Separate reach from audience quality, credibility, and conduct.
+
+2
+Build the KOL diligence file
+Cover audience fit, content history, disclosure behavior, conflicts, brand safety, and previous promotions.
+
+3
+Design compensation for disclosure and alignment
+Make payment and token arrangements transparent; avoid incentives tied to misleading claims or short-term hype.
+
+4
+Approve content before publication
+Use claim substantiation, disclosure placement, risk language, and official-link checks.
+
+5
+Monitor and document the campaign
+Track live content, changes, complaints, suspicious engagement, and correction needs.
+
+6
+Measure beyond clicks
+Assess quality of traffic, support load, retained participation, and brand risk.
+
+7
+Conclusion and FAQ
+Provide a KOL vendor checklist.
+
+5. FAQ Section
+What should be checked before hiring a crypto KOL? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. How should paid token promotions be disclosed? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Can a KOL be paid in tokens? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What red flags should end a partnership? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. How should KOL campaign quality be measured? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential presale-marketing partner that can structure evidence, content, channel strategy, measurement, and communications workflows. Avoid promising a raise, listing, ROI, or token-performance outcome.
+
+CTA banner Section: “Influencer reach is not a substitute for due diligence. Ask Coinpresso to build a presale KOL vetting and content-approval workflow.”
+
+Recommended internal links: Link to Referral and Bonus Structures in Presales, How Regulators Reading Crypto Press Releases Changed What You Can Legally Claim, and Presale Red Flags Investors Actually Search For.
+
+Guardrails: Do not provide a route to pump-and-dump behavior or market manipulation. Influencer compensation and material relationships require clear, conspicuous disclosure; all contracts and communications need qualified legal review.1

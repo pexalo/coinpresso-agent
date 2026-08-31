@@ -1,0 +1,77 @@
+Telegram Scam Impersonators: Protecting Your Crypto Community From Fake Admin DMs
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+Telegram admin impersonation crypto
+
+Semantic keywords
+fake admin Telegram scam, crypto community security, Telegram scam prevention, Web3 impersonator DMs, Telegram moderation
+
+Intent and audience
+Informational/safety focused; community teams reducing impersonation risk.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/telegram-scam-impersonators-fake-admin-dms
+
+Meta title
+Telegram Fake Admin DMs: Protect Your Crypto Community
+
+Meta description
+A zero-trust DM safety protocol for crypto Telegram communities: official contact rules, scam reporting, evidence preservation, and calm member communication.
+
+2. SERP Gap
+Most guides say “admins never DM first” and stop there. They omit how teams should make official pathways unmistakable, preserve evidence, support affected members, and prevent panic without overpromising recovery.
+3. Unique Coinpresso Angle
+Build a zero-trust DM protocol into daily community design. Make verified communication routes easier than a scammer’s path, then operationalize reporting, evidence preservation, and follow-up.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Why fake-admin DMs work
+Explain urgency, authority mimicry, and confusion around official support.
+
+2
+Publish non-negotiable contact rules
+State who can contact users, through which channels, and what staff will never ask for.
+
+3
+Create an official support path
+Pin verified links, use consistent usernames, publish a help page, and add in-group reporting instructions.
+
+4
+Triage a suspected impersonation
+Protect the member, collect message/account evidence, block/report through the platform, and alert the community if needed.
+
+5
+Communicate without amplifying the scam
+Use clear facts, do not repeat malicious links, and avoid recovery promises.
+
+6
+Harden the team account model
+Use strong account security, restricted permissions, and routine profile/role checks.
+
+7
+Conclusion and FAQ
+Provide a scam-response checklist.
+
+5. FAQ Section
+Do real Telegram admins DM users first? Provide a concise, practical answer with any relevant safety or measurement limitation. What should a user do after receiving a fake-admin DM? Provide a concise, practical answer with any relevant safety or measurement limitation. What evidence should be saved before a scammer deletes a chat? Provide a concise, practical answer with any relevant safety or measurement limitation. Should a project post every scam report publicly? Provide a concise, practical answer with any relevant safety or measurement limitation. Can a community promise fund recovery? Provide a concise, practical answer with any relevant safety or measurement limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential community-strategy partner that can help define operating models, moderation workflows, content formats, measurement, and channel roles. Avoid promising growth, retention, conversion, or incident prevention.
+
+CTA banner Section: “Scam prevention works when official routes are unmistakable and reports are handled quickly. Ask Coinpresso to build a Telegram zero-trust DM protocol.”
+
+Recommended internal links: Link to FUD Campaigns and Coordinated Raids, AI Moderation Bots vs Human Moderators, and Crypto Discord Moderator Burnout.
+
+Guardrails: Do not share seed phrases, private keys, recovery information, or scammer operational details. Avoid financial-recovery promises; preserve lawful evidence and direct affected users to official reporting channels where appropriate.1 2

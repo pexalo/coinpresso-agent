@@ -1,0 +1,77 @@
+Building a Crypto Media List: Which Outlets Still Have Real Crypto Reporters in 2026
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto media list 2026
+
+Semantic keywords
+crypto reporters 2026, Web3 journalist list, crypto media outreach, reporter beat mapping, crypto PR media list
+
+Intent and audience
+Informational/practical; teams building an earned-media outreach workflow.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-media-list-reporters-2026
+
+Meta title
+Build a Crypto Media List in 2026: Reporter-First, Not Outlet-First
+
+Meta description
+Build a current crypto media list by tracking active reporters, beats, source needs, policies, and last-verified dates—not just outlet logos.
+
+2. SERP Gap
+Most “top crypto media” lists are static logos, stale contacts, or paid-placement directories. They do not distinguish active reporting from aggregators, editorial from sponsored inventory, or an outlet from the individual reporter’s beat.
+3. Unique Coinpresso Angle
+Replace the media list with a living newsroom map. It should be reporter-first, date-stamped, evidence-led, and continuously verified rather than claiming a permanent list of outlets with “real reporters.”
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Why outlet lists go stale
+Cover newsroom changes, beat shifts, and changing editorial formats.
+
+2
+Build a reporter-first record
+Capture name, beat, current work, contact route, geography, and last verified date.
+
+3
+Add a source-needs field
+Track whether the reporter needs data, technical access, executive comment, local angle, or investigative evidence.
+
+4
+Separate editorial from paid inventory
+Record contributor, sponsored, newswire, newsletter, podcast, and event opportunities.
+
+5
+Create tiers by fit—not prestige alone
+Prioritize beat relevance, audience, frequency, and source fit.
+
+6
+Run a monthly verification loop
+Review recent bylines, policy changes, contact accuracy, and sent-pitch history.
+
+7
+Conclusion and FAQ
+Offer a media-list schema template.
+
+5. FAQ Section
+How often should a crypto media list be updated? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Should a team pitch an outlet or a named reporter? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How do I tell paid inventory from an editorial route? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What fields belong in a media-list spreadsheet? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Is a large media list better than a focused one? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “Stop buying stale outlet lists. Ask Coinpresso to build a current, reporter-first crypto newsroom map for your category.”
+
+Recommended internal links: Link to How to Get a Journalist to Actually Read Your Crypto Pitch, Crypto PR Timing, and Best Crypto PR Agencies in 2026.
+7. Source and Production Guardrails
+Do not claim a fixed set of outlets has active reporters indefinitely. Verify reporters through recent bylines and disclosed editorial policies before each outreach wave; observe outlet contact rules and privacy law.

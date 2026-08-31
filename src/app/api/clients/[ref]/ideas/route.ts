@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { defaultCampaign, getClient, hasModule } from "@/lib/clients";
-import { mockMode } from "@/lib/models";
+import { mockMode, MODELS } from "@/lib/models";
+import { recordSpend } from "@/lib/spend-log";
+import { usageOf } from "@/lib/providers/anthropic";
 import { mockIdeas, runIdeas } from "@/lib/agents/ideas";
 import { resolveCampaign } from "@/lib/campaign-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** A market scan runs a dozen searches before it proposes anything. */
+export const maxDuration = 300;
 
 export async function POST(
   req: Request,
@@ -44,16 +48,42 @@ export async function POST(
 
   try {
     if (mockMode()) {
-      return NextResponse.json({ ideas: await mockIdeas(request), mock: true });
+      const m = await mockIdeas(request);
+      return NextResponse.json({ ...m, mock: true });
     }
     const r = await runIdeas(request);
+
+    // The scan is the most search-heavy call in the system and produces no run,
+    // so without this line it costs real money that appears nowhere. Recorded
+    // before the response so a closed tab cannot lose the spend.
+    await recordSpend(ref, {
+      kind: "ideas-scan",
+      model: MODELS.strategy,
+      tokensIn: r.tokensIn,
+      tokensOut: r.tokensOut,
+      searchRequests: r.searchRequests,
+    });
+
     return NextResponse.json({
+      topics: r.topics,
       ideas: r.ideas,
+      searchUrls: r.searchUrls,
       mock: false,
       tokensIn: r.tokensIn,
       tokensOut: r.tokensOut,
     });
   } catch (e) {
+    // Billed but unparseable — searches included. See the blog-ideas route.
+    const u = usageOf(e);
+    if (u) {
+      await recordSpend(ref, {
+        kind: "ideas-scan",
+        model: MODELS.strategy,
+        tokensIn: u.tokensIn,
+        tokensOut: u.tokensOut,
+        searchRequests: u.searchRequests,
+      });
+    }
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },
       { status: 502 }

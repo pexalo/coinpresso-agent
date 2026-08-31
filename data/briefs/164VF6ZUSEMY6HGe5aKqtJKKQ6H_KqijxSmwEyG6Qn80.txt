@@ -1,0 +1,77 @@
+Warpcast, Farcaster & Onchain Communities: Is Web3-Native Social the Next Discord?
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+Farcaster vs Discord
+
+Semantic keywords
+Warpcast community management, onchain communities, Farcaster channels, Web3 social strategy, Discord alternative crypto
+
+Intent and audience
+Informational/comparative; Web3 teams choosing channel roles for discovery and community operations.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/warpcast-farcaster-onchain-communities-vs-discord
+
+Meta title
+Farcaster vs Discord: Is Web3-Native Social the Next Community Hub?
+
+Meta description
+Compare Farcaster, Warpcast, and Discord by discovery, conversation depth, onchain interaction, moderation, support, and community operating fit.
+
+2. SERP Gap
+Most comparisons frame Farcaster as a Discord replacement or focus only on protocol mechanics. They do not map the operational division of labor between public discovery, feed-based interaction, private support, real-time discussion, and community governance.
+3. Unique Coinpresso Angle
+Farcaster is usually a discovery-and-interaction layer, not a wholesale Discord replacement. The article offers a channel-role map and a pilot plan that tests onchain social for a defined job.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Stop asking replacement questions
+Define the different jobs of public discovery, real-time discussion, support, and governance.
+
+2
+What Farcaster and Warpcast enable
+Cover channels, identity, social graph, and Mini Apps using official terminology.
+
+3
+What Discord still does well
+Cover private rooms, real-time moderation, support workflows, voice, and deep member operations.
+
+4
+Build a channel-role map
+Assign content, support, events, feedback, and governance tasks to the right surface.
+
+5
+Moderation and safety trade-offs
+Explain that protocols and clients may have different controls; plan policies before a pilot.
+
+6
+Run a 30-day pilot
+Choose a use case, success metric, moderation owner, content cadence, and exit criteria.
+
+7
+Conclusion and FAQ
+Provide a Farcaster-versus-Discord decision grid.
+
+5. FAQ Section
+Is Farcaster replacing Discord for Web3 communities? Provide a concise, practical answer with any relevant safety or measurement limitation. What is the difference between Farcaster and Warpcast? Provide a concise, practical answer with any relevant safety or measurement limitation. Which community activities suit Farcaster best? Provide a concise, practical answer with any relevant safety or measurement limitation. How should a team moderate a Farcaster channel? Provide a concise, practical answer with any relevant safety or measurement limitation. How can a project pilot onchain social without abandoning Discord? Provide a concise, practical answer with any relevant safety or measurement limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential community-strategy partner that can help define operating models, moderation workflows, content formats, measurement, and channel roles. Avoid promising growth, retention, conversion, or incident prevention.
+
+CTA banner Section: “Do not move channels for the narrative—move them for a defined community job. Ask Coinpresso to design a Farcaster and Discord channel-role pilot.”
+
+Recommended internal links: Link to Running Crypto AMAs That Convert, Community Management KPIs, and Multi-Timezone Coverage.
+
+Guardrails: Do not claim that Farcaster or Warpcast will replace Discord. Assess channel fit, moderation capacity, identity/privacy needs, and community behavior; platform features and policies can change.1 2

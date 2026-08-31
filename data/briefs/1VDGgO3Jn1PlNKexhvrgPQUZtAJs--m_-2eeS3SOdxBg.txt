@@ -1,0 +1,77 @@
+Presale Marketing Timeline: What to Do 90, 30, and 7 Days Before TGE
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto presale marketing timeline
+
+Semantic keywords
+TGE marketing checklist, token launch timeline, presale launch preparation, crypto community launch, token generation event communications
+
+Intent and audience
+Informational/implementation focused; teams planning the final three months before TGE.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/presale-marketing-timeline-before-tge
+
+Meta title
+Crypto Presale Marketing Timeline: 90, 30, and 7 Days Before TGE
+
+Meta description
+Plan 90, 30, and 7 days before TGE around proof, approvals, operations, community safety, measurement, and post-launch continuity—not last-minute hype.
+
+2. SERP Gap
+Most timelines list promotional tasks and countdowns. They fail to sequence the hard gates: evidence readiness, legal approval, technical checks, support coverage, scam protection, partner coordination, and the first post-TGE update.
+3. Unique Coinpresso Angle
+Treat the timeline as a risk-and-readiness plan, not a hype calendar. Each phase has a non-negotiable evidence, operations, and communications gate before awareness activity scales.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+The launch-readiness principle
+Explain why promotion cannot compensate for unresolved facts or operations.
+
+2
+90 days: build the proof base
+Prioritize terms, documentation, contract identity, audit scope, tokenomics, risk, and measurement.
+
+3
+30 days: test the operating system
+Test support, community escalation, content claims, partner coordination, scam alerts, and analytics.
+
+4
+7 days: reduce uncertainty
+Lock final approved materials, publish official routes, prepare status processes, and timebox changes.
+
+5
+TGE day: communicate facts, not price
+Publish verified instructions, update schedule, support capacity, and correction process.
+
+6
+T+7: maintain the relationship
+Deliver post-launch education, product updates, community feedback, and measured reporting.
+
+7
+Conclusion and FAQ
+Provide the readiness-gate checklist.
+
+5. FAQ Section
+What must be ready 90 days before TGE? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What should a project test 30 days out? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What should stop changing 7 days before TGE? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Should a team promise price performance at launch? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What must happen after TGE? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential presale-marketing partner that can structure evidence, content, channel strategy, measurement, and communications workflows. Avoid promising a raise, listing, ROI, or token-performance outcome.
+
+CTA banner Section: “A successful launch sequence starts with readiness, not a countdown clock. Ask Coinpresso to map your presale, TGE, and post-launch communication gates.”
+
+Recommended internal links: Link to Locked Liquidity, Vesting & Audits, Crypto PR Timing, and Why Some Crypto Presales Raise Millions and Still Flop at Listing.
+
+Guardrails: This is a communications-planning framework, not legal, financial, exchange-listing, or technical deployment advice. Legal, technical, security, and product owners must approve their respective launch gates.

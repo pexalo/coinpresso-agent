@@ -7,10 +7,12 @@
 // this stage producing a real, verifiable ledger.
 // ---------------------------------------------------------------------------
 
-import { callClaude, extractJson } from "../providers/anthropic";
+import { billed, callClaude, extractJson } from "../providers/anthropic";
+import { briefToPrompt } from "../content-brief";
 import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
+import type { CallContext } from "../providers/routing";
 import { CONTENT_TYPES, PILLARS } from "../blog";
 
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
@@ -110,14 +112,27 @@ RULES
    invent it.
 7. There are no price predictions and no presale figures on this track. Leave
    those fields empty.
+8. A brief may carry an INTERNAL EDITORIAL BRIEF url. It is Coinpresso's own
+   working document. Follow what it asks for, and NEVER put it in "sources" —
+   it is not published, a reader cannot open it, and a link to it in a live post
+   is a broken link on Coinpresso's own domain. The same goes for any URL that
+   appears inside that document: those are the doc author's references, not
+   pages you retrieved, and rule 2 applies to them exactly as it does to
+   anything else. If one of them is worth citing, search for it and retrieve it
+   yourself first.
 
 Return ONLY a JSON object matching the schema given.`;
 
-export async function runStrategyBlog(brief: Brief): Promise<{
+export async function runStrategyBlog(
+  brief: Brief,
+  ctx?: CallContext
+): Promise<{
   research: ResearchBrief;
   tokensIn: number;
   tokensOut: number;
   searchUrls: string[];
+  /** Billable searches, straight from the API usage block. */
+  searchRequests: number;
 }> {
   const today = new Date().toISOString().slice(0, 10);
   const pillar = PILLARS.find((x) => x.id === brief.pillar);
@@ -129,7 +144,41 @@ WORKING TITLE: ${brief.title}
 TARGET KEYWORDS: ${brief.keywords.join(", ")}
 ${pillar ? `PILLAR: ${pillar.name} — the post links to ${pillar.hub}\nWhat this buyer is worried about: ${pillar.buyerQuestion}` : ""}
 ${type ? `FORMAT: ${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : ""}
-${brief.notes ? `\nOPERATOR NOTES: ${brief.notes}` : ""}
+${brief.notes ? `\nOPERATOR NOTES: ${brief.notes}` : ""}${
+    brief.contentBrief
+      ? `
+
+${briefToPrompt(brief.contentBrief)}${
+          brief.referenceUrl
+            ? `
+
+The full document is at ${brief.referenceUrl} — internal, unpublished, and not
+citable. It is here so a person can open it, not so you can link to it.`
+            : ""
+        }`
+      : brief.referenceUrl
+        ? `
+
+--- INTERNAL EDITORIAL BRIEF (guidance — NOT a source) ---
+${brief.referenceUrl}
+
+Coinpresso's content-recommendation document for this post. Treat it as the
+client's instructions and follow them. It is NOT a source and must not appear in
+"sources": an internal Drive document, unpublished, unreachable by a reader, and
+a citation to it would be a broken link on Coinpresso's own domain.`
+      : ""
+  }${
+    brief.linkTarget
+      ? `
+
+--- LINK TARGET ---
+${brief.linkTarget}
+
+This post exists partly to link to that Coinpresso page. Say in opportunityGap
+where that link belongs naturally in the argument. It is an internal
+destination, not a citation, and does not go in "sources".`
+      : ""
+  }
 
 Research this and return JSON:
 {
@@ -158,11 +207,25 @@ Research this and return JSON:
     model: MODELS.strategy,
     system: BLOG_SYSTEM,
     user,
-    maxTokens: 12000,
+    // A research brief is a few thousand tokens of JSON. The search results
+    // that make it possible are INPUT, and are not bounded by this at all — so
+    // 16000 here bought no research and only set how far a runaway reply could
+    // run before being cut off and billed. 8000 is still roughly double the
+    // longest brief this stage has produced.
+    maxTokens: 8000,
     webSearch: true,
+    context: { ...ctx, stage: "strategy" },
   });
 
-  const research = extractJson<ResearchBrief>(r.text);
+  let research: ResearchBrief;
+  try {
+    research = extractJson<ResearchBrief>(r.text, { stage: "research", stopReason: r.stopReason, blockTypes: r.blockTypes,
+      tokensOut: r.tokensOut, maxTokens: 8000 });
+  } catch (e) {
+    // Searches and tokens were billed even though the parse failed. The
+    // pipeline's fail() reads this off the error and records it on the run.
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: r.searchRequests ?? 0 });
+  }
   research.sources = research.sources || [];
   research.predictions = research.predictions || [];
   research.riskNotes = research.riskNotes || [];
@@ -172,16 +235,27 @@ Research this and return JSON:
   research.secondaryKeywords = research.secondaryKeywords || [];
   research.presaleState = research.presaleState || { raised: "n/a", stage: "n/a", note: "blog track" };
 
-  return { research, tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchUrls: r.searchUrls };
+  return {
+    research,
+    tokensIn: r.tokensIn,
+    tokensOut: r.tokensOut,
+    searchUrls: r.searchUrls,
+    searchRequests: r.searchRequests,
+  };
 }
 
-export async function runStrategy(brief: Brief): Promise<{
+export async function runStrategy(
+  brief: Brief,
+  ctx?: CallContext
+): Promise<{
   research: ResearchBrief;
   tokensIn: number;
   tokensOut: number;
   searchUrls: string[];
+  /** Billable searches, straight from the API usage block. */
+  searchRequests: number;
 }> {
-  if (brief.track === "blog") return runStrategyBlog(brief);
+  if (brief.track === "blog") return runStrategyBlog(brief, ctx);
 
   const pub = PUBLICATIONS[brief.publication];
   const today = new Date().toISOString().slice(0, 10);
@@ -210,11 +284,25 @@ ${schemaBlock()}`;
     model: MODELS.strategy,
     system: SYSTEM,
     user,
-    maxTokens: 12000,
+    // A research brief is a few thousand tokens of JSON. The search results
+    // that make it possible are INPUT, and are not bounded by this at all — so
+    // 16000 here bought no research and only set how far a runaway reply could
+    // run before being cut off and billed. 8000 is still roughly double the
+    // longest brief this stage has produced.
+    maxTokens: 8000,
     webSearch: true,
+    context: { ...ctx, stage: "strategy" },
   });
 
-  const research = extractJson<ResearchBrief>(r.text);
+  let research: ResearchBrief;
+  try {
+    research = extractJson<ResearchBrief>(r.text, { stage: "research", stopReason: r.stopReason, blockTypes: r.blockTypes,
+      tokensOut: r.tokensOut, maxTokens: 8000 });
+  } catch (e) {
+    // Searches and tokens were billed even though the parse failed. The
+    // pipeline's fail() reads this off the error and records it on the run.
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: r.searchRequests ?? 0 });
+  }
 
   // Normalise so downstream code never has to defend against missing arrays.
   research.sources = research.sources || [];
@@ -230,5 +318,6 @@ ${schemaBlock()}`;
     tokensIn: r.tokensIn,
     tokensOut: r.tokensOut,
     searchUrls: r.searchUrls,
+    searchRequests: r.searchRequests,
   };
 }

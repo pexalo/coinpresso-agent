@@ -16,9 +16,10 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dataDir } from "./data-dir";
 import { MOONBERG_ARCHIVE, type PublishedArticle } from "./archive";
 
-const DIR = path.join(process.cwd(), ".data", "archive");
+const DIR = dataDir("archive");
 
 /** A stored article — the seed shape plus the text and where it came from. */
 export interface StoredArticle extends PublishedArticle {

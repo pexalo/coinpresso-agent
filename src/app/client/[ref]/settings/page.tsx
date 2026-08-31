@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { ClientSettings } from "@/lib/settings";
+import SnapshotRestore from "@/components/SnapshotRestore";
 
 /** What the API actually returns: secrets replaced by a mask plus a has-it flag. */
 type Masked = ClientSettings & {
@@ -103,6 +104,20 @@ function Toggle({
 
 export default function SettingsPage() {
   const { ref } = useParams<{ ref: string }>();
+  const [campaigns, setCampaigns] = useState<
+    Array<{ id: string; name: string; ticker: string }>
+  >([]);
+
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/clients/${ref}/campaigns`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => alive && setCampaigns(Array.isArray(d) ? d : []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [ref]);
   const [s, setS] = useState<Masked | null>(null);
   const [token, setToken] = useState("");
   const [appPw, setAppPw] = useState("");
@@ -153,12 +168,14 @@ export default function SettingsPage() {
     setAppPw("");
   }
 
-  async function testTelegram() {
+  async function testTelegram(campaignId?: string) {
     setTesting(true);
     setTestMsg(null);
     try {
       const res = await fetch(`/api/clients/${ref}/settings/test-telegram`, {
         method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(campaignId ? { campaignId } : {}),
       });
       const data = await res.json();
       setTestMsg({ ok: Boolean(data.ok), detail: data.detail ?? "No response." });
@@ -232,7 +249,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className={label} htmlFor="tg-chat">
-              Chat ID
+              Internal chat ID
             </label>
             <input
               id="tg-chat"
@@ -250,12 +267,84 @@ export default function SettingsPage() {
               className={field}
             />
             <p className="text-[10.5px] text-[var(--ink-4)] mt-1.5 leading-relaxed">
-              Add the bot to the group, then read the id from{" "}
-              <code className="text-[var(--accent)]">getUpdates</code>. Group ids start
-              with a minus.
+              Coinpresso&apos;s own chat — connectivity tests and internal
+              notifications. Client reports never go here; each campaign has its
+              own chat below.
             </p>
           </div>
         </div>
+
+        {campaigns.length > 0 && (
+          <div className="rounded-lg border border-[var(--line)] p-4 space-y-3">
+            <div>
+              <span className="text-[12.5px] font-bold">
+                Report delivery, per campaign
+              </span>
+              <p className="text-[10.5px] text-[var(--ink-4)] mt-1 leading-relaxed max-w-2xl">
+                Each campaign&apos;s daily report carries that client&apos;s
+                revenue and spend, so it goes to that campaign&apos;s chat{" "}
+                <strong>or it is not sent</strong> — there is no fallback to the
+                internal chat or to another campaign&apos;s. A campaign with no
+                chat here simply gets no Telegram delivery.
+              </p>
+            </div>
+            {campaigns.map((c) => (
+              <div
+                key={c.id}
+                className="grid sm:grid-cols-[180px_minmax(0,1fr)_auto] gap-3 items-center"
+              >
+                <span className="text-[12px] font-semibold">
+                  {c.name}{" "}
+                  <span className="text-[var(--ink-4)] font-normal">
+                    {c.ticker}
+                  </span>
+                </span>
+                <input
+                  value={tg.campaignChats?.[c.id] ?? ""}
+                  onChange={(e) =>
+                    setS({
+                      ...s,
+                      delivery: {
+                        ...s.delivery,
+                        telegram: {
+                          ...tg,
+                          campaignChats: {
+                            ...tg.campaignChats,
+                            [c.id]: e.target.value,
+                          },
+                        },
+                      },
+                    })
+                  }
+                  onBlur={() =>
+                    save({
+                      delivery: {
+                        ...s.delivery,
+                        telegram: { ...tg, campaignChats: tg.campaignChats },
+                      },
+                    })
+                  }
+                  placeholder="-1001234567890 — this campaign's group"
+                  className={field}
+                />
+                <button
+                  onClick={() => testTelegram(c.id)}
+                  disabled={
+                    testing || !tg.hasToken || !tg.campaignChats?.[c.id]?.trim()
+                  }
+                  title={
+                    !tg.campaignChats?.[c.id]?.trim()
+                      ? "Save a chat ID for this campaign first"
+                      : "Sends this campaign's latest real report to its own chat"
+                  }
+                  className="text-[11.5px] font-semibold px-3 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Send report
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
@@ -277,16 +366,16 @@ export default function SettingsPage() {
             {saving ? "Saving…" : "Save connection"}
           </button>
           <button
-            onClick={testTelegram}
+            onClick={() => testTelegram()}
             disabled={testing || !tg.hasToken || !tg.chatId}
             className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title={
               !tg.hasToken || !tg.chatId
                 ? "Save a bot token and chat ID first"
-                : "Sends the latest real report, not a hello-world"
+                : "A connectivity check to the internal chat — no client figures"
             }
           >
-            {testing ? "Sending…" : "Send the latest report now"}
+            {testing ? "Sending…" : "Test the internal chat"}
           </button>
           {tg.lastTestAt && (
             <span className="text-[11px] text-[var(--ink-3)]">
@@ -415,38 +504,113 @@ export default function SettingsPage() {
 
       <Section
         title="Approvals"
-        blurb="Who takes editorial responsibility. Recorded against every export."
+        blurb="Who has to sign before anything reaches coinpresso.io or a publisher. Each signature is bound to the exact draft it was given against — revise a piece and the approvals it already had stop counting."
       >
-        <Toggle
-          checked={s.approvals.requireApprovalBeforeExport}
-          onChange={(v) =>
-            save({
-              approvals: { ...s.approvals, requireApprovalBeforeExport: v },
-            })
-          }
-          title="Require approval before a draft leaves the dashboard"
-          detail="Turning this off would let drafts reach a Doc unread. The wires are third parties and a release cannot be recalled."
-        />
+        <div className="space-y-2.5">
+          {s.approvals.approvers.map((a, i) => (
+            <div key={a.id} className="grid sm:grid-cols-[160px_minmax(0,1fr)_auto] gap-3 items-center">
+              <input
+                value={a.name}
+                onChange={(e) => {
+                  const next = [...s.approvals.approvers];
+                  next[i] = { ...a, name: e.target.value };
+                  setS({ ...s, approvals: { ...s.approvals, approvers: next } });
+                }}
+                onBlur={() => save({ approvals: s.approvals })}
+                placeholder="Name"
+                className={field}
+              />
+              <input
+                value={a.role}
+                onChange={(e) => {
+                  const next = [...s.approvals.approvers];
+                  next[i] = { ...a, role: e.target.value };
+                  setS({ ...s, approvals: { ...s.approvals, approvers: next } });
+                }}
+                onBlur={() => save({ approvals: s.approvals })}
+                placeholder="What they are signing for"
+                className={field}
+              />
+              {/* Removing someone also lowers `required` if it would otherwise
+                  exceed the people left — a gate that needs three signatures
+                  from two people is a publishing outage, not a policy. */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = s.approvals.approvers.filter((_, j) => j !== i);
+                  if (next.length === 0) return;
+                  const approvals = {
+                    approvers: next,
+                    required: Math.min(s.approvals.required, next.length),
+                  };
+                  setS({ ...s, approvals });
+                  save({ approvals });
+                }}
+                disabled={s.approvals.approvers.length <= 1}
+                title={
+                  s.approvals.approvers.length <= 1
+                    ? "At least one approver is required"
+                    : `Remove ${a.name || "this approver"}`
+                }
+                className="text-[11.5px] font-medium px-2.5 py-2 rounded-lg border border-[var(--line)] text-[var(--ink-3)] hover:text-[var(--danger)] hover:border-[var(--danger)]/50 disabled:opacity-30 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              const id = `approver_${Date.now().toString(36)}`;
+              const approvals = {
+                ...s.approvals,
+                approvers: [
+                  ...s.approvals.approvers,
+                  { id, name: "", role: "" },
+                ],
+              };
+              setS({ ...s, approvals });
+              save({ approvals });
+            }}
+            className="text-[11.5px] font-medium px-3 py-2 rounded-lg border border-[var(--line)] text-[var(--ink-3)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-colors"
+          >
+            + Add approver
+          </button>
+        </div>
+
         <div>
-          <label className={label} htmlFor="approvers">
-            Approvers
+          <label className={label} htmlFor="required">
+            Signatures required
           </label>
           <input
-            id="approvers"
-            value={s.approvals.approvers}
+            id="required"
+            type="number"
+            min={1}
+            max={s.approvals.approvers.length}
+            value={s.approvals.required}
             onChange={(e) =>
               setS({
                 ...s,
-                approvals: { ...s.approvals, approvers: e.target.value },
+                approvals: {
+                  ...s.approvals,
+                  required: Number(e.target.value) || 1,
+                },
               })
             }
             onBlur={() => save({ approvals: s.approvals })}
-            placeholder="liam@coinpresso.io, pete@coinpresso.io"
-            className={field}
+            className={`${field} w-24`}
           />
+          <p className="text-[11px] text-[var(--ink-4)] mt-1.5 max-w-2xl">
+            Currently {s.approvals.required} of {s.approvals.approvers.length}.
+            Lowering this does not retire an approver — it means release unlocks
+            before everyone has read it. A wire release cannot be recalled once a
+            publisher has it, which is the reason this number is not one.
+          </p>
         </div>
       </Section>
 
+
+      <SnapshotRestore />
 
       <Section
         title="WordPress — coinpresso.io"

@@ -1,0 +1,77 @@
+Vetting a Crypto Community Manager: Interview Questions That Actually Predict Performance
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto community manager interview questions
+
+Semantic keywords
+Web3 community manager hiring, crypto moderator interview, Discord security hiring, community manager scorecard, crypto community operations
+
+Intent and audience
+Informational; founders and operations leads hiring a Web3 community manager.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/vetting-crypto-community-manager
+
+Meta title
+Crypto Community Manager Interview Questions That Predict Performance
+
+Meta description
+Hire beyond engagement slogans: assess community-operations judgment, security escalation, evidence handling, conflict management, and measured growth.
+
+2. SERP Gap
+Existing lists test social-posting skills and generic engagement ideas. They miss the operational reality of crypto communities: scam reports, compromise escalation, uncertain information, on-chain literacy, and protected member communication.
+3. Unique Coinpresso Angle
+Hire for judgment under uncertainty, not audience hype. The article gives structured scenario questions and a scorecard for evidence handling, security escalation, writing, empathy, and operational discipline.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Define the role before the interview
+Separate moderator, support lead, community strategist, ambassador manager, and social manager.
+
+2
+Use scenario-based questions
+Test a fake-admin report, market panic, roadmap delay, recurring scam link, and heated governance discussion.
+
+3
+Score evidence discipline
+Assess when the candidate verifies, escalates, documents, and avoids speculation.
+
+4
+Assess crypto literacy safely
+Test ability to interpret public documentation and identify when to hand off—not to give wallet advice.
+
+5
+Test communication craft
+Review a short incident update, FAQ answer, and de-escalation message.
+
+6
+Run a paid practical exercise
+Use a synthetic scenario with clear consent and no access to sensitive tools.
+
+7
+Conclusion and FAQ
+Include an interview-scorecard template.
+
+5. FAQ Section
+What skills matter most in a crypto community manager? Provide a concise, practical answer with any relevant safety or measurement limitation. Should a community manager know how to use a block explorer? Provide a concise, practical answer with any relevant safety or measurement limitation. How can an interview test scam-response judgment? Provide a concise, practical answer with any relevant safety or measurement limitation. What is a fair practical hiring exercise? Provide a concise, practical answer with any relevant safety or measurement limitation. Can one community manager cover Discord, Telegram, and X? Provide a concise, practical answer with any relevant safety or measurement limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential community-strategy partner that can help define operating models, moderation workflows, content formats, measurement, and channel roles. Avoid promising growth, retention, conversion, or incident prevention.
+
+CTA banner Section: “The right hire protects community trust as well as engagement. Ask Coinpresso to help define a crypto community-manager scorecard and operating model.”
+
+Recommended internal links: Link to AI Moderation Bots vs Human Moderators, Telegram Scam Impersonators, and In-House vs Agency Community Management.
+
+Guardrails: Do not treat a community manager as a security engineer, financial adviser, or sole crisis owner. Design exercises that avoid real user data, real wallets, and live moderation access.

@@ -8,9 +8,10 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dataDir } from "./data-dir";
 import type { Run } from "./types";
 
-const DIR = path.join(process.cwd(), ".data", "runs");
+const DIR = dataDir("runs");
 
 async function ensure(): Promise<void> {
   await fs.mkdir(DIR, { recursive: true });

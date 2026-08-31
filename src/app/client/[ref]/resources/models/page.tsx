@@ -84,6 +84,13 @@ export default async function ModelRegisterPage({
                         <span className="text-[10.5px] text-[var(--ink-4)]">
                           {m.provider} · {m.tier} · ${m.pricing.in}/$
                           {m.pricing.out} per M
+                          {m.priceChange && (
+                            <span className="text-[var(--warning)] font-semibold">
+                              {" "}
+                              → ${m.priceChange.pricing.in}/$
+                              {m.priceChange.pricing.out} from {m.priceChange.on}
+                            </span>
+                          )}
                         </span>
                       )}
                       {s.envVar !== "—" && (

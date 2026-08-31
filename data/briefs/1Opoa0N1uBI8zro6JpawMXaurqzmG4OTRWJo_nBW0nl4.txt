@@ -1,0 +1,52 @@
+llms.txt for Crypto & Web3 Sites: Do You Need One?
+Primary Keyword: llms.txt for crypto
+Secondary Keywords: llms.txt Web3 sites, AI crawler optimization blockchain, llms.txt DeFi
+
+SERP Gap Analysis
+Only one notable article (Victoria Olsina, May 2026) discusses llms.txt for Web3. The rest of the SERP is either the official llms.txt specification (llmstxt.org) or generic implementation guides (Webflow University). There is a massive gap for a practical, marketing-focused guide that provides actual copy-paste templates for different types of crypto projects and explains the ROI in business terms.
+
+Unique Angle
+Don't just explain what llms.txt is; provide the exact templates for three different crypto project types. Position llms.txt as the "duct tape" that fixes the fragmented nature of Web3 documentation. Include a decision matrix for when you need one (and when you don't), and provide before/after AI visibility comparisons.
+
+Recommended Article Structure
+Section
+Title
+Focus
+1
+The New robots.txt for the AI Era
+What llms.txt is and why it's suddenly critical for Web3 visibility
+2
+The Web3 Fragmentation Problem
+Why crypto projects desperately need llms.txt to connect scattered content
+3
+How AI Crawlers Use llms.txt
+Mechanics of how Perplexity and ChatGPT use this file
+4
+Anatomy of a Perfect Crypto llms.txt
+Essential components: canonical description, docs, API, risks/limitations
+5
+Template 1: The DeFi Protocol
+Structure focusing on smart contracts, audits, and mechanics
+6
+Template 2: The Layer 1/Layer 2
+Structure focusing on consensus mechanisms, node operation, SDKs
+7
+Template 3: The Crypto Exchange/Wallet
+Structure focusing on security, supported assets, regulatory compliance
+8
+Implementation and Maintenance
+Deploying the file and keeping it updated alongside protocol upgrades
+9
+Conclusion
+Why llms.txt is the highest ROI technical task a Web3 marketer can do this week
+
+FAQ Section
+Q1: What is llms.txt and how is it different from robots.txt? llms.txt is a plain text file placed at your domain root (yourdomain.com/llms.txt) that provides a structured guide for AI crawlers. While robots.txt tells search engines what not to crawl, llms.txt tells AI systems what to prioritize and how to understand your site's content hierarchy. It uses simple markdown formatting with headings, descriptions, and links.
+
+Q2: Do I need llms.txt if my crypto site already ranks well on Google? Yes. Google rankings and AI visibility are increasingly separate systems. A site can rank #1 on Google but be completely ignored by ChatGPT and Perplexity. llms.txt specifically helps AI crawlers understand your site structure, which traditional SEO signals don't address.
+
+Q3: How long should a crypto llms.txt file be? Keep it focused: 10-15 of your most important pages. The goal is to provide a curated guide, not an exhaustive sitemap. Prioritize your canonical explainer, technical documentation, risk disclosures, and API references. Avoid listing every blog post or marketing page.
+
+Q4: Does llms.txt actually improve AI citations? While llms.txt alone won't guarantee citations, it removes a significant barrier. Without it, AI crawlers must guess which of your scattered pages are most important. With it, you explicitly direct AI systems to your most authoritative content, significantly improving the accuracy and consistency of how AI describes your project.
+
+Q5: How often should I update my llms.txt? Update it whenever you make significant content changes: new product launches, major documentation updates, new audit publications, or architectural changes to your site. At minimum, review it quarterly. An outdated llms.txt is worse than no llms.txt because it directs AI crawlers to stale content.

@@ -1,0 +1,52 @@
+Crypto Comparison Pages That Get Cited by AI: A Structural Breakdown
+Primary Keyword: crypto comparison pages AI citations
+Secondary Keywords: AI search comparison pages Web3, how to get cited by AI crypto, crypto exchange comparison SEO
+
+SERP Gap Analysis
+Kevin Indig's research shows that a single well-structured comparison page (learn.g2.com) generated 495 citations from 65 unique prompts, outperforming entire domain portfolios. Search Engine Journal reports that AI engines vary widely in cited sources but converge on brands. However, no article provides a specific structural blueprint for crypto comparison pages that maximize AI extraction.
+
+Unique Angle
+Provide a literal teardown of the perfect AI-optimized crypto comparison page. Move beyond "write good content" to providing the exact HTML structure, table formatting rules, and objective phrasing required to become the definitive source that ChatGPT and Perplexity use when users ask "X vs Y protocol." Include actual before/after examples showing how restructuring a comparison page increases citation frequency.
+
+Recommended Article Structure
+Section
+Title
+Focus
+1
+Why AI Engines Love Comparisons
+Data behind comparison page dominance in AI search
+2
+The "Objective Arbiter" Positioning
+Why AI penalizes biased "Us vs Them" pages; how to write neutrally
+3
+The AI-Optimized Comparison Table
+Exact formatting rules: clear headers, binary data, objective metrics
+4
+Structuring the Feature Breakdown
+Using H2s and H3s to create machine-readable hierarchy
+5
+Handling Subjective Elements
+Presenting UX and support comparisons using aggregated data
+6
+The "TL;DR" Executive Summary
+Why the top 100 words dictate AI citation; writing the perfect summary
+7
+Schema Markup for Comparison Pages
+Technical implementation of ItemList and Product schema
+8
+Updating Frequency and Freshness
+Why AI engines drop outdated crypto comparisons instantly
+9
+Conclusion
+Template for building a scalable comparison page engine
+
+FAQ Section
+Q1: Why are comparison pages so effective for AI citations? AI engines prioritize comparison pages because they provide structured, objective information that directly answers user queries. When someone asks "Uniswap vs SushiSwap," AI engines need a source that presents both sides fairly with clear data points. A well-structured comparison page is the easiest content for an LLM to extract and reformulate into an answer.
+
+Q2: Should I compare my own crypto project against competitors? Yes, but with extreme objectivity. AI engines detect and penalize biased comparisons. The most effective approach is to present factual differences (fees, features, supported chains) without declaring a "winner." Paradoxically, the more neutral your comparison, the more likely AI engines will cite it and the more trust you build with readers.
+
+Q3: What format works best for crypto comparison tables? Use clean HTML tables with: clear column headers (Feature, Project A, Project B), binary data where possible (Yes/No, checkmarks), objective metrics (numbers, percentages), and consistent formatting. Avoid subjective ratings (stars, scores) unless sourced from third-party aggregators.
+
+Q4: How many comparison pages should a crypto project have? Create comparison pages for every major competitor and alternative in your category. A DeFi lending protocol should have pages comparing itself to each major competitor, plus a "roundup" page comparing all options. Aim for 5-10 comparison pages as a starting point, each targeting a specific "[Your Brand] vs [Competitor]" query.
+
+Q5: How often should I update crypto comparison pages? At minimum monthly, and immediately when competitors change fees, add features, or face security incidents. AI engines strongly favor fresh content for financial comparisons. Include a visible "Last Updated" date on the page to signal freshness to both users and AI crawlers.

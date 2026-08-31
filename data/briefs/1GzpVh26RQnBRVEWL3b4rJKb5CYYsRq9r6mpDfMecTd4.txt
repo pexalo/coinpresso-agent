@@ -1,0 +1,132 @@
+The Crypto GEO Prompt List: What People Are Actually Asking ChatGPT About Your Category
+1. SEO Brief
+Element
+Recommendation
+
+Exact title
+The Crypto GEO Prompt List: What People Are Actually Asking ChatGPT About Your Category
+
+Primary keyword
+crypto GEO prompts
+
+Secondary keywords
+ChatGPT crypto queries, AI search prompt research, crypto prompt taxonomy, LLM visibility tracking, Web3 GEO audit, crypto buyer questions
+
+Search intent
+Informational and practical
+
+Audience
+Crypto marketers, SEO teams, founders, product marketers, and research leads
+
+Recommended length
+2,300–2,900 words
+
+Funnel stage
+Awareness to consideration
+
+Proposed slug
+/crypto-geo-prompt-list
+
+Meta title
+Crypto GEO Prompt List: What Users Ask AI Models
+
+Meta description
+Build a representative crypto AI prompt panel across safety, fees, comparisons, use cases, jurisdictions, and investment-research questions.
+
+2. SERP Landscape and Gap
+The SERP is split between generic GEO explainers and copy-paste prompt lists for traders. The latter tell readers how to ask ChatGPT for technical analysis or token ideas; they do not help a Web3 brand discover the questions that determine whether it is mentioned, cited, accurately described, or recommended.
+
+The crucial caveat is that public, keyword-style search-volume data for exact ChatGPT prompts is limited. ChatGPT Search supports conversational questions and contextual follow-ups, which makes AI query behavior less reducible to a static list of short keywords.1 Therefore, the article should not claim that its prompts are the “most searched” unless Coinpresso has a disclosed dataset. It should show readers how to build and validate a representative prompt panel from real demand signals.
+3. Unique Coinpresso Angle
+The prompt list is not the deliverable; the prompt-coverage model is.
+
+Coinpresso should create a B2B Crypto Prompt Taxonomy organized by decision stage, product category, risk level, geography, and comparison intent. The article then explains how to source prompts, test them repeatedly across models, score brand coverage, and refresh the panel. This avoids becoming another trader-prompt list and directly supports GEO planning.
+4. Why This Article Can Win
+The article can rank because it satisfies list intent while delivering a rigorous methodology. Generative engines can synthesize information from multiple sources, so a prompt may trigger several reformulated searches rather than map neatly to one keyword.2 Gemini’s official grounding documentation, for example, describes a workflow in which the model can generate one or multiple search queries before producing a cited answer.3
+
+The piece must distinguish observed user language from editor-created test prompts. It should disclose the source of every prompt cluster and avoid presenting anecdotal screenshots as market-wide behavior.
+5. Recommended Article Outline
+Article section
+What it should cover
+Target words
+
+1. Why Crypto Prompt Research Is Not Keyword Research
+Explain conversational queries, follow-ups, model search reformulation, and the lack of universal prompt-volume data.
+270
+
+2. Where Real Crypto Questions Come From
+Mine support tickets, sales calls, site search, community questions, Reddit, YouTube comments, Google Search Console, and competitor FAQs.
+340
+
+3. The Seven-Cluster Crypto Prompt Taxonomy
+Cover definition, safety, comparison, fees, eligibility, use case, and investment-research prompts.
+420
+
+4. Prompts by Project Category
+Provide starter sets for exchanges, wallets, DeFi, infrastructure, gaming, stablecoins, and tokenized assets.
+420
+
+5. Add Geography, Persona, and Risk Modifiers
+Show how “best exchange” changes by country, experience level, asset, custody preference, and compliance needs.
+300
+
+6. Build a Representative Test Panel
+Balance head, mid-tail, long-tail, branded, unbranded, positive, skeptical, and comparison prompts.
+320
+
+7. Run and Score the Panel
+Log model, date, mode, exact prompt, mention, citation, recommendation, sentiment, accuracy, and competitors.
+330
+
+8. Turn Coverage Gaps Into a Content Roadmap
+Map unsupported prompts to new pages, documentation fixes, third-party validation, or product clarification.
+300
+
+9. Conclusion and FAQ
+Explain update cadence and link the prompt panel to Share of Model Voice reporting.
+260
+
+6. Original Asset or Methodology
+Create a downloadable Crypto GEO Prompt Library and Coverage Matrix. Seed it with representative prompts but include columns for source, verbatim wording, category, persona, geography, funnel stage, risk sensitivity, expected evidence, and last validation date.
+
+Cluster
+Representative prompt pattern
+
+Safety
+“What evidence should I check before using a [category]?”
+
+Comparison
+“[Project A] vs [Project B] for [specific use case]”
+
+Eligibility
+“Which [category] can residents of [jurisdiction] use?”
+
+Fees
+“What is the total cost of using [category] for [transaction]?”
+
+Technical fit
+“Which [category] supports [network, standard, or integration]?”
+
+Risk/limitations
+“What are the main risks or limitations of [project/category]?”
+
+Alternatives
+“What are credible alternatives to [incumbent] for [persona]?”
+
+7. FAQ Section
+Can we see exact ChatGPT search volume for crypto prompts? Explain that exact public prompt-volume data is generally not equivalent to conventional keyword tools; use multiple first-party and public demand signals and disclose the methodology.
+
+How many prompts should a crypto GEO audit include? Recommend coverage based on category complexity and decision paths rather than a universal count.
+
+Should branded prompts be included? Yes, because they reveal factual accuracy and reputation issues; unbranded prompts reveal discovery and competitive visibility.
+
+How often should the list be refreshed? Suggest monthly monitoring for priority clusters and quarterly taxonomy reviews, with faster updates after product, regulatory, or market changes.
+
+What should a team do when a prompt produces a wrong answer? Trace the cited or likely source, correct canonical information, strengthen evidence, and retest across multiple runs instead of trying to manipulate the prompt.
+8. Conversion and Linking Plan
+Position Coinpresso as the partner that can build the prompt universe, run the model audit, identify coverage gaps, and convert those gaps into a prioritized content and authority roadmap.
+
+CTA banner Section: “Do you know which AI questions decide whether your crypto brand is discovered? Ask Coinpresso for a category prompt map and visibility baseline.”
+
+Recommended internal links are Share of Model Voice: The New KPI for Crypto Brands in ChatGPT, Gemini & Claude, Generative Engine Optimization for Crypto Projects: The Complete 2026 Guide, and Why ChatGPT and Perplexity Don't Cite Crypto Brands (And How to Fix It).
+9. References

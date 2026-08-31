@@ -94,13 +94,29 @@ export const WORKFLOWS: Record<WorkflowId, Workflow> = {
     destination: "OpenPR · StreetInsider · GlobeNewswire · TechBullion · 5 more",
     nodes: [
       {
+        id: "ideation",
+        kind: "agent",
+        title: "Ideation",
+        role: "Scans the live market for dated catalysts, then proposes topics and titles",
+        model: MODELS.strategy,
+        tools: ["web search"],
+        reads: ["The live market", "Published archive", "Competitor work", "Wire usage"],
+        emits: [
+          "Topics — a dated hook with the URLs it found",
+          "Titles under each topic, one keyword and one wire apiece",
+          "Its own read on how strong each catalyst is",
+        ],
+        why: "Optional — a brief can be typed directly. It runs the same model and search tool as the research stage because ideation IS research: proposing a title blind produces a premise the research stage then disproves, after the title is fixed.",
+        costShare: 0.05,
+      },
+      {
         id: "brief",
         kind: "input",
         title: "Brief",
-        role: "Title, target keywords, wire — or a batch from the ideas agent",
-        reads: ["Campaign fact sheet", "Banned claims"],
+        role: "Title, target keywords, wire — typed, or taken from a topic",
+        reads: ["Campaign fact sheet", "Banned claims", "The topic's hook and sources"],
         emits: ["Brief stamped with the figures true at submission"],
-        why: "The fact sheet is snapshotted onto the brief so a mid-batch change cannot make two articles disagree about the raise.",
+        why: "The fact sheet is snapshotted onto the brief so a mid-batch change cannot make two articles disagree about the raise. Where the brief came from a topic, the catalyst and its URLs travel with it so research starts from the hook the title was chosen for.",
       },
       {
         id: "strategy",
@@ -160,10 +176,11 @@ export const WORKFLOWS: Record<WorkflowId, Workflow> = {
       {
         id: "review",
         kind: "human",
-        title: "Liam reviews",
-        role: "Nothing reaches a wire without a person approving it",
+        title: "Three approvals",
+        role: "Each named approver signs the exact draft",
         reads: ["Draft", "Findings", "Source ledger"],
-        emits: ["Approved", "Sent back"],
+        emits: ["Signed by each", "Sent back with a reason"],
+        why: "A wire release goes to a third party and cannot be recalled, so one click by one person is the wrong shape for it. Each signature is bound to the version it was given against: revise after two approvals and both are taken again. A rejection blocks release outright — the other two agreeing does not overrule the one person who found the problem.",
       },
       {
         id: "export",
@@ -193,12 +210,30 @@ export const WORKFLOWS: Record<WorkflowId, Workflow> = {
     destination: "coinpresso.io — pillar and cluster",
     nodes: [
       {
+        id: "seeds",
+        kind: "input",
+        title: "Coinpresso's topics",
+        role: "Topics and keywords supplied by the people who know the business",
+        reads: ["The topic queue", "Standing keywords"],
+        emits: [
+          "One required post per topic",
+          "The keywords that post targets",
+          "Any figure or example only Coinpresso holds",
+        ],
+        why: "The planner reads pillars and the archive, and cannot know what three sales calls asked last week or which term a competitor started bidding on. A topic left here is a commitment the day has to carry, not a suggestion the planner may dilute — and it is marked written once the batch starts, so it is never published twice.",
+        costShare: 0,
+      },
+      {
         id: "plan",
         kind: "input",
         title: "Day plan",
         role: "5–8 posts spread across pillars and formats",
         model: MODELS.strategy,
-        reads: ["Pillars and clusters", "Everything already on the blog"],
+        reads: [
+          "Coinpresso's queued topics",
+          "Pillars and clusters",
+          "Everything already on the blog",
+        ],
         emits: [
           "One post per pillar slot",
           "A content type per post",
@@ -260,11 +295,11 @@ export const WORKFLOWS: Record<WorkflowId, Workflow> = {
       {
         id: "review",
         kind: "human",
-        title: "Editor approves",
-        role: "The day's set is read together, not one at a time",
+        title: "Three approvals",
+        role: "The approvers sign — read as a day, recorded per post",
         reads: ["The day's drafts", "Pillar spread"],
-        emits: ["Approved", "Shelved"],
-        why: "Eight posts each fine alone can still be a bad day's publishing. The spread across pillars and formats is only visible in the set.",
+        emits: ["Signed by each", "Sent back with a reason"],
+        why: "Eight posts each fine alone can still be a bad day's publishing, so the day is what gets read and one action signs the set. The RECORD stays per post: revising one tomorrow voids only that post's approvals, and a piece that was challenged can be traced to who signed that exact version.",
       },
       {
         id: "publish",

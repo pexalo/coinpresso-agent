@@ -1,0 +1,77 @@
+Crypto PR Crisis Management: What to Say (and Not Say) After an Exploit or De-Peg
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto PR crisis management
+
+Semantic keywords
+exploit communications, stablecoin de-peg communications, Web3 crisis PR, incident status page, crypto incident disclosure
+
+Intent and audience
+Informational; communications, security, and leadership teams planning incident readiness.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-pr-crisis-management-exploit-depeg
+
+Meta title
+Crypto PR Crisis Management After an Exploit or De-Peg
+
+Meta description
+A practical communications framework for crypto incidents: verified facts, uncertainty, timestamps, status updates, corrections, and counsel review.
+
+2. SERP Gap
+Generic crisis pieces blur exploits and de-pegs and race to write a statement. They rarely separate verified facts from reassurance, technical cause, recovery promises, and legal conclusions.
+3. Unique Coinpresso Angle
+Use a two-track communications protocol: an evidence ledger for verified incident facts and a separate decision log for unverified, legal, or recovery-sensitive statements. The article is about avoiding harmful overstatement, not about operational incident response.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Exploit, de-peg, and outage are not the same crisis
+Explain why facts, stakeholders, and communications risks differ.
+
+2
+Activate one source of truth
+Define a timestamped status page and update owner.
+
+3
+Track one of three statement types
+Separate verified facts, active uncertainty, and forward-looking commitments.
+
+4
+What not to say early
+Avoid “funds are safe,” attribution, root-cause, recovery, or timeline claims without evidence and approvals.
+
+5
+The first update template
+Cover scope, known impact, user action if any, next-update time, and correction channel.
+
+6
+Coordinate technical, legal, and communications teams
+Set approval roles and preserve a decision log.
+
+7
+Conclusion and FAQ
+Include a tabletop-exercise checklist.
+
+5. FAQ Section
+What should be in the first public incident update? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Should a project promise reimbursement immediately? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How often should a status page be updated? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How should a team correct an early statement? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Does a de-peg require a different communications plan from an exploit? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “Crisis trust is built with accuracy, timestamps, and disciplined updates. Ask Coinpresso to help create a crypto incident communications playbook.”
+
+Recommended internal links: Link to Why AI Models Are Skeptical of Crypto Projects, Crypto PR Timing, and How Regulators Reading Crypto Press Releases Changed What You Can Legally Claim.
+7. Source and Production Guardrails
+Informational only; incident communications, user notices, and regulatory disclosures require qualified legal counsel review. Do not provide exploit remediation steps, speculate on cause or attacker identity, or promise recovery before the relevant facts and approvals exist.

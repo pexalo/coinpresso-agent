@@ -16,6 +16,7 @@ import { PUBLICATIONS } from "../publications";
 import { LIAM_STYLE_PROFILE } from "../style-profile";
 import { recent } from "../archive";
 import { BLOG_PLAYBOOK, BLOG_STYLE, CONTENT_TYPES } from "../blog";
+import type { CallContext } from "../providers/routing";
 import type {
   Brief,
   Draft,
@@ -51,6 +52,8 @@ the brief rather than patched.
 Return ONLY a JSON object.`;
 
 export interface ReviewerInput {
+  /** Threaded to the gateway so spend is attributed to a client and a run. */
+  ctx?: CallContext;
   brief: Brief;
   research: ResearchBrief;
   draft: Draft;
@@ -203,6 +206,7 @@ Return JSON:
     user,
     maxTokens: 4000,
     json: true,
+    context: { ...input.ctx, stage: "reviewer" },
   });
 
   const review = JSON.parse(r.text) as ReviewResult;
@@ -301,6 +305,7 @@ Return JSON:
     user,
     maxTokens: 4000,
     json: true,
+    context: { ...input.ctx, stage: "reviewer" },
   });
 
   const review = JSON.parse(r.text) as ReviewResult;

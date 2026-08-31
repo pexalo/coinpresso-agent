@@ -1,3 +1,5 @@
+import type { ContentBrief } from "./content-brief";
+
 // ---------------------------------------------------------------------------
 // Shared types for the Coinpresso agent pipeline.
 // ---------------------------------------------------------------------------
@@ -46,6 +48,25 @@ export interface Brief {
   presaleRaised?: string;
   presaleStage?: string;
   notes?: string;
+  /**
+   * An INTERNAL editorial brief for this post — Coinpresso's own content
+   * recommendation doc, held in their Drive.
+   *
+   * It is guidance the pipeline follows and it is NOT a source. It is not
+   * published, not reachable by a reader, and citing it would put a Google Docs
+   * link in a live article. It is therefore kept out of `Source` entirely and
+   * carried here on its own, so that the one place it can appear — the strategy
+   * prompt — can quarantine it explicitly rather than relying on a model
+   * inferring that an internal URL is different in kind from a researched one.
+   */
+  referenceUrl?: string;
+  /** The client's content brief, as structure. See `content-brief.ts`. */
+  contentBrief?: ContentBrief;
+  /**
+   * A Coinpresso page this post exists to link to. Outreach rows in the content
+   * calendar carry one; ordinary posts do not.
+   */
+  linkTarget?: string;
   /** Snapshot of the campaign at the moment the brief was submitted, so a run
    *  records what was true then rather than what the fact sheet says today. */
   campaignId?: string;
@@ -166,7 +187,12 @@ export interface StageRecord {
   error?: string;
   tokensIn?: number;
   tokensOut?: number;
+  /** Billable server-side web searches. Priced separately from tokens. */
+  searchRequests?: number;
+  /** Tokens only. */
   costUsd?: number;
+  /** Search fees only. Kept apart so the split stays visible in the breakdown. */
+  searchCostUsd?: number;
   attempt?: number;
 }
 
@@ -191,5 +217,9 @@ export interface Run {
   approvedAt?: string;
   approvedBy?: string;
   mock: boolean;
+  /** Tokens plus search. The number to bill from. */
   totalCostUsd: number;
+  /** Of which search fees. */
+  totalSearchCostUsd?: number;
+  totalSearchRequests?: number;
 }

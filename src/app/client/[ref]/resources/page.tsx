@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClient } from "@/lib/clients";
-import { MODELS } from "@/lib/models";
+import { MODELS, keyStatus } from "@/lib/models";
+import { storageIsEphemeral } from "@/lib/data-dir";
 import { PRICED_ON } from "@/lib/model-registry";
+import CredentialProbe from "@/components/CredentialProbe";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CARDS = [
@@ -67,11 +70,18 @@ export default async function ResourcesPage({
 
       <div className="card p-5">
         <h2 className="font-bold text-sm mb-3">Running right now</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: "Strategy and writer", value: MODELS.strategy },
             { label: "Reviewer", value: MODELS.reviewer },
             { label: "Prices verified", value: PRICED_ON },
+            {
+              label: "Model calls route",
+              value:
+                keyStatus().mode === "gateway"
+                  ? "via Pexalo HQ"
+                  : "direct to providers",
+            },
           ].map((k) => (
             <div key={k.label}>
               <div className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
@@ -84,6 +94,19 @@ export default async function ResourcesPage({
           ))}
         </div>
       </div>
+
+      <CredentialProbe />
+
+      {storageIsEphemeral() && (
+        <div className="rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-4 py-3 text-[12px] text-[var(--danger)]">
+          <span className="font-semibold">
+            Storage is ephemeral on this deployment.
+          </span>{" "}
+          Runs, the archive, campaign facts and the saved credentials are on a
+          disk the next deploy will wipe. Mount a Railway volume and set{" "}
+          <code>DATA_DIR</code> to its path — see DEPLOY-RAILWAY.md.
+        </div>
+      )}
 
       <div className="card p-5">
         <h2 className="font-bold text-sm mb-2">Elsewhere in the dashboard</h2>

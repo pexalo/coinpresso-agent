@@ -11,11 +11,12 @@
 // and quietly overstated one tier by 3x.
 // ---------------------------------------------------------------------------
 
-import { pricingTable, STAGE_MODELS } from "./model-registry";
+import { priceFor, pricingTable, STAGE_MODELS } from "./model-registry";
+import { canCallModels, routingMode, routingWarning } from "./providers/routing";
 
 function assigned(stage: string): string {
   return (
-    STAGE_MODELS.find((s) => s.stage === stage)?.modelId ?? "claude-sonnet-4-5"
+    STAGE_MODELS.find((s) => s.stage === stage)?.modelId ?? "claude-sonnet-5"
   );
 }
 
@@ -35,40 +36,56 @@ export const MODELS = {
 export const PRICING: Record<string, { in: number; out: number }> =
   pricingTable();
 
-export function estimateCost(model: string, tin: number, tout: number): number {
-  const p = PRICING[model];
+/**
+ * Priced AT CALL TIME, not at module load.
+ *
+ * The register carries announced price changes (Sonnet 5 steps from $2/$10 to
+ * $3/$15 on 1 Sep), and a deployment that boots in August and runs into
+ * September must not keep charging August prices. `PRICING` above stays for
+ * existence checks and display; the money goes through here.
+ *
+ * An UNKNOWN model returns 0 — there is no honest number to invent — but the
+ * caller records the tokens regardless, and the cost report surfaces "tokens
+ * burned on an unpriced model" as its own warning. Silently costing an
+ * unregistered override at $0 was exactly the hole this note exists to close:
+ * set WRITER_MODEL to anything the register has not heard of and every article
+ * looked free.
+ */
+export function estimateCost(
+  model: string,
+  tin: number,
+  tout: number,
+  at: Date = new Date()
+): number {
+  const p = priceFor(model, at);
   if (!p) return 0;
   return (tin / 1_000_000) * p.in + (tout / 1_000_000) * p.out;
 }
 
-/**
- * A key is only real if it is present AND not one of the placeholders that
- * `cp .env.example .env.local` leaves behind. Checking presence alone flips the
- * app to live mode on a file full of `sk-ant-...`, and the failure surfaces as a
- * 401 three minutes into the first run rather than as "you have no keys".
- */
-function usableKey(value: string | undefined): boolean {
-  if (!value) return false;
-  const v = value.trim();
-  if (!v) return false;
-  if (v.includes("...")) return false;
-  if (/^(your|replace|changeme|todo|xxx)/i.test(v)) return false;
-  return v.length >= 20;
+/** Env-override models the register cannot price. Surfaced by /api/health. */
+export function unpricedModels(): string[] {
+  return [...new Set(Object.values(MODELS))].filter((m) => !priceFor(m));
 }
 
+/**
+ * Mock mode when this app cannot actually reach a model.
+ *
+ * The check defers to the routing layer, because "do we have provider keys" is
+ * the wrong question in gateway mode — HQ holds the keys there, and demanding
+ * them locally would put a correctly configured deployment into mock.
+ */
 export function mockMode(): boolean {
   if (process.env.MOCK_AGENTS === "1") return true;
-  return (
-    !usableKey(process.env.ANTHROPIC_API_KEY) ||
-    !usableKey(process.env.OPENAI_API_KEY)
-  );
+  const can = canCallModels();
+  return !can.anthropic || !can.openai;
 }
 
-/** Which keys are actually usable — surfaced by /api/health so the dashboard can
- *  say which one is missing rather than only that it is in mock mode. */
-export function keyStatus(): { anthropic: boolean; openai: boolean } {
-  return {
-    anthropic: usableKey(process.env.ANTHROPIC_API_KEY),
-    openai: usableKey(process.env.OPENAI_API_KEY),
-  };
+/** Surfaced by /api/health so the dashboard can say what is actually missing. */
+export function keyStatus(): {
+  anthropic: boolean;
+  openai: boolean;
+  mode: ReturnType<typeof routingMode>;
+  warning: string | null;
+} {
+  return { ...canCallModels(), mode: routingMode(), warning: routingWarning() };
 }

@@ -6,10 +6,11 @@
 // thinking; this stage does the prose.
 // ---------------------------------------------------------------------------
 
-import { callClaude, extractJson } from "../providers/anthropic";
+import { billed, callClaude } from "../providers/anthropic";
 import { MODELS } from "../models";
 import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
+import { briefToPrompt } from "../content-brief";
 import { exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import {
   BLOG_ARCHIVE_ID,
@@ -19,6 +20,7 @@ import {
   CONTENT_TYPES,
   PILLARS,
 } from "../blog";
+import type { CallContext } from "../providers/routing";
 import type { Brief, Draft, ResearchBrief, ReviewFinding } from "../types";
 
 function styleBlock(): string {
@@ -62,7 +64,64 @@ Do not fill it.
 
 ${PLAYBOOK}`;
 
+/**
+ * Parse the writer's sectioned plain-text reply into a Draft.
+ *
+ * WHY THE WRITER DOES NOT RETURN JSON ANY MORE. A 1,500-word markdown article
+ * inside a JSON string needs every quote and newline escaped, and articles on
+ * this programme are DENSE with quotes — quoted AI prompts, quoted headlines,
+ * quoted analyst lines. One unescaped quote or one raw newline and the entire
+ * paid reply was unparseable; it failed twice in production in exactly this
+ * way on the first live article. Sectioned plain text has no escaping at all,
+ * so the failure class does not exist: the only way to break this format is to
+ * omit a section header, which the diagnostics below name precisely.
+ */
+function parseDraftSections(
+  text: string,
+  ctx: { stage: string; stopReason?: string; maxTokens: number }
+): Omit<Draft, "wordCount"> {
+  const grab = (name: string): string => {
+    const m = text.match(
+      new RegExp(`===${name}===\\s*([\\s\\S]*?)(?=\\n===[A-Z]+===|$)`)
+    );
+    return m ? m[1].trim() : "";
+  };
+
+  const headline = grab("HEADLINE");
+  const body = grab("BODY");
+  if (!headline || !body) {
+    if (ctx.stopReason === "max_tokens") {
+      throw new Error(
+        `The ${ctx.stage} reply was cut off at the ${ctx.maxTokens} token limit before it finished the article. Retry the stage; if it recurs, the format's word target and this ceiling disagree.`
+      );
+    }
+    const missing = !headline ? "===HEADLINE===" : "===BODY===";
+    throw new Error(
+      `The ${ctx.stage} reply did not contain the ${missing} section. It began: ${JSON.stringify(text.slice(0, 160))}`
+    );
+  }
+
+  const datelineRaw = grab("DATELINE");
+  const dateline =
+    !datelineRaw || /^none\.?$/i.test(datelineRaw) ? null : datelineRaw;
+
+  const faqs: Array<{ q: string; a: string }> = [];
+  for (const block of grab("FAQS").split(/\n(?=Q:)/)) {
+    const m = block.match(/^Q:\s*([\s\S]*?)\n\s*A:\s*([\s\S]*)$/);
+    if (m) faqs.push({ q: m[1].trim(), a: m[2].trim() });
+  }
+
+  const tags = grab("TAGS")
+    .split(/[,\n]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  return { headline, dateline, body, faqs, tags };
+}
+
 export interface WriterInput {
+  /** Threaded to the gateway so spend is attributed to a client and a run. */
+  ctx?: CallContext;
   brief: Brief;
   research: ResearchBrief;
   /** On a revision pass, what the reviewer asked for. */
@@ -138,8 +197,22 @@ otherwise would, and do not invent house conventions it does not state.\n`;
           .join("\n")}\n\nYOUR PREVIOUS DRAFT:\n${previous.body}`
       : "";
 
+  // The client's brief goes to the WRITER too, not only to research.
+  //
+  // It used to reach here second-hand, folded into suggestedHeadings and
+  // faqCandidates by the strategy agent — which is a summary of a summary. The
+  // brief is the thing the writer is meant to follow before it invents anything
+  // of its own: the section order, the per-section word counts, the exact FAQ
+  // questions, and the sentence saying what the piece must not claim. Those
+  // survive being passed along only if they are passed along intact.
+  const clientBrief = brief.contentBrief
+    ? `\n---\n\n${briefToPrompt(brief.contentBrief)}\n\nWhere this brief and the research below disagree on a FACT, the research wins —
+it was retrieved and the brief was not. Where they differ on SHAPE — the
+sections, their order, the questions, the length — follow the brief.\n`
+    : "";
+
   const user = `${BLOG_STYLE}
-${voiceBlock}
+${voiceBlock}${clientBrief}
 ---
 
 FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}
@@ -188,24 +261,54 @@ ${revisionBlock}
 
 ---
 
-Return ONLY a JSON object:
-{
-  "headline": "the final H1",
-  "dateline": null,
-  "body": "the full post in markdown with ## H2 sections. No boilerplate, no disclaimer. Do NOT include the FAQs here.",
-  "faqs": [{ "q": "...", "a": "..." }],
-  "tags": ["..."]
-}`;
+Return your work in EXACTLY this sectioned plain-text format — NOT JSON. Write
+markdown naturally: real line breaks, quotes as quotes, nothing escaped.
+
+===HEADLINE===
+the final H1
+===DATELINE===
+none
+===BODY===
+the full post in markdown with ## H2 sections. No boilerplate, no disclaimer.
+Do NOT include the FAQs here.
+===FAQS===
+Q: first question
+A: its answer
+Q: second question
+A: its answer
+===TAGS===
+comma, separated, tags
+
+Start your reply with ===HEADLINE=== and end it after the tags line.`;
+
+  // DERIVED FROM THE WORD TARGET THIS FORMAT ACTUALLY ASKS FOR.
+  //
+  // The article lives inside a JSON string with every quote and newline
+  // escaped, so it needs real headroom — 8000 genuinely was not enough for the
+  // long formats. But 16000 was not a considered figure either: it is four
+  // times the longest brief on the books, and a flat ceiling that high means a
+  // reply that runs away is billed for four articles' worth of tokens before
+  // anything stops it. Two and a half tokens per target word covers markdown,
+  // escaping and the FAQ block with room to spare; the 3000 floor covers the
+  // wrapper and the short formats.
+  const targetWords = type?.words?.[1] ?? 2200;
+  const ceiling = Math.round(3000 + targetWords * 2.5);
 
   const r = await callClaude({
     model: MODELS.writer,
     system: BLOG_SYSTEM,
     user,
-    maxTokens: 8000,
+    maxTokens: ceiling,
     temperature: 0.65,
+    context: { ...input.ctx, stage: input.fixes ? "revision" : "writer" },
   });
 
-  const parsed = extractJson<Omit<Draft, "wordCount">>(r.text);
+  let parsed: Omit<Draft, "wordCount">;
+  try {
+    parsed = parseDraftSections(r.text, { stage: "writer", stopReason: r.stopReason, maxTokens: ceiling });
+  } catch (e) {
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: 0 });
+  }
   const draft: Draft = {
     ...parsed,
     dateline: null,
@@ -360,24 +463,45 @@ ${revisionBlock}
 
 ---
 
-Return ONLY a JSON object:
-{
-  "headline": "...",
-  "dateline": ${pub.dateline ? '"ZUG, Switzerland, Month D, YYYY (GLOBE NEWSWIRE) --"' : "null"},
-  "body": "the full article in markdown: intro paragraphs, ## H2 sections, prose. Include the boilerplate at the end. Do NOT include the FAQs here — they go in the faqs field.",
-  "faqs": [{ "q": "...", "a": "..." }],
-  "tags": ["..."]
-}`;
+Return your work in EXACTLY this sectioned plain-text format — NOT JSON. Write
+markdown naturally: real line breaks, quotes as quotes, nothing escaped.
+
+===HEADLINE===
+the final H1
+===DATELINE===
+${pub.dateline ? "ZUG, Switzerland, Month D, YYYY (GLOBE NEWSWIRE) --" : "none"}
+===BODY===
+the full article in markdown: intro paragraphs, ## H2 sections, prose. Include
+the boilerplate at the end. Do NOT include the FAQs here.
+===FAQS===
+Q: first question
+A: its answer
+Q: second question
+A: its answer
+===TAGS===
+comma, separated, tags
+
+Start your reply with ===HEADLINE=== and end it after the tags line.`;
+
+  // Same derivation as the blog writer above, from the publication's own word
+  // target rather than a flat figure.
+  const ceiling = Math.round(3000 + (pub.wordTarget?.[1] ?? 2200) * 2.5);
 
   const r = await callClaude({
     model: MODELS.writer,
     system: SYSTEM,
     user,
-    maxTokens: 8000,
+    maxTokens: ceiling,
     temperature: 0.6,
+    context: { ...input.ctx, stage: input.fixes ? "revision" : "writer" },
   });
 
-  const parsed = extractJson<Omit<Draft, "wordCount">>(r.text);
+  let parsed: Omit<Draft, "wordCount">;
+  try {
+    parsed = parseDraftSections(r.text, { stage: "writer", stopReason: r.stopReason, maxTokens: ceiling });
+  } catch (e) {
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: 0 });
+  }
   const draft: Draft = {
     ...parsed,
     faqs: parsed.faqs || [],

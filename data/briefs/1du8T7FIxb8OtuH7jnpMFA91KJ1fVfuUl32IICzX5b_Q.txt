@@ -1,0 +1,77 @@
+PR for Anonymous Teams: How Pseudonymous Founders Can Still Earn Credible Coverage
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+PR for anonymous crypto teams
+
+Semantic keywords
+pseudonymous founders PR, anonymous Web3 team credibility, crypto media trust, anonymous founder verification, Web3 due diligence
+
+Intent and audience
+Informational; pseudonymous teams seeking an ethical credibility framework.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/pr-for-anonymous-crypto-teams
+
+Meta title
+PR for Anonymous Crypto Teams: Build Credibility Without Hype
+
+Meta description
+A practical PR framework for pseudonymous Web3 teams: verifiable project evidence, clear risk disclosure, responsible source access, and privacy boundaries.
+
+2. SERP Gap
+Most articles present public doxxing as the only alternative to anonymous hype. They do not explain how a team can give journalists meaningful project verification while keeping personal information private.
+3. Unique Coinpresso Angle
+Shift the story from personal identity to verifiable accountability. A pseudonymous team can build a layered evidence package—code provenance, governance, signer accountability, audit scope, and journalist source access—without promising that anonymity has no trade-offs.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Anonymity is a disclosure choice, not a trust substitute
+State the benefits, constraints, and audience expectations.
+
+2
+Map what can be verified publicly
+Cover code, contracts, governance, treasury controls, releases, and audit scope.
+
+3
+Create a privacy-respecting source package
+Offer project evidence, attributable pseudonyms, and clearly bounded private verification where appropriate.
+
+4
+Be candid about limitations
+Do not imply anonymity has no due-diligence impact.
+
+5
+Choose stories that fit the evidence
+Prioritize technical or data-backed narratives over personality-led claims.
+
+6
+Set crisis and disclosure protocols
+Ensure users know who communicates and how facts are confirmed.
+
+7
+Conclusion and FAQ
+Provide a credibility checklist for non-doxxed teams.
+
+5. FAQ Section
+Can a pseudonymous founder get earned coverage? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Should a journalist be asked to sign an NDA? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What public evidence matters most? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Can an audit replace team accountability? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What should an anonymous team disclose during a crisis? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “Pseudonymity requires stronger project evidence, not louder promises. Ask Coinpresso to build a privacy-respecting media evidence package.”
+
+Recommended internal links: Link to Why AI Models Are Skeptical of Crypto Projects, Entity Resolution for Tokens, and Crypto PR Crisis Management.
+7. Source and Production Guardrails
+Do not represent privacy as a workaround for legal disclosure, sanctions, consumer-protection, exchange, or investor-due-diligence requirements. Obtain qualified counsel review for material statements and any confidential-verification process.

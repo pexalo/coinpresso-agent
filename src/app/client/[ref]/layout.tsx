@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import ClientHeader from "@/components/ClientHeader";
 import ClientSidebar, { MobileSectionTabs } from "@/components/ClientSidebar";
-import { CampaignProvider } from "@/components/CampaignContext";
 import { PoweredBy } from "@/components/Brand";
 import { clientModules, getClient } from "@/lib/clients";
 
@@ -17,7 +16,7 @@ export default async function ClientLayout({
   if (!client) notFound();
 
   return (
-    <CampaignProvider clientRef={client.ref} campaigns={client.campaigns}>
+    <>
       <ClientHeader client={client} />
       <div
         className="max-w-[1240px] mx-auto px-5 md:px-8 pb-12 lg:flex lg:gap-8"
@@ -30,6 +29,6 @@ export default async function ClientLayout({
         </div>
       </div>
       <PoweredBy />
-    </CampaignProvider>
+    </>
   );
 }

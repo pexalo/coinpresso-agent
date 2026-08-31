@@ -1,0 +1,77 @@
+AI Moderation Bots vs Human Moderators: What Crypto Communities Should Automate (and What They Shouldn't)
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto community AI moderation
+
+Semantic keywords
+Discord AutoMod crypto, Web3 moderation automation, AI community support, human moderation crypto, crypto scam prevention
+
+Intent and audience
+Informational/technical; teams deciding what to automate in Discord and Telegram.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/ai-moderation-bots-vs-human-moderators-crypto
+
+Meta title
+AI Moderation Bots vs Human Moderators for Crypto Communities
+
+Meta description
+A practical automation boundary for crypto communities: what bots can triage, what humans must own, and how to prevent dangerous AI-support mistakes.
+
+2. SERP Gap
+Most bot articles equate automation with moderation. They do not define the boundary between deterministic rule enforcement, AI-assisted triage, high-context community judgment, and safety-critical user support.
+3. Unique Coinpresso Angle
+Automate noise and routing; keep trust, safety, and judgment human-owned. The article provides an automation boundary matrix rather than a bot feature list.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+The four classes of community work
+Separate repetitive enforcement, triage, knowledge retrieval, and high-context decisions.
+
+2
+Safe automation candidates
+Cover spam patterns, duplicate messages, link screening, queue routing, and basic FAQ retrieval with source links.
+
+3
+Human-only decisions
+Keep bans in ambiguous cases, security incidents, wallet/contract guidance, conflict mediation, and crisis statements human-owned.
+
+4
+Build human review into the bot flow
+Add confidence thresholds, appeal routes, sampling, audit logs, and kill switches.
+
+5
+Avoid AI support traps
+Never let a bot guess addresses, bridges, token actions, or recovery steps.
+
+6
+Measure automation quality
+Track false positives, escalation accuracy, resolution time, user satisfaction, and moderator workload.
+
+7
+Conclusion and FAQ
+Provide the automation boundary matrix.
+
+5. FAQ Section
+What should a crypto moderation bot automate first? Provide a concise, practical answer with any relevant safety or measurement limitation. Should AI bots answer token or wallet questions? Provide a concise, practical answer with any relevant safety or measurement limitation. Can AI automatically ban suspected scammers? Provide a concise, practical answer with any relevant safety or measurement limitation. How should bot mistakes be reviewed? Provide a concise, practical answer with any relevant safety or measurement limitation. Does automation reduce the need for human moderators? Provide a concise, practical answer with any relevant safety or measurement limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential community-strategy partner that can help define operating models, moderation workflows, content formats, measurement, and channel roles. Avoid promising growth, retention, conversion, or incident prevention.
+
+CTA banner Section: “Automate the repetitive work without automating trust away. Ask Coinpresso to map the right human-and-bot moderation boundary for your community.”
+
+Recommended internal links: Link to Crypto Discord Moderator Burnout, Telegram Scam Impersonators, and Community Management KPIs That Matter More Than Member Count.
+
+Guardrails: Use automation as assistive technology. Never allow an AI bot to provide unverified transaction, wallet, bridge, contract, recovery, or security instructions; all safety-sensitive escalations need accountable human review.

@@ -1,0 +1,77 @@
+How to Spot (and Avoid Hiring) a Crypto PR Agency That Only Sells Wire Distribution
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto PR agency red flags
+
+Semantic keywords
+crypto PR agency due diligence, wire distribution agency, earned media crypto, crypto PR vendor checklist, press release placement audit
+
+Intent and audience
+Commercial investigation; teams evaluating crypto PR providers.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-pr-agency-red-flags-wire-distribution
+
+Meta title
+Crypto PR Agency Red Flags: How to Evaluate Wire-Only Vendors
+
+Meta description
+Learn how to evaluate a crypto PR agency beyond outlet logos: placement type, disclosure, story development, reporting, source preparation, and contract terms.
+
+2. SERP Gap
+Agency listicles judge providers by outlet count and promised placements. They rarely show buyers how to verify the difference between a wire service, sponsored inventory, genuine media relations, and a bundled strategy.
+3. Unique Coinpresso Angle
+Evaluate the work product, not the publisher-logo spreadsheet. The article offers a buyer’s due-diligence checklist for scope, evidence, media process, placement disclosure, sample reporting, and contract language.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Know what you are buying
+Define wire, media relations, sponsored content, bylined thought leadership, and strategic PR.
+
+2
+The seven questions to ask
+Ask about story development, target rationale, sample reports, disclosures, follow-up, approvals, and crisis scope.
+
+3
+Audit sample placements
+Check byline, label, URL, canonical, links, publication context, and whether a reporter was involved.
+
+4
+Red flags in promises and pricing
+Flag “guaranteed editorial coverage,” secret outlet lists, dofollow promises, and vague deliverables.
+
+5
+What a useful PR report looks like
+Include pitches sent, rationale, responses, placement type, disclosure, learning, and next action.
+
+6
+Build a balanced scope
+Combine announcement distribution with earned-media preparation when appropriate.
+
+7
+Conclusion and FAQ
+Give a vendor-comparison scorecard.
+
+5. FAQ Section
+Is wire distribution inherently bad? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Can an agency guarantee editorial coverage? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What should a crypto PR contract include? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. How can I audit a vendor’s past placements? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Are outlet logos enough to compare agencies? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “Do not hire based on a logo sheet. Ask Coinpresso for a vendor-scope review before you commit to a crypto PR retainer.”
+
+Recommended internal links: Link to Best Crypto PR Agencies in 2026, Wire Distribution vs Tier-1 Crypto Media, and Nofollow, Sponsored, and Ignored.
+7. Source and Production Guardrails
+Do not accuse an agency of misconduct solely because it offers wire distribution. Present wire distribution as one service type and assess whether claims, placement labels, deliverables, and reporting match what was sold. The Chainstory findings are a study-specific signal, not a verdict on every provider.

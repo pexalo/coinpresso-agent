@@ -1,8 +1,11 @@
 // ---------------------------------------------------------------------------
 // Minimal OpenAI Chat Completions client for the review stage.
+//
+// Routed by ./routing — direct to OpenAI, or through the Pexalo gateway. Same
+// body either way.
 // ---------------------------------------------------------------------------
 
-const API = "https://api.openai.com/v1/chat/completions";
+import { openaiRoute, authHelp, type CallContext } from "./routing";
 
 export interface GptCall {
   model: string;
@@ -11,6 +14,8 @@ export interface GptCall {
   maxTokens?: number;
   /** Ask for a JSON object back. */
   json?: boolean;
+  /** Who this call is for. Used by the gateway to attribute spend. */
+  context?: CallContext;
 }
 
 export interface GptResult {
@@ -20,8 +25,7 @@ export interface GptResult {
 }
 
 export async function callGpt(opts: GptCall): Promise<GptResult> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY is not set");
+  const route = openaiRoute(opts.context);
 
   const body: Record<string, unknown> = {
     model: opts.model,
@@ -33,15 +37,15 @@ export async function callGpt(opts: GptCall): Promise<GptResult> {
   };
   if (opts.json) body.response_format = { type: "json_object" };
 
-  const res = await fetch(API, {
+  const res = await fetch(route.url, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${key}`,
-    },
+    headers: route.headers,
     body: JSON.stringify(body),
   });
 
+  if (res.status === 401 || res.status === 403) {
+    throw new Error(authHelp("OpenAI", route.mode, res.status));
+  }
   if (!res.ok) {
     const detail = await res.text();
     throw new Error(`OpenAI ${res.status}: ${detail.slice(0, 400)}`);

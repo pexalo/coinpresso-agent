@@ -1,0 +1,77 @@
+MiCA and Presale Marketing: What EU Rules Mean for Your Token Sale Messaging
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+MiCA marketing communications requirements
+
+Semantic keywords
+MiCA presale marketing, EU token sale messaging, crypto white paper marketing, MiCA Article 7, crypto marketing compliance
+
+Intent and audience
+Informational/compliance focused; EU-facing crypto teams planning token-sale communications.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/mica-presale-marketing-messaging
+
+Meta title
+MiCA and Presale Marketing: EU Token Sale Messaging Guide
+
+Meta description
+A practical messaging-review framework for EU-facing crypto presale communications: white-paper consistency, identifiable marketing, fair claims, risk clarity, and governance.
+
+2. SERP Gap
+Existing articles summarize MiCA provisions but do not translate them into a working marketing review process for landing pages, social posts, KOL briefs, referral copy, PR, and FAQs.
+3. Unique Coinpresso Angle
+Build a message-to-white-paper consistency matrix. Every marketing claim should map to an approved source, applicable disclosure, audience/jurisdiction, owner, and version date.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+MiCA is a messaging-system issue
+Explain why compliance touches every asset, not only the white paper.
+
+2
+Create the message-to-white-paper matrix
+Map claim, source, qualifier, target market, channel, owner, and review date.
+
+3
+Apply the fair-clear-identifiable test
+Review headlines, visuals, scarcity language, comparisons, and calls to action.
+
+4
+Handle risks and limitations visibly
+Make material limitations and eligibility clear instead of burying them in footnotes.
+
+5
+Brief KOLs, affiliates, and partners
+Provide approved claims, disclosure instructions, prohibited statements, and correction process.
+
+6
+Version and archive public claims
+Maintain a dated change log across landing pages, PR, social, and paid materials.
+
+7
+Conclusion and FAQ
+Provide a MiCA message-review checklist.
+
+5. FAQ Section
+What does “fair, clear and not misleading” mean for token-sale marketing? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Must marketing match the crypto-asset white paper? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. How should influencer content be governed? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Can a campaign use scarcity language? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Who should approve EU-facing presale copy? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential presale-marketing partner that can structure evidence, content, channel strategy, measurement, and communications workflows. Avoid promising a raise, listing, ROI, or token-performance outcome.
+
+CTA banner Section: “Compliance is easier when every claim has an owner and source. Ask Coinpresso to operationalize a MiCA-aware presale messaging workflow alongside your legal counsel.”
+
+Recommended internal links: Link to Whitelist and Allowlist Campaigns, Referral and Bonus Structures in Presales, and How Regulators Reading Crypto Press Releases Changed What You Can Legally Claim.
+
+Guardrails: Informational only, not legal advice. MiCA obligations depend on the crypto-asset, offer, services, jurisdictions, and exemptions; obtain qualified EU legal counsel review. Article 7 requires marketing communications to be clearly identifiable and fair, clear, and not misleading, and to be consistent with the crypto-asset white paper where applicable.1 2

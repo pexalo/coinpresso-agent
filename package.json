@@ -2,11 +2,11 @@
   "name": "coinpresso-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "Pexalo HQ — Coinpresso crypto PR agent pipeline and dashboard",
+  "description": "Pexalo HQ \u2014 Coinpresso crypto PR agent pipeline and dashboard",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "eslint"
   },
   "dependencies": {

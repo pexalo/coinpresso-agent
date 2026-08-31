@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getClient, hasModule } from "@/lib/clients";
+import ReportDeliveryBar from "@/components/ReportDeliveryBar";
 import { reportsFor, type StatCard } from "@/lib/daily-report";
 import {
   DailyRevenueChart,
@@ -61,27 +62,66 @@ function Stat({ card, big }: { card: StatCard; big?: boolean }) {
 
 export default async function DailyReportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ ref: string }>;
+  searchParams: Promise<{ campaign?: string }>;
 }) {
   const { ref } = await params;
   const client = getClient(ref);
   if (!client || !hasModule(client, "daily-report")) notFound();
 
-  // One campaign has reports today. When a second does, this reads the picker.
-  const campaign = client.campaigns[0];
-  const report = reportsFor(campaign?.id ?? "")[0];
+  // STRICTLY one campaign's report at a time. Each of these goes to a
+  // different end client under Coinpresso's name, and the fastest way to leak
+  // one client's revenue figures to another is a report page that defaults to
+  // "whatever data is around". The campaign comes from the URL; an id that is
+  // not one of this client's campaigns is a 404, not a fallback — a mistyped
+  // link must fail closed rather than show someone else's numbers.
+  const { campaign: wanted } = await searchParams;
+  const withReports = client.campaigns.filter(
+    (c) => reportsFor(c.id).length > 0
+  );
+
+  const campaign = wanted
+    ? client.campaigns.find((c) => c.id === wanted)
+    : (withReports[0] ?? client.campaigns[0]);
+  if (!campaign) notFound();
+
+  const report = reportsFor(campaign.id)[0];
+
+  // The selector and the destination, together, always — not tabs that only
+  // appear once a second campaign exists. "Which report am I looking at" and
+  // "who receives it when I press send" are the two questions this page has to
+  // answer before anything else on it matters.
+  const picker = (
+    <ReportDeliveryBar
+      clientRef={ref}
+      campaigns={client.campaigns.map((c) => ({
+        id: c.id,
+        name: c.name,
+        ticker: c.ticker,
+        hasReports: withReports.some((w) => w.id === c.id),
+      }))}
+      selectedId={campaign.id}
+      hasReport={Boolean(report)}
+    />
+  );
 
   if (!report) {
     return (
-      <div className="card p-10 text-center text-[var(--ink-3)] text-sm mt-2">
-        No report for this campaign yet.
+      <div className="space-y-4 pt-2">
+        {picker}
+        <div className="card p-10 text-center text-[var(--ink-3)] text-sm">
+          No report for {campaign.name} yet. Reports are per campaign — another
+          campaign&apos;s report is never shown here in its place.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 pt-2">
+      {picker}
       {/* Masthead */}
       <div className="card p-5 md:p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">

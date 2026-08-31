@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getClient, hasModule } from "@/lib/clients";
 import { getRun, saveRun } from "@/lib/store";
-import { readSettings } from "@/lib/settings";
+import { gateConfig, readSettings } from "@/lib/settings";
+import { getRecord } from "@/lib/approval-store";
+import { fingerprint, gateState } from "@/lib/approval";
 import { createDraft } from "@/lib/wordpress";
 import { wpCategoryFor } from "@/lib/blog";
 
@@ -49,6 +51,31 @@ export async function POST(
   }
 
   const settings = await readSettings(ref);
+
+  // The approval gate, checked again here rather than trusted from the release
+  // step. This is the endpoint that actually creates something on coinpresso.io,
+  // and it was previously reachable for any run with a draft — no approval
+  // required at all. Re-checking also catches the case that matters most: a
+  // piece released, then edited, then pushed. The signatures were given against
+  // the old text and the fingerprint no longer matches, so this refuses.
+  const { approvers, required } = gateConfig(settings);
+  const gate = gateState(
+    await getRecord(ref, id),
+    approvers,
+    required,
+    fingerprint(run),
+    true
+  );
+  if (!gate.released && !gate.canRelease) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Not approved for publishing. ${gate.reason}`,
+        gate,
+      },
+      { status: 409 }
+    );
+  }
 
   const result = await createDraft(
     {

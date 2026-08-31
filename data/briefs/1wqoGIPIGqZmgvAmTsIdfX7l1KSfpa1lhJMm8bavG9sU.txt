@@ -1,0 +1,77 @@
+Locked Liquidity, Vesting & Audits: The Trust Signals Your Presale Landing Page Is Missing
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto presale trust signals
+
+Semantic keywords
+locked liquidity presale, token vesting transparency, smart contract audit landing page, crypto token sale trust, presale due diligence
+
+Intent and audience
+Informational/technical; token teams improving the clarity of presale landing pages.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/locked-liquidity-vesting-audits-presale
+
+Meta title
+Locked Liquidity, Vesting & Audits: Presale Trust Signals
+
+Meta description
+Build a presale trust stack with direct, current evidence for liquidity, vesting, audits, contracts, ownership controls, and material limitations.
+
+2. SERP Gap
+Most landing pages rely on logos, badges, and vague “audited” language. They rarely show users how to verify the relevant contract, audit scope, locker, allocation, or vesting schedule.
+3. Unique Coinpresso Angle
+Replace static trust badges with a verifiable trust stack. Each signal should state what it proves, what it does not prove, where it can be checked, and when it was last reviewed.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Why trust badges are insufficient
+Explain the difference between a logo and verifiable evidence.
+
+2
+The six evidence modules
+Cover contract identity, liquidity, vesting, audit scope, control/ownership, and token allocation.
+
+3
+Build direct verification paths
+Use clear links, identifiers, dates, and plain-language instructions.
+
+4
+Explain scope and limitations
+Clarify whether an audit, lock, or vesting module covers the exact release and what remains outside scope.
+
+5
+Design the trust section for a real user
+Use hierarchy, accessible copy, and no dark patterns.
+
+6
+Set an evidence-update cadence
+Assign owners, update dates, and correction process.
+
+7
+Conclusion and FAQ
+Include a trust-stack page checklist.
+
+5. FAQ Section
+What does locked liquidity actually prove? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Does an audit make a presale safe? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. How should vesting information be shown? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. Should a landing page link directly to contracts? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation. What are the most important presale trust signals? Provide a concise, practical answer that explains the relevant evidence, disclosure, or limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential presale-marketing partner that can structure evidence, content, channel strategy, measurement, and communications workflows. Avoid promising a raise, listing, ROI, or token-performance outcome.
+
+CTA banner Section: “A badge is not evidence. Ask Coinpresso to design a presale trust stack that makes the right facts easy to verify.”
+
+Recommended internal links: Link to Presale Red Flags Investors Actually Search For, Fair Launch vs Presale vs Stealth Launch, and MiCA and Presale Marketing.
+
+Guardrails: Never imply that liquidity locks, vesting, audits, or contract verification eliminate risk. Describe scope, dates, and limitations; obtain legal and technical review for disclosures.

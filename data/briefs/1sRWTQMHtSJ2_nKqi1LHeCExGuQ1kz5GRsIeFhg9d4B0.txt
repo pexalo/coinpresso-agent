@@ -1,0 +1,77 @@
+Why 60%+ of Crypto Press Releases Are Linked to Red-Flag Projects (And How to Not Be One)
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+crypto press release red flags
+
+Semantic keywords
+crypto PR credibility, red-flag project screening, earned media vs wire distribution, crypto press release compliance, PR evidence packet
+
+Intent and audience
+Informational; founders and marketers assessing press-release credibility.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/crypto-press-release-red-flags
+
+Meta title
+Crypto Press Release Red Flags: How Legitimate Projects Stand Apart
+
+Meta description
+A study found 60%+ of sampled crypto wire releases came from high-risk or scam projects. Learn the evidence and disclosure practices that help legitimate teams stand apart.
+
+2. SERP Gap
+Most results sell distribution rather than interrogate the credibility cost of release quality. They rarely explain the Chainstory sample, its definitions, or how a legitimate project can screen its own evidence before pitching.
+3. Unique Coinpresso Angle
+Treat a press release as a due-diligence packet, not a credibility costume. The article uses the Chainstory study as a starting point, then gives teams a factuality, substantiation, disclosure, and evidence checklist.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+The finding—and its limits
+Attribute the 60%+ figure to Chainstory’s 2,893-release sample and explain its “high risk”/“scam” definitions.
+
+2
+Why manufactured legitimacy works
+Separate a familiar domain appearance from independent editorial verification.
+
+3
+The red-flag claim audit
+Flag unsupported superlatives, unclear team identity, vague partnerships, yield promises, and missing risk context.
+
+4
+The PR evidence packet
+Map each material claim to a primary source, date, owner, and approval status.
+
+5
+Disclosure and placement hygiene
+Explain paid versus earned placement and clear commercial disclosure.
+
+6
+What legitimate projects should publish
+Prioritize verifiable product, team, contract, audit, funding, and limitation information.
+
+7
+Conclusion and FAQ
+End with a pre-distribution go/no-go checklist.
+
+5. FAQ Section
+Does the 60%+ figure apply to every crypto press release? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What makes a press release look like marketing rather than news? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Can an anonymous team avoid red flags? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. Should a wire release be labelled as paid content? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step. What evidence should be ready before a journalist is contacted? Provide a concise, practical answer that states any relevant limitation, disclosure, or verification step.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential PR strategy partner that can help assess evidence, message discipline, channel fit, and measurement. Avoid promising coverage, links, rankings, AI visibility, or commercial results.
+
+CTA banner Section: “Before you distribute another crypto announcement, make sure every material claim can survive scrutiny. Ask Coinpresso for a PR evidence review.”
+
+Recommended internal links: Link to Wire Distribution vs Tier-1 Crypto Media, Nofollow, Sponsored, and Ignored, and How to Spot a Crypto PR Agency That Only Sells Wire Distribution.
+7. Source and Production Guardrails
+Use the 60%+ figure only as a finding from Chainstory’s June–November 2025 sample; it is not a universal rate for all crypto PR. This content is informational and should be reviewed by qualified counsel where claims, promotions, or regulated products are involved.

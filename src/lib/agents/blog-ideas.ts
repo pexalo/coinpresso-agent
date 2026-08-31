@@ -22,17 +22,28 @@
 // a post that needs a figure nobody has is a post to shelve, not to fake.
 // ---------------------------------------------------------------------------
 
-import { callClaude, extractJson } from "../providers/anthropic";
+import { billed, callClaude, extractJson } from "../providers/anthropic";
 import { MODELS } from "../models";
 import { BLOG_ARCHIVE_ID, CONTENT_TYPE_LIST, PILLARS } from "../blog";
 import { allArticles } from "../archive-store";
 import { listRuns } from "../store";
 import type { ContentTypeId } from "../blog";
+import type { SeedTopic } from "../blog-seed";
 
 export interface BlogIdea {
   id: string;
   title: string;
   keywords: string[];
+  /**
+   * Set when this idea came from a topic Coinpresso supplied, rather than from
+   * the planner's own reading of the pillars.
+   *
+   * Carried through to the plan screen so the operator can see which posts they
+   * asked for, and back to the seed store so the topic is marked written once
+   * the batch starts. Without it a supplied topic is indistinguishable from a
+   * proposed one the moment the model returns.
+   */
+  seedTopicId?: string;
   pillar: string;
   contentType: ContentTypeId;
   buyerQuestion: string;
@@ -89,6 +100,85 @@ export interface BlogIdeaRequest {
   /** Optional pillar to weight the day toward. */
   pillar?: string;
   steer?: string;
+  /** Topics Coinpresso supplied that this day must cover. */
+  seeds?: SeedTopic[];
+  /** Terms to work in where they fit, across the programme. */
+  standingKeywords?: string[];
+}
+
+/**
+ * The block describing the topics Coinpresso supplied.
+ *
+ * Two rules do the work here. Each supplied topic becomes EXACTLY ONE post —
+ * without that, a planner asked for six posts and given four topics returns
+ * three angles on the most interesting one and drops the rest. And the hard
+ * constraints still apply to them: a supplied topic that would be the fourth
+ * post on one pillar, or the third guide in a row, is still wrong, and the
+ * planner is told to solve that with format and angle rather than by quietly
+ * dropping the topic.
+ *
+ * Standing keywords are stated as an opportunity, not a requirement, and the
+ * prompt says why. A model handed a keyword list and a word count will meet the
+ * list; the instruction has to be explicit that not using one is the correct
+ * answer where it does not fit.
+ */
+function seedBlock(seeds: SeedTopic[], standing: string[]): string {
+  const parts: string[] = [];
+
+  if (seeds.length) {
+    parts.push(
+      `--- TOPICS COINPRESSO HAVE ASKED FOR (${seeds.length}) ---
+
+These are REQUIRED. Coinpresso supplied them because they know something you
+cannot infer from the pillars: what a sales call surfaced, what a competitor
+started bidding on, what a client asked twice this week.
+
+Rules for them:
+- Produce EXACTLY ONE post per topic below. Not two angles on one, not a merge
+  of two into one post. Set seedTopicId to the id given.
+- Use the supplied keywords for that post. Add your own only if they are needed;
+  the supplied ones are the target.
+- The hard constraints still apply. If a required topic collides with the pillar
+  or format spread, resolve it by changing the FORMAT or the ANGLE — never by
+  dropping the topic or by writing the same post twice.
+- Where a note supplies a figure or an example, that is what makes the post
+  original: build the piece around it and set needsClientData false. Where the
+  topic needs a figure that was NOT supplied, set needsClientData true and say
+  which figure — do not invent it.
+- If a topic is a straight re-run of something already published, still write it,
+  and say in the rationale which post it replaces and what has changed.
+
+${seeds
+  .map(
+    (s) =>
+      `- id: ${s.id}
+  topic: ${s.topic}
+  keywords: ${s.keywords.length ? s.keywords.join(", ") : "(none supplied — choose them)"}
+  pillar hint: ${s.pillar ?? "(none — you decide)"}
+  ${s.notes ? `note from Coinpresso: ${s.notes}` : "no note supplied"}`
+  )
+  .join("\n\n")}
+
+The remaining posts in the day are yours to propose as normal.`
+    );
+  }
+
+  if (standing.length) {
+    parts.push(
+      `--- STANDING KEYWORDS ---
+
+${standing.join(", ")}
+
+Terms Coinpresso want to rank for across the programme. Use one ONLY where it is
+the natural phrasing for that post's subject. These are not a checklist and not a
+quota: a day of posts that each work in every term reads as stuffed, ranks worse
+than one that does not, and is the specific pattern that gets a domain demoted.
+Most posts should use none of them. Ignoring the list entirely for a given day is
+a correct outcome.`
+    );
+  }
+
+  return parts.join("\n\n");
 }
 
 /**
@@ -127,6 +217,8 @@ async function priorBlogWork(clientRef: string): Promise<
 
 export async function runBlogIdeas(req: BlogIdeaRequest): Promise<{
   ideas: BlogIdea[];
+  /** Supplied topics the planner did not produce a post for. */
+  missingSeedIds: string[];
   tokensIn: number;
   tokensOut: number;
 }> {
@@ -141,9 +233,21 @@ export async function runBlogIdeas(req: BlogIdeaRequest): Promise<{
   });
 
   const today = new Date().toISOString().slice(0, 10);
+  const seeds = req.seeds ?? [];
+  const supplied = seedBlock(seeds, req.standingKeywords ?? []);
+
+  // A 1- or 2-post "day" cannot spread across three pillars, and a model held
+  // to an unsatisfiable constraint either refuses or silently pads the list
+  // back up to three. Waive the spread explicitly for small days; every other
+  // rule still stands.
+  const smallDay =
+    req.count < 3
+      ? `\nThis is a small day of ${req.count} post${req.count === 1 ? "" : "s"}, so the pillar-spread and format-spread constraints cannot apply and are waived. Do NOT add extra posts to satisfy them. Every other rule stands.\n`
+      : "";
 
   const user = `Today is ${today}. Plan ${req.count} posts for Coinpresso's own blog.
-${req.pillar ? `\nThe operator wants the day weighted toward the "${req.pillar}" pillar — but still spread across at least three.\n` : ""}${req.steer ? `\nOPERATOR STEER: ${req.steer}\n` : ""}
+${smallDay}
+${seeds.length ? `\n${seeds.length} of those ${req.count} are topics Coinpresso have supplied and are listed below. Plan the other ${Math.max(req.count - seeds.length, 0)} yourself.\n` : ""}${req.pillar ? `\nThe operator wants the day weighted toward the "${req.pillar}" pillar — but still spread across at least three.\n` : ""}${req.steer ? `\nOPERATOR STEER: ${req.steer}\n` : ""}${supplied ? `\n${supplied}\n` : ""}
 PILLARS — every post belongs to exactly one, by id:
 ${PILLARS.map(
   (p) =>
@@ -178,41 +282,101 @@ ${
 
 ---
 
+LENGTH. Every prose field below is ONE sentence, 25 words at the outside. This
+is a plan, not the posts: the research and writing stages get the whole argument,
+and a planner that writes paragraphs here is spending the budget twice. Emit the
+JSON immediately, with no commentary before or after it, and stop the moment the
+closing brace is written.
+
 Return JSON:
 {
   "ideas": [
     {
       "title": "the H1 as it would publish — question-shaped where natural, sentence case",
       "keywords": ["primary first", "secondary"],
+      "seedTopicId": "the id from the supplied-topics block, or omit entirely for a post you proposed",
       "pillar": "one of the pillar ids above",
       "contentType": "one of the content type ids above",
-      "buyerQuestion": "what the reader is actually worried about, in their words",
-      "originality": "the specific thing that makes this worth publishing",
+      "buyerQuestion": "one sentence, in the reader's words",
+      "originality": "one sentence — the specific thing that makes this worth publishing",
       "needsClientData": true or false,
-      "rationale": "why this post, and what the research agent must verify",
-      "differentiator": "which other post — in this batch or already published — this is not a duplicate of, and why",
+      "rationale": "one sentence — why this post, and what research must verify",
+      "differentiator": "one sentence — which other post this is not a duplicate of",
       "confidence": "high | medium | speculative"
     }
   ]
 }`;
 
+  // SIZED TO THE ASK, NOT SET TO A ROUND NUMBER.
+  //
+  // The ceiling was 8000, then 16000, on the reasoning that a truncated reply
+  // parses as nothing and a bigger allowance makes truncation less likely. That
+  // reasoning is backwards where the ceiling is being HIT: max_tokens is not a
+  // budget the model spends only if it needs to, it is the length at which a
+  // runaway reply is finally cut off — and every token before the cut is billed
+  // for a reply that parses as nothing. Raising it made each failure cost twice
+  // as much and did not make the underlying problem less likely.
+  //
+  // So: an allowance derived from what was actually asked for. One terse idea is
+  // about 200 tokens; 450 each leaves better than double the room, and the fixed
+  // 800 covers the wrapper. Eight ideas lands near 4400 rather than 16000, which
+  // caps a failed plan at roughly four cents instead of sixteen.
+  const ceiling = 800 + 450 * req.count;
+
   const r = await callClaude({
     model: MODELS.strategy,
     system: SYSTEM,
     user,
-    maxTokens: 8000,
-    temperature: 0.8,
+    maxTokens: ceiling,
+    // Was 0.8. This stage emits a fixed JSON shape against a long, repetitive
+    // context — a published-post list ninety lines deep — which is the exact
+    // setup where high-temperature sampling drifts into repeating itself and
+    // runs to the ceiling. The variety worth having here is in which topics get
+    // chosen, and that comes from the pillars and the seeds, not from the
+    // sampler.
+    temperature: 0.4,
   });
 
-  const parsed = extractJson<{ ideas: Omit<BlogIdea, "id">[] }>(r.text);
+  let parsed;
+  try {
+    parsed = extractJson<{ ideas: Omit<BlogIdea, "id">[] }>(r.text, {
+      stage: "day planner",
+      stopReason: r.stopReason,
+      blockTypes: r.blockTypes,
+      tokensOut: r.tokensOut,
+      maxTokens: ceiling,
+    });
+  } catch (e) {
+    // The reply arrived and was billed; only the parse failed.
+    throw billed(e, {
+      tokensIn: r.tokensIn,
+      tokensOut: r.tokensOut,
+      searchRequests: r.searchRequests ?? 0,
+    });
+  }
+
+  // A seedTopicId is only honoured if it names a topic actually supplied. A
+  // model that invents one, or echoes an id from an earlier day, would otherwise
+  // get a topic marked written that nobody wrote.
+  const valid = new Set(seeds.map((s) => s.id));
+
   const ideas: BlogIdea[] = (parsed.ideas ?? []).map((i, n) => ({
     ...i,
     id: `blog_idea_${Date.now()}_${n}`,
     keywords: i.keywords ?? [],
     needsClientData: Boolean(i.needsClientData),
+    seedTopicId:
+      i.seedTopicId && valid.has(i.seedTopicId) ? i.seedTopicId : undefined,
   }));
 
-  return { ideas, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+  // Which supplied topics the planner did not produce a post for. Reported
+  // rather than patched: silently appending a stub post for a dropped topic
+  // would hide the fact that the planner had a reason, and the operator can
+  // re-run or plan a bigger day knowing what is missing.
+  const covered = new Set(ideas.map((i) => i.seedTopicId).filter(Boolean));
+  const missingSeedIds = seeds.map((s) => s.id).filter((id) => !covered.has(id));
+
+  return { ideas, missingSeedIds, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
 }
 
 /**
@@ -274,7 +438,29 @@ export async function mockBlogIdeas(req: BlogIdeaRequest): Promise<BlogIdea[]> {
     ],
   ];
 
-  return Array.from({ length: Math.min(req.count, seeds.length) }, (_, n) => {
+  // Supplied topics come back as posts even in mock mode. Dropping them would
+  // make the mock quietly wrong about the one thing this screen now promises:
+  // that a topic left in the queue gets written.
+  const fromSeeds: BlogIdea[] = (req.seeds ?? []).map((s, n) => ({
+    id: `blog_idea_mock_seed_${n}`,
+    seedTopicId: s.id,
+    title: s.topic,
+    keywords: s.keywords.length ? s.keywords : ["crypto marketing agency"],
+    pillar: s.pillar ?? "crypto-pr",
+    contentType: "guide" as ContentTypeId,
+    buyerQuestion: PILLARS.find((p) => p.id === s.pillar)?.buyerQuestion ?? "",
+    originality:
+      "Mock plan — the topic is yours, but nothing here was researched or checked against what already ranks.",
+    needsClientData: !s.notes,
+    rationale:
+      "Mock idea built straight from your supplied topic. Add model keys for a real plan.",
+    differentiator: "Mock run.",
+    confidence: "speculative" as const,
+  }));
+
+  const remaining = Math.max(req.count - fromSeeds.length, 0);
+
+  const proposed = Array.from({ length: Math.min(remaining, seeds.length) }, (_, n) => {
     const [title, pillar, contentType, kw] = seeds[n];
     return {
       id: `blog_idea_mock_${n}`,
@@ -292,4 +478,6 @@ export async function mockBlogIdeas(req: BlogIdeaRequest): Promise<BlogIdea[]> {
       confidence: "speculative" as const,
     };
   });
+
+  return [...fromSeeds, ...proposed];
 }

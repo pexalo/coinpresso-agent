@@ -1,0 +1,77 @@
+In-House vs Agency Community Management: What Actually Changes at 10k+ Members
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+in-house vs agency community management crypto
+
+Semantic keywords
+crypto community scaling, Web3 community agency, Discord team structure, crypto moderation operations, 10k Discord members
+
+Intent and audience
+Commercial investigation; teams designing a scalable community-management model.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/in-house-vs-agency-community-management-crypto
+
+Meta title
+In-House vs Agency Crypto Community Management at 10k+ Members
+
+Meta description
+What changes when a crypto community grows: staffing, escalation, reporting, security, coverage, product feedback, and the best fit for in-house, agency, or hybrid teams.
+
+2. SERP Gap
+Most comparisons reduce the decision to cost and member count. They do not address response coverage, security permissions, product feedback loops, institutional memory, language needs, or what a 10k-member community actually demands.
+3. Unique Coinpresso Angle
+10k is not a universal staffing trigger—it is an operating-complexity signal. Compare in-house, agency, and hybrid models by ownership, coverage, escalation, context, and risk rather than a simplistic price comparison.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Why size alone does not decide the model
+Explain activity, risk, channel count, language, and product complexity.
+
+2
+What in-house changes
+Cover product proximity, institutional memory, faster feedback, and management overhead.
+
+3
+What an agency changes
+Cover flexible coverage, established process, broader experience, and onboarding/context trade-offs.
+
+4
+The hybrid operating model
+Keep product and crisis ownership in-house while using external capacity or specialist coverage.
+
+5
+Security and permission design
+Limit privileged access, document handovers, and separate roles from identities.
+
+6
+The 10k+ readiness checklist
+Assess queue volume, support types, incidents, reports, languages, and staffing resilience.
+
+7
+Conclusion and FAQ
+Offer a decision matrix.
+
+5. FAQ Section
+Does 10k members mean a project needs an agency? Provide a concise, practical answer with any relevant safety or measurement limitation. What should stay in-house? Provide a concise, practical answer with any relevant safety or measurement limitation. Can an agency moderate without full admin access? Provide a concise, practical answer with any relevant safety or measurement limitation. How should teams measure an agency’s community work? Provide a concise, practical answer with any relevant safety or measurement limitation. When does a hybrid model make sense? Provide a concise, practical answer with any relevant safety or measurement limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential community-strategy partner that can help define operating models, moderation workflows, content formats, measurement, and channel roles. Avoid promising growth, retention, conversion, or incident prevention.
+
+CTA banner Section: “Choose a community model for the work you actually have—not a follower milestone. Ask Coinpresso to map your coverage, escalation, and operating requirements.”
+
+Recommended internal links: Link to Multi-Timezone Coverage, Vetting a Crypto Community Manager, and Community Management KPIs That Matter More Than Member Count.
+
+Guardrails: Avoid promising that any model prevents incidents or costs less. Design permissions according to least privilege, documented handovers, and accountable internal ownership.1

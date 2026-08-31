@@ -1,0 +1,52 @@
+How AI Search Engines Evaluate DeFi and Exchange Websites
+Primary Keyword: how AI search engines evaluate DeFi websites
+Secondary Keywords: AI search crypto exchanges, LLM evaluation Web3 sites, AI visibility DeFi
+
+SERP Gap Analysis
+The 5WPR Crypto AI Visibility Index shows who is winning (Coinbase 13%, Kraken 9%, Gemini 5.5%), but doesn't explain the technical how and why. General articles about AI source selection (NeptuneWeb, WPSeoAI, Kevin Indig) discuss broad principles but never apply them to DeFi or exchange-specific architectures. There is no reverse-engineering of what makes Coinbase's pages more citable than competitors.
+
+Unique Angle
+Reverse-engineer the AI evaluation process by analyzing the specific page structures, data presentations, and trust signals used by the top-cited exchanges. Explain how smaller DeFi protocols can mimic this architecture to steal citation share from incumbents. Introduce the concept of "Extractable Data Architecture" as the key differentiator.
+
+Recommended Article Structure
+Section
+Title
+Focus
+1
+The AI Citation Hierarchy
+Current landscape where few major exchanges dominate AI citations
+2
+The "Objective Truth" Preference
+Why AI engines favor clean data (fees, APY, tokens) over marketing copy
+3
+How AI Evaluates Security and Risk
+Keywords and structures LLMs look for regarding audits and custody
+4
+The Power of Comparison Architecture
+Why AI engines love comparison pages and how to build them for DeFi
+5
+Evaluating Tokenomics and Mechanics
+How AI engines parse complex DeFi mechanics; why simplification is critical
+6
+The Regulatory Signal Advantage
+How compliance pages boost overall domain authority in AI search
+7
+DeFi vs. CeFi: The Evaluation Differences
+How AI engines treat decentralized protocols differently
+8
+The "Extractable Data" Checklist
+Technical guide to formatting fees, APYs, and token lists for AI
+9
+Conclusion
+The shift from persuasive copywriting to objective data structuring
+
+FAQ Section
+Q1: Why does Coinbase dominate AI search citations in crypto? Coinbase captures approximately 13% of all crypto AI citations because it has: a public company structure with audited financials, clean data pages with objective fee structures, comprehensive educational content, strong entity recognition across mainstream media, and regulatory clarity in all 50 US states. These factors create a "safe citation" profile for AI engines.
+
+Q2: Can a DeFi protocol compete with centralized exchanges in AI visibility? DeFi protocols can dominate niche queries (e.g., "best decentralized lending protocol") but will struggle with broad queries (e.g., "best crypto exchange") where centralized platforms have stronger trust signals. The strategy is to own your specific category rather than competing broadly.
+
+Q3: Do AI engines penalize DeFi sites for being decentralized? Not directly, but decentralization creates challenges: anonymous teams reduce E-E-A-T signals, fragmented documentation confuses AI crawlers, and the absence of traditional corporate trust signals (SEC filings, physical offices) makes AI engines more cautious about citing DeFi content in financial queries.
+
+Q4: What page types get cited most by AI for crypto queries? Based on citation analysis, the most-cited page types are: comparison pages (e.g., "X vs Y"), fee structure pages with clean tables, educational explainers with clear definitions, and security/compliance pages. Marketing homepages and blog posts are rarely cited directly.
+
+Q5: How do I track my DeFi protocol's AI visibility over time? Use tools like Profound, Goodie, or Daydream to monitor citation share. Alternatively, create a manual tracking system: test 30-50 relevant prompts across ChatGPT, Perplexity, Claude, and Gemini monthly, recording whether your protocol is mentioned, cited, or recommended.

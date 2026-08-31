@@ -1,0 +1,77 @@
+Mercenary Communities: Why Airdrop Farmers Aren't the Same as Real Holders
+Prepared for: Coinpresso.io
+1. SEO Brief
+Element
+Recommendation
+
+Primary keyword
+mercenary communities crypto
+
+Semantic keywords
+airdrop farmers vs real users, crypto community retention, Sybil-resistant engagement, Web3 contributor segmentation, airdrop strategy
+
+Intent and audience
+Informational/strategic; founders evaluating incentive-led community growth.
+
+Recommended length
+1,700–2,200 words
+
+Funnel stage
+Consideration
+
+Proposed slug
+/mercenary-communities-airdrop-farmers
+
+Meta title
+Mercenary Crypto Communities: Airdrop Farmers vs Contributors
+
+Meta description
+Why wallet activity, airdrop participation, and real community contribution are different—and how Web3 teams can design incentives around durable engagement.
+
+2. SERP Gap
+Most airdrop articles label users as either “farmers” or “holders.” They omit the operationally useful middle ground: contributors, testers, advocates, developers, and repeat users with different motivations and evidence of value.
+3. Unique Coinpresso Angle
+Measure contribution quality, not token-holding mythology. The article introduces a segmentation model that distinguishes temporary incentive participation from repeated product use and verifiable contribution without judging users or offering investment advice.
+4. Recommended Article Structure
+Section
+Suggested H2
+What the article must cover
+
+1
+Why “community” is an overloaded metric
+Differentiate audience, wallet, holder, user, contributor, ambassador, and farmer.
+
+2
+What incentives attract
+Explain that incentives can create attention and testing volume, but do not automatically produce retention or advocacy.
+
+3
+Build a contribution-segmentation model
+Use repeat product actions, helpful support, governance quality, content, referrals, and developer work.
+
+4
+Avoid the Sybil-versus-human false binary
+Use risk flags and review; do not mislabel legitimate participants solely from wallet behavior.
+
+5
+Design post-airdrop pathways
+Create clear next actions, recognition, feedback loops, and product reasons to remain involved.
+
+6
+Report the right outcomes
+Track activation, repeat use, contribution, support load, and retention cohorts rather than member counts alone.
+
+7
+Conclusion and FAQ
+Provide a contributor-segmentation worksheet.
+
+5. FAQ Section
+Are airdrop farmers always bad for a project? Provide a concise, practical answer with any relevant safety or measurement limitation. Is a token holder automatically a community member? Provide a concise, practical answer with any relevant safety or measurement limitation. How should a project measure real contribution? Provide a concise, practical answer with any relevant safety or measurement limitation. Can an airdrop improve retention? Provide a concise, practical answer with any relevant safety or measurement limitation. How can teams avoid calling legitimate users Sybils? Provide a concise, practical answer with any relevant safety or measurement limitation.
+6. Conversion and Linking Plan
+Position Coinpresso as a potential community-strategy partner that can help define operating models, moderation workflows, content formats, measurement, and channel roles. Avoid promising growth, retention, conversion, or incident prevention.
+
+CTA banner Section: “Incentives can create attention; systems create contribution. Ask Coinpresso to design a community measurement model beyond wallet and member counts.”
+
+Recommended internal links: Link to Community Management KPIs That Matter More Than Member Count, Running Crypto AMAs That Convert, and Warpcast, Farcaster & Onchain Communities.
+
+Guardrails: Do not equate a wallet, token balance, or airdrop claim with investment quality, loyalty, or human identity. Avoid investment advice and use human review before punitive actions based on activity patterns.

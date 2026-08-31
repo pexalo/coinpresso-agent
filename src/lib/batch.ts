@@ -13,6 +13,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dataDir } from "./data-dir";
 import { executeRun, newRun } from "./pipeline";
 import { newRunId, saveRun } from "./store";
 import { mockMode } from "./models";
@@ -22,7 +23,7 @@ import { CONCURRENCY, type Batch } from "./batch-types";
 export { CONCURRENCY, progressOf, formatEta } from "./batch-types";
 export type { Batch, BatchItem, BatchItemStatus, Progress } from "./batch-types";
 
-const DIR = path.join(process.cwd(), ".data", "batches");
+const DIR = dataDir("batches");
 
 async function ensure(): Promise<void> {
   await fs.mkdir(DIR, { recursive: true });

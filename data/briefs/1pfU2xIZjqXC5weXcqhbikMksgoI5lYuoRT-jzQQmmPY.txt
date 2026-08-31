@@ -1,0 +1,52 @@
+Schema Markup Checklist for Crypto Exchanges, Wallets, and DeFi Protocols
+Primary Keyword: schema markup crypto exchanges wallets
+Secondary Keywords: structured data DeFi protocol, JSON-LD schema crypto, Web3 schema markup guide
+
+SERP Gap Analysis
+The SERP contains generic schema guides, highly technical developer documentation (bitcoinschema.org), one recent article from InfluxJuice (June 2026) covering FAQ schema for crypto/DeFi, and a useful tool (Crawlux Token Schema Tester). However, no comprehensive checklist exists that provides specific JSON-LD code for the three major Web3 verticals (exchanges, wallets, DeFi protocols) with implementation guidance.
+
+Unique Angle
+Provide actual JSON-LD code snippets tailored for specific Web3 entities. Explain the strategic difference between applying FinancialProduct schema to a DeFi yield farm versus SoftwareApplication schema to a non-custodial wallet. Include a decision tree for choosing the right schema type based on your project category, and provide validation steps using the Crawlux Token Schema Tester.
+
+Recommended Article Structure
+Section
+Title
+Focus
+1
+Speaking the Machine's Language
+Why schema markup is the foundational layer of GEO
+2
+Core Entity: Organization and WebSite Schema
+Establishing baseline identity for your crypto project
+3
+Schema for Crypto Exchanges
+FinancialService and ExchangeRateSpecification implementation
+4
+Schema for Crypto Wallets
+SoftwareApplication combined with security specifications
+5
+Schema for DeFi Protocols
+Marking up decentralized applications and yield products
+6
+FAQ Schema: The Double-Edged Sword
+When it helps win AI citations and when it backfires
+7
+Marking Up Tokenomics and Real-Time Data
+Handling dynamic data like APY and token prices
+8
+Common Schema Mistakes in Web3
+Errors that block citations (conflicting entity definitions)
+9
+Implementation Plan
+Step-by-step guide to auditing and deploying Web3 schema
+
+FAQ Section
+Q1: What schema types should a crypto exchange use? A crypto exchange should implement: Organization schema (brand identity), WebSite schema (search functionality), FinancialService schema (service classification), and ExchangeRateSpecification for trading pairs. Additionally, use FAQPage schema on support pages and Article schema on educational content.
+
+Q2: Does schema markup directly improve AI search citations? Schema markup doesn't directly cause AI citations, but it removes ambiguity about what your site is and what it offers. AI crawlers use structured data to classify and understand your content more accurately, which increases the likelihood of being selected as a citation source for relevant queries.
+
+Q3: How is DeFi protocol schema different from exchange schema? DeFi protocols face a unique challenge: they offer financial products without being traditional financial services. The recommended approach is to use FinancialProduct schema for yield-bearing products, SoftwareApplication for the protocol interface, and custom properties for TVL, audit status, and governance structure.
+
+Q4: Should I use FAQ schema on every page of my crypto site? No. FAQ schema should only be applied to pages with genuine, substantive Q&A content. Overusing FAQ schema (especially with thin or promotional answers) can trigger quality filters. Use it strategically on educational pages, product explainers, and support documentation where the questions are genuinely useful.
+
+Q5: How do I validate my crypto site's schema markup? Use Google's Rich Results Test for basic validation, the Crawlux Token Schema Tester for crypto-specific schema, and Schema.org's validator for syntax checking. Test across multiple pages and ensure there are no conflicting entity definitions (e.g., your brand being classified as both an "Organization" and a "SoftwareApplication" at the domain level).

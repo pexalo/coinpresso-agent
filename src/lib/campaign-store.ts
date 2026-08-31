@@ -12,13 +12,14 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dataDir } from "./data-dir";
 import {
   getClient,
   type Campaign,
   type CampaignFacts,
 } from "./clients";
 
-const DIR = path.join(process.cwd(), ".data", "campaign-facts");
+const DIR = dataDir("campaign-facts");
 
 function keyFor(clientRef: string, campaignId: string): string {
   return path.join(DIR, `${clientRef}__${campaignId}.json`);
