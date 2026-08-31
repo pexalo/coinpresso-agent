@@ -118,7 +118,10 @@ browser — settings mask them on read — and the same discipline applies here.
 
 `railway.json` carries the build and deploy config:
 
-- Builder: Nixpacks, `npm ci && npm run build`
+- Builder: Nixpacks. Install is Nixpacks' own `npm ci`; the build command is
+  just `npm run build`. Do NOT put `npm ci` in the build command — Railway mounts
+  a cache at `node_modules/.cache` during the build step, and a second `npm ci`
+  fails trying to remove it (`EBUSY … rmdir '/app/node_modules/.cache'`).
 - Start: `npm run start` — binds `0.0.0.0` and `$PORT`
 - Healthcheck: `/api/health`, 120s timeout (the first boot compiles)
 - Restart on failure, 3 retries, 1 replica
