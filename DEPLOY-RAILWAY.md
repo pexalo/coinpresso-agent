@@ -96,6 +96,7 @@ every call site, and the seam is one file.
 | `PORTAL_PASSCODE` | **Yes in production** | Coinpresso team login |
 | `PORTAL_ADMIN_PASSCODE` | **Yes in production** | Pexalo login — billing figure, snapshot restore |
 | `BILLING_MARKUP_PCT` | No | Default 10; shown to the admin login only |
+| `BILLING_HOSTING_USD` | No | Flat monthly hosting allowance on the admin billing card; 0 = included in retainer |
 | `ANTHROPIC_API_KEY` | Direct mode | Shared, project level |
 | `OPENAI_API_KEY` | Direct mode | Shared, project level |
 | `PEXALO_AI_URL` | Gateway mode | Both or neither |

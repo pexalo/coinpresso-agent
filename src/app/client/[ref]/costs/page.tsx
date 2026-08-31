@@ -55,6 +55,12 @@ export default async function CostsPage({
   const billable = (cost: number) => cost * (1 + markupPct / 100);
   const monthly = forecast(report, { wirePerDay: 4, blogPerDay: 6 });
   const monthlyBaseUsd = monthly.reduce((a, f) => a + f.perMonthUsd, 0);
+  // Hosting is a FLAT ALLOWANCE, not a measurement. Railway bills the whole
+  // project by usage and cannot attribute a dollar figure to one client, so any
+  // per-client hosting number is a decision, not a reading. Set it in the
+  // deployment; 0 (the default) means "included in the retainer" and the tile
+  // does not render. Not marked up — it is a pass-through.
+  const hostingUsd = Math.max(0, Number(process.env.BILLING_HOSTING_USD ?? 0) || 0);
 
   return (
     <div className="space-y-5 pt-2">
@@ -108,16 +114,27 @@ export default async function CostsPage({
               Pexalo only · not shown to the client login
             </span>
           </div>
-          <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-5 grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label: "Cost base to date", value: usd(grandTotalUsd) },
               { label: `Markup ${markupPct}%`, value: usd(grandTotalUsd * (markupPct / 100)) },
               { label: "Billable to date", value: usd(billable(grandTotalUsd)), strong: true },
               {
                 label: "Billable / month at 4 wire + 6 blog",
-                value: usd(billable(monthlyBaseUsd)),
-                sub: `base ${usd(monthlyBaseUsd)}`,
+                value: usd(billable(monthlyBaseUsd) + hostingUsd),
+                sub: hostingUsd
+                  ? `models ${usd(billable(monthlyBaseUsd))} + hosting ${usd(hostingUsd)}`
+                  : `base ${usd(monthlyBaseUsd)}`,
               },
+              ...(hostingUsd
+                ? [
+                    {
+                      label: "Hosting allowance / month",
+                      value: usd(hostingUsd),
+                      sub: "flat, not marked up",
+                    },
+                  ]
+                : []),
             ].map((k) => (
               <div key={k.label} className="rounded-lg border border-[var(--line)] px-4 py-3">
                 <div className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">{k.label}</div>
@@ -135,7 +152,9 @@ export default async function CostsPage({
             Every model is in the base — Claude for research and writing, GPT for
             review — plus web-search fees, all measured from the providers&apos;
             own usage reports. Failed calls that were still billed are included.
-            Change the rate with <code>BILLING_MARKUP_PCT</code> in the deployment.
+            Change the rate with <code>BILLING_MARKUP_PCT</code> in the deployment;
+            set <code>BILLING_HOSTING_USD</code> to add a flat monthly hosting
+            allowance, or leave it at 0 to treat hosting as part of the retainer.
             At this volume the markup is a pass-through, not a revenue line — the
             money is in the retainer.
           </p>
