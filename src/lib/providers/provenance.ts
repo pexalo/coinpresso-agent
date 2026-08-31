@@ -31,9 +31,26 @@ import path from "node:path";
 
 export type Source =
   | "shell"
+  | "platform"
   | "env-file"
   | "shell-shadowing-file"
   | "absent";
+
+/**
+ * Running somewhere that injects configuration as environment variables,
+ * rather than on a developer's machine. Same signal data-dir.ts uses to decide
+ * whether the filesystem is ephemeral, for the same reason: on a platform the
+ * rules about where config comes from are simply different.
+ */
+function onPlatform(): boolean {
+  return Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+      process.env.RAILWAY_PROJECT_ID ||
+      process.env.RENDER ||
+      process.env.FLY_APP_NAME ||
+      process.env.VERCEL
+  );
+}
 
 export interface Provenance {
   variable: string;
@@ -97,6 +114,25 @@ export async function provenanceOf(name: string): Promise<Provenance> {
   }
 
   if (live && !onDisk) {
+    // ON A PLATFORM, THIS IS THE CORRECT SOURCE — and saying otherwise is
+    // worse than saying nothing.
+    //
+    // This check exists for one specific local failure: a stale key exported
+    // from ~/.zshrc silently beating .env.local, which cost a day. On Railway
+    // (or any host that injects config as environment variables) there IS no
+    // .env file and there is not meant to be one, so the same state is not a
+    // problem — and the remedy the message gives, `unset ANTHROPIC_API_KEY`,
+    // would take the deployment down. A health check that always shows two
+    // warnings also trains you to ignore the warnings, which is the real cost:
+    // the next one will be a genuine one.
+    if (onPlatform()) {
+      return {
+        variable: name,
+        source: "platform",
+        shape: shapeOf(live),
+        detail: `${name} is injected by the host as an environment variable. That is the right place for it in a deployment — there is no .env file here and there should not be. Rotate it where the service's variables are configured.`,
+      };
+    }
     return {
       variable: name,
       source: "shell",
