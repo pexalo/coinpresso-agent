@@ -7,6 +7,7 @@ import ReviewPanel from "@/components/ReviewPanel";
 import ArticleView from "@/components/ArticleView";
 import ApprovalGate from "@/components/ApprovalGate";
 import SourceLedger from "@/components/SourceLedger";
+import OutlinePanel from "@/components/OutlinePanel";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -403,6 +404,7 @@ export default function RunDetail({
             <ApprovalGate clientRef={ref} runId={id} onGate={onGate} />
           )}
           <RunTimeline stages={run.stages} />
+          {isBlog && <OutlinePanel brief={run.brief.contentBrief} draft={run.draft} />}
           {run.research && <SourceLedger research={run.research} />}
         </div>
       </div>

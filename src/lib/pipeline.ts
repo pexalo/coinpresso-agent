@@ -221,6 +221,29 @@ export async function executeRun(run: Run): Promise<Run> {
     } else {
       const r = await runStrategy(run.brief, ident(run));
       run.research = r.research;
+
+      // A topic that arrived without a brief now has one, written by research
+      // in the client's format. Promoting it onto the run's Brief means the
+      // writer, the enforcement, the brief drawer and any rewrite all see the
+      // same thing — and nobody downstream has to ask "which kind of post is
+      // this". Only done when the run genuinely had no outline; a client's
+      // brief is never overwritten by a generated one.
+      const proposed = r.research.proposedBrief;
+      if (
+        run.brief.track === "blog" &&
+        !run.brief.contentBrief?.outline?.length &&
+        proposed?.outline?.length
+      ) {
+        run.brief.contentBrief = {
+          ...run.brief.contentBrief,
+          angle: proposed.angle,
+          gap: proposed.gap,
+          outline: proposed.outline.map((sct, i) => ({ ...sct, n: i + 1 })),
+          faqs: proposed.faqs ?? [],
+          generated: true,
+        };
+      }
+
       await finish(run, "strategy", r.research, {
         tokensIn: r.tokensIn,
         tokensOut: r.tokensOut,

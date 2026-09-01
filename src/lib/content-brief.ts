@@ -59,6 +59,14 @@ export interface ContentBrief {
   /** Which Drive doc this came from, and when it was read. */
   docId?: string;
   importedAt?: string;
+  /**
+   * True when the research stage wrote this brief because the topic had none.
+   * It is built to the same shape as Coinpresso's own briefs — 7 or 9
+   * declarative sections, scene-setting opener, "Conclusion and FAQ", five
+   * FAQs — so the writer treats both identically. Shown in the UI so a reader
+   * knows whether Liam or the agent chose the headings.
+   */
+  generated?: boolean;
 }
 
 /** Enough to label the row in a list of eighty without opening it. */
@@ -144,4 +152,43 @@ yourself.`,
   if (b.linking) parts.push(`WHERE IT SHOULD LINK, AND THE CALL TO ACTION\n${b.linking}`);
 
   return parts.join("\n\n");
+}
+
+
+/**
+ * A few of Coinpresso's real brief outlines, for the research stage to imitate
+ * when a topic arrives without one.
+ *
+ * WHY EXEMPLARS AND NOT A DESCRIPTION. The house pattern was described in
+ * prose once before — "question-shaped H2s, FAQ block" — and it was wrong, and
+ * it stayed wrong for seven articles because a description can drift from the
+ * thing it describes without anyone noticing. Three of the client's actual
+ * outlines cannot drift; they ARE the pattern. Measured across 74 briefs: 7 or
+ * 9 sections, 0% question headings, a scene-setting opener, "Conclusion and
+ * FAQ" to close, five FAQs.
+ */
+export function outlineExemplars(
+  briefs: ContentBrief[],
+  limit = 3
+): string {
+  const usable = briefs.filter(
+    (b) => !b.generated && b.outline && b.outline.length >= 7 && b.angle
+  );
+  if (!usable.length) return "";
+  // Spread across the list rather than the first three, so one pillar's
+  // conventions do not become the whole house's.
+  const step = Math.max(1, Math.floor(usable.length / limit));
+  const picked = usable.filter((_, i) => i % step === 0).slice(0, limit);
+  return `COINPRESSO'S OWN BRIEFS — three real examples of the shape every post takes.
+Imitate the SHAPE exactly: section count (7 or 9), a scene-setting first
+section, declarative headings that are statements, never questions, and a final
+"Conclusion and FAQ". Do not imitate the subject matter.
+
+${picked
+  .map(
+    (b, k) => `EXAMPLE ${k + 1} — angle: ${b.angle}
+${b.outline!.map((s) => `  ${s.n}. ${s.title}`).join("\n")}
+  FAQs: ${b.faqs?.length ?? 0}`
+  )
+  .join("\n\n")}`;
 }

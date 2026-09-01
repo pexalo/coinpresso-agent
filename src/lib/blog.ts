@@ -174,7 +174,7 @@ export const CONTENT_TYPES: Record<ContentTypeId, ContentType> = {
     id: "guide",
     name: "Guide",
     shape:
-      "House default when there is no brief: question-shaped H1, H2s phrased as the questions buyers actually ask, FAQ block at the end. A client brief's outline replaces all of this.",
+      "Follows the post's outline — the client's, or one research wrote in the client's format. Declarative headings, scene-setting opener, Conclusion and FAQ.",
     words: [1200, 1800],
     job: "Owns an informational keyword and gets quoted by AI models.",
   },
@@ -305,10 +305,12 @@ post with no home is a post that will not rank.`;
  * an extended FAQ. A default has to be a default: present when nothing better
  * exists, absent when the client has said what they want.
  */
-export const BLOG_DEFAULT_STRUCTURE = `STRUCTURE — house default (no client brief for this post)
-- One clear, question-shaped H1
-- H2s phrased as the questions people actually ask
-- An FAQ block at the end`;
+export const BLOG_DEFAULT_STRUCTURE = `STRUCTURE — house pattern (this post arrived with no outline and research did not supply one)
+Measured from 74 of Coinpresso's own briefs:
+- 7 or 9 H2 sections, never another number
+- Section 1 sets the scene — a statement about the reader's current reality
+- Every heading is a statement or noun phrase; none is a question
+- The last section is titled "Conclusion and FAQ", with exactly 5 FAQs`;
 
 /** Coinpresso's own voice — distinct from the Moonberg wire voice. */
 export const BLOG_STYLE = `WRITING STYLE — Coinpresso house blog.

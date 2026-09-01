@@ -8,7 +8,8 @@
 // ---------------------------------------------------------------------------
 
 import { billed, callClaude, extractJson } from "../providers/anthropic";
-import { briefToPrompt } from "../content-brief";
+import { briefToPrompt, outlineExemplars, type ContentBrief } from "../content-brief";
+import { listSeeds } from "../blog-seed";
 import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
@@ -138,9 +139,28 @@ export async function runStrategyBlog(
   const pillar = PILLARS.find((x) => x.id === brief.pillar);
   const type = brief.contentType ? CONTENT_TYPES[brief.contentType as keyof typeof CONTENT_TYPES] : undefined;
 
+  // NO BRIEF? WRITE ONE — in the client's shape, learned from the client's own.
+  //
+  // A topic the planner proposed, or one typed in without a recommendations
+  // doc, used to fall through to a coded "house default" of question-shaped
+  // headings and an FAQ block. The client rejected that shape outright. What
+  // they want is for every post to read like the ones they briefed, so the
+  // research stage now produces a brief to the same pattern as theirs — with
+  // three of their real outlines in front of it as the specification — and
+  // the writer follows it under exactly the same enforcement. There is one
+  // path through the writer, not two.
+  const needsBrief = !brief.contentBrief?.outline?.length;
+  let exemplars = "";
+  if (needsBrief && ctx?.clientRef) {
+    const seeds = await listSeeds(ctx.clientRef);
+    exemplars = outlineExemplars(
+      seeds.topics.map((t) => t.brief).filter((b): b is ContentBrief => Boolean(b))
+    );
+  }
+
   const user = `Today's date is ${today}.
 
-WORKING TITLE: ${brief.title}
+TITLE (fixed): ${brief.title}
 TARGET KEYWORDS: ${brief.keywords.join(", ")}
 ${pillar ? `PILLAR: ${pillar.name} — the post links to ${pillar.hub}\nWhat this buyer is worried about: ${pillar.buyerQuestion}` : ""}
 ${type ? `FORMAT: ${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : ""}
@@ -179,6 +199,26 @@ where that link belongs naturally in the argument. It is an internal
 destination, not a citation, and does not go in "sources".`
       : ""
   }
+${
+    needsBrief
+      ? `
+
+--- THIS TOPIC HAS NO CLIENT BRIEF. WRITE ONE, IN THE CLIENT'S FORMAT. ---
+${exemplars || "(No client briefs available to imitate — follow the rules below exactly.)"}
+
+RULES FOR proposedBrief — measured from 74 of the client's own briefs, not invented:
+- EXACTLY 7 or 9 sections. Not 6, not 8, not 10.
+- Section 1 sets the scene: a statement about the current reality the reader is
+  in. Never a definition, never a question.
+- Every heading is a declarative statement or a noun phrase. NONE ends in "?".
+  If you have written a question, rewrite it as the claim it answers.
+- The final section is titled exactly "Conclusion and FAQ".
+- EXACTLY 5 FAQs. Each answer must be supportable from the sources you found.
+- Headings describe THIS topic specifically — a heading that could sit on any
+  post in the category is not finished.
+`
+      : ""
+  }
 
 Research this and return JSON:
 {
@@ -198,11 +238,24 @@ Research this and return JSON:
   "comparisonAssets": ["named alternatives, tools or approaches worth contrasting"],
   "structureVariant": "single_asset",
   "suggestedHeadings": ["${
-    brief.contentBrief?.outline?.length
-      ? "the client's outline headings, returned EXACTLY as given in the brief above — research each section, do not rename them"
-      : "5-7 H2s for the post"
+    needsBrief
+      ? "the same headings as proposedBrief.outline, in order"
+      : "the client's outline headings, returned EXACTLY as given in the brief above — research each section, do not rename them"
   }"],
-  "faqCandidates": ["..."],
+  "faqCandidates": ["..."],${
+    needsBrief
+      ? `
+  "proposedBrief": {
+    "angle": "one or two sentences — the position this post takes that a competitor would not",
+    "gap": "what already ranks for this and what it leaves out",
+    "outline": [
+      { "n": 1, "title": "scene-setting opener — a statement about the current reality, NOT a question, NOT a definition", "focus": "what this section establishes" },
+      { "n": 2, "title": "...", "focus": "..." }
+    ],
+    "faqs": [ { "q": "...", "a": "a two-sentence answer grounded in the sources" } ]
+  },`
+      : ""
+  }
   "riskNotes": ["anything unverifiable, or where Coinpresso data is needed and absent"],
   "sources": [{ "id": "s1", "publisher": "...", "title": "...", "url": "https://...", "claim": "...", "kind": "news | market_data | project", "figures": ["..."] }]
 }`;
@@ -216,7 +269,7 @@ Research this and return JSON:
     // 16000 here bought no research and only set how far a runaway reply could
     // run before being cut off and billed. 8000 is still roughly double the
     // longest brief this stage has produced.
-    maxTokens: 8000,
+    maxTokens: needsBrief ? 10000 : 8000,
     webSearch: true,
     context: { ...ctx, stage: "strategy" },
   });
@@ -224,7 +277,7 @@ Research this and return JSON:
   let research: ResearchBrief;
   try {
     research = extractJson<ResearchBrief>(r.text, { stage: "research", stopReason: r.stopReason, blockTypes: r.blockTypes,
-      tokensOut: r.tokensOut, maxTokens: 8000 });
+      tokensOut: r.tokensOut, maxTokens: needsBrief ? 10000 : 8000 });
   } catch (e) {
     // Searches and tokens were billed even though the parse failed. The
     // pipeline's fail() reads this off the error and records it on the run.

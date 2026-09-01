@@ -100,6 +100,12 @@ export interface Source {
 
 /** The strategy agent's structured output. */
 export interface ResearchBrief {
+  /**
+   * Blog track, topics without a client brief only: the brief the research
+   * stage wrote in the client's format. The pipeline promotes it onto the run's
+   * Brief so the writer sees one shape of input whoever authored it.
+   */
+  proposedBrief?: Pick<ContentBrief, "angle" | "gap" | "outline" | "faqs">;
   featuredAsset: string;
   primaryKeyword: string;
   secondaryKeywords: string[];
