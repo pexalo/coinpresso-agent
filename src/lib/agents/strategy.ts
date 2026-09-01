@@ -197,7 +197,11 @@ Research this and return JSON:
   "presaleState": { "raised": "n/a", "stage": "n/a", "note": "blog track" },
   "comparisonAssets": ["named alternatives, tools or approaches worth contrasting"],
   "structureVariant": "single_asset",
-  "suggestedHeadings": ["question-shaped H2s"],
+  "suggestedHeadings": ["${
+    brief.contentBrief?.outline?.length
+      ? "the client's outline headings, returned EXACTLY as given in the brief above — research each section, do not rename them"
+      : "5-7 H2s for the post"
+  }"],
   "faqCandidates": ["..."],
   "riskNotes": ["anything unverifiable, or where Coinpresso data is needed and absent"],
   "sources": [{ "id": "s1", "publisher": "...", "title": "...", "url": "https://...", "claim": "...", "kind": "news | market_data | project", "figures": ["..."] }]

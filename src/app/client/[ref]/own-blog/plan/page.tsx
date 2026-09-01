@@ -158,6 +158,7 @@ export default function PlanDayPage() {
         referenceUrl: seed?.referenceUrl,
         linkTarget: seed?.linkTarget,
         contentBrief: seed?.brief,
+        seedTopicId: seed?.id,
         notes: `${fromCoinpresso}Buyer question: ${i.buyerQuestion}\nOriginality required: ${i.originality}${
           i.needsClientData
             ? "\nNOTE: this post's originality depends on Coinpresso's own campaign data, which was NOT supplied. Write around the gap honestly — do not invent a figure."

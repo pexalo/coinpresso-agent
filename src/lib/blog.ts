@@ -174,7 +174,7 @@ export const CONTENT_TYPES: Record<ContentTypeId, ContentType> = {
     id: "guide",
     name: "Guide",
     shape:
-      "Question-shaped H1. Direct answer in the first two sentences. H2s phrased as the questions buyers actually ask, each answered before it is contextualised. FAQ block at the end.",
+      "House default when there is no brief: question-shaped H1, H2s phrased as the questions buyers actually ask, FAQ block at the end. A client brief's outline replaces all of this.",
     words: [1200, 1800],
     job: "Owns an informational keyword and gets quoted by AI models.",
   },
@@ -267,11 +267,13 @@ A post that only reassembles what already ranks adds nothing, and at five to
 eight a day that is precisely the pattern that gets a domain demoted. If a draft
 has none of the four, it is not publishable — say so rather than padding it.
 
-## Structure for AI retrieval
-- One clear, question-shaped H1
-- H2s phrased as the questions people actually ask
+## Structure
+The structure of a post comes from the client's brief when there is one, and
+from the house default when there is not. Which applies is stated explicitly in
+each writing task — do not carry a structure from one post to the next.
+
+## Retrieval habits that apply whatever the structure
 - The direct answer in the first two sentences under each H2, before context
-- An FAQ block
 - Internal links to the pillar page and to two or three sibling posts, using
   descriptive anchor text
 
@@ -292,6 +294,22 @@ starts reading like the Moonberg programme, it has gone wrong.
 Every post belongs to a pillar and links to it. The cluster is the asset; a
 post with no home is a post that will not rank.`;
 
+/**
+ * The house structure, used ONLY when a post has no client brief.
+ *
+ * This used to live inside BLOG_PLAYBOOK — in the writer's system prompt,
+ * where it applied to every post unconditionally. Coinpresso's briefs specify
+ * a section-by-section outline per topic, and the writer was receiving both:
+ * "here are the nine sections" and "H2s are phrased as questions". It kept the
+ * sections and questionified every heading, and the client read the result as
+ * an extended FAQ. A default has to be a default: present when nothing better
+ * exists, absent when the client has said what they want.
+ */
+export const BLOG_DEFAULT_STRUCTURE = `STRUCTURE — house default (no client brief for this post)
+- One clear, question-shaped H1
+- H2s phrased as the questions people actually ask
+- An FAQ block at the end`;
+
 /** Coinpresso's own voice — distinct from the Moonberg wire voice. */
 export const BLOG_STYLE = `WRITING STYLE — Coinpresso house blog.
 
@@ -303,7 +321,7 @@ adjectives.
   for Coinpresso ("we ran", "we found") — and only where it is literally true
 - Sentences average around 18 words, with high variation
 - Paragraphs of two to four sentences
-- Headings in sentence case, phrased as questions where natural
+- Heading case and phrasing follow the structure given for the post — the brief's headings are used as written
 - Contractions are fine
 - Bullet lists are allowed here, unlike the wire work, but never more than one
   list per two screens of prose

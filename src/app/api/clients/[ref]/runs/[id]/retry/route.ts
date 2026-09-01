@@ -15,13 +15,14 @@
 import { NextResponse } from "next/server";
 import { getClient } from "@/lib/clients";
 import { getRun, saveRun } from "@/lib/store";
+import { listSeeds } from "@/lib/blog-seed";
 import { executeRun } from "@/lib/pipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ ref: string; id: string }> }
 ) {
   const { ref, id } = await params;
@@ -32,7 +33,70 @@ export async function POST(
   if (!run) {
     return NextResponse.json({ error: "Unknown run" }, { status: 404 });
   }
-  if (run.status !== "failed") {
+
+  // REWRITE FROM RESEARCH — ?from=writer.
+  //
+  // Keeps the strategy stage (the research and the source ledger, more than
+  // half the cost of a run) and discards everything after it, so the writer
+  // runs again from the same facts. This exists because the first seven live
+  // articles were structurally wrong through a prompt fault, not a research
+  // fault: the sources were fine, the headings were not. Re-running the whole
+  // pipeline would have paid for the research a second time to fix a mistake
+  // the research did not make.
+  //
+  // Allowed on failed and needs-review runs. A rewrite changes the draft,
+  // which changes its fingerprint, which stales every signature on it — so a
+  // half-approved post cannot be quietly swapped out from under an approver.
+  const from = new URL(req.url).searchParams.get("from");
+  if (from === "writer") {
+    if (run.status !== "failed" && run.status !== "needs_review") {
+      return NextResponse.json(
+        { error: `A run can be rewritten from research only while failed or awaiting review — this one is "${run.status}".` },
+        { status: 409 }
+      );
+    }
+    if (!run.research) {
+      return NextResponse.json(
+        { error: "This run has no research to rewrite from — retry it from the start instead." },
+        { status: 409 }
+      );
+    }
+    for (const s of run.stages) {
+      if (s.id === "strategy") continue;
+      s.status = "pending";
+      s.error = undefined;
+      s.output = undefined;
+      s.startedAt = undefined;
+      s.endedAt = undefined;
+      s.durationMs = undefined;
+    }
+    run.draft = undefined;
+    run.review = undefined;
+    run.linkCheck = undefined;
+    run.revisions = 0;
+
+    // THE TITLE GOES BACK TO WHAT THE CLIENT WROTE. The first live plans
+    // rewrote every supplied topic as a question, and that rewritten title was
+    // stored on the run — so a rewrite that trusted the stored brief would
+    // reproduce the fault it exists to fix. The queue topic is found by id
+    // where the run recorded one, and by the brief document's id otherwise
+    // (runs from before the id was carried).
+    const seeds = await listSeeds(ref);
+    const seed =
+      seeds.topics.find((t) => t.id === run.brief.seedTopicId) ??
+      (run.brief.contentBrief?.docId
+        ? seeds.topics.find((t) => t.brief?.docId === run.brief.contentBrief?.docId)
+        : undefined);
+    if (seed) {
+      run.brief.title = seed.topic;
+      run.brief.seedTopicId = seed.id;
+      if (seed.keywords.length) run.brief.keywords = seed.keywords;
+      if (seed.brief) run.brief.contentBrief = seed.brief;
+    }
+
+    run.status = "failed"; // executeRun flips it to running and resumes after strategy
+    await saveRun(run);
+  } else if (run.status !== "failed") {
     return NextResponse.json(
       { error: `Only failed runs can be retried — this one is "${run.status}".` },
       { status: 409 }

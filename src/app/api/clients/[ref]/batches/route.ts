@@ -88,6 +88,7 @@ export async function POST(
       referenceUrl?: string;
       linkTarget?: string;
       contentBrief?: ContentBrief;
+      seedTopicId?: string;
     }>;
   };
   try {
@@ -133,6 +134,7 @@ export async function POST(
         referenceUrl: httpUrl(i.referenceUrl),
         linkTarget: httpUrl(i.linkTarget),
         contentBrief: i.contentBrief,
+        seedTopicId: i.seedTopicId,
       };
     });
   } else {

@@ -86,13 +86,14 @@ export default function RunDetail({
   // Fire the retry, then fall back into the normal polling loop: the run's
   // status leaves "failed", the settled check stops matching, and the page
   // updates itself exactly as it does on a first attempt.
-  const retry = useCallback(async () => {
+  const retry = useCallback(async (from?: "writer") => {
     setRetrying(true);
     setRetryMsg(null);
     try {
-      const res = await fetch(`/api/clients/${ref}/runs/${id}/retry`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `/api/clients/${ref}/runs/${id}/retry${from ? `?from=${from}` : ""}`,
+        { method: "POST" }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Retry failed to start.");
       const tick = async () => {
@@ -340,7 +341,7 @@ export default function RunDetail({
               </div>
               <div className="flex flex-col items-end gap-1 flex-none">
                 <button
-                  onClick={retry}
+                  onClick={() => retry()}
                   disabled={retrying}
                   className="text-[12.5px] font-semibold px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
                 >
@@ -358,7 +359,32 @@ export default function RunDetail({
       <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <div className="space-y-5 min-w-0">
           {run.draft && run.rendered ? (
-            <ArticleView draft={run.draft} rendered={run.rendered} />
+            <>
+              <ArticleView draft={run.draft} rendered={run.rendered} />
+              {(run.status === "failed" || run.status === "needs_review") && (
+                <div className="card px-5 py-4 flex flex-wrap items-center gap-4">
+                  <div className="text-[12px] text-[var(--ink-3)] max-w-xl leading-relaxed">
+                    Not right?{" "}
+                    <strong className="text-[var(--ink)]">Rewrite from research</strong>{" "}
+                    keeps the sources and the ledger and re-runs only the
+                    writer — about a seventh of the cost of a fresh run. Any
+                    signatures already given go stale, by design.
+                  </div>
+                  <div className="ml-auto flex flex-col items-end gap-1">
+                    <button
+                      onClick={() => retry("writer")}
+                      disabled={retrying}
+                      className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--accent)] disabled:opacity-40 transition-colors"
+                    >
+                      {retrying ? "Rewriting…" : "Rewrite from research"}
+                    </button>
+                    {retryMsg && run.status !== "failed" && (
+                      <span className="text-[11.5px] text-[var(--danger)]">{retryMsg}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="card p-10 text-center text-[var(--ink-3)] text-sm">
               {run.status === "failed"

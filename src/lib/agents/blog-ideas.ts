@@ -136,6 +136,9 @@ started bidding on, what a client asked twice this week.
 Rules for them:
 - Produce EXACTLY ONE post per topic below. Not two angles on one, not a merge
   of two into one post. Set seedTopicId to the id given.
+- The title IS the supplied topic text, character for character. Do not
+  rephrase it, do not turn it into a question, do not change its case. The
+  client wrote it and will look for it by that name.
 - Use the supplied keywords for that post. Add your own only if they are needed;
   the supplied ones are the target.
 - The hard constraints still apply. If a required topic collides with the pillar
@@ -292,7 +295,7 @@ Return JSON:
 {
   "ideas": [
     {
-      "title": "the H1 as it would publish — question-shaped where natural, sentence case",
+      "title": "for a supplied topic: the topic text EXACTLY as given, unchanged. For your own proposals: a clear declarative title in Title Case, not a question",
       "keywords": ["primary first", "secondary"],
       "seedTopicId": "the id from the supplied-topics block, or omit entirely for a post you proposed",
       "pillar": "one of the pillar ids above",
@@ -360,14 +363,25 @@ Return JSON:
   // get a topic marked written that nobody wrote.
   const valid = new Set(seeds.map((s) => s.id));
 
-  const ideas: BlogIdea[] = (parsed.ideas ?? []).map((i, n) => ({
-    ...i,
-    id: `blog_idea_${Date.now()}_${n}`,
-    keywords: i.keywords ?? [],
-    needsClientData: Boolean(i.needsClientData),
-    seedTopicId:
-      i.seedTopicId && valid.has(i.seedTopicId) ? i.seedTopicId : undefined,
-  }));
+  // A supplied topic's title is the topic. The prompt says so; this makes it
+  // so. The client enters "E-E-A-T for Crypto Websites in the Age of AI
+  // Search" and the first live plan turned it into "What does E-E-A-T actually
+  // mean for a crypto website in 2026?" — then looked for it in the queue by
+  // the name they gave it and could not find it.
+  const seedById = new Map(seeds.map((s) => [s.id, s]));
+  const ideas: BlogIdea[] = (parsed.ideas ?? []).map((i, n) => {
+    const seedId =
+      i.seedTopicId && valid.has(i.seedTopicId) ? i.seedTopicId : undefined;
+    const seed = seedId ? seedById.get(seedId) : undefined;
+    return {
+      ...i,
+      id: `blog_idea_${Date.now()}_${n}`,
+      title: seed ? seed.topic : i.title,
+      keywords: seed?.keywords?.length ? seed.keywords : (i.keywords ?? []),
+      needsClientData: Boolean(i.needsClientData),
+      seedTopicId: seedId,
+    };
+  });
 
   // Which supplied topics the planner did not produce a post for. Reported
   // rather than patched: silently appending a stub post for a dropped topic

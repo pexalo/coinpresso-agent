@@ -10,10 +10,11 @@ import { billed, callClaude } from "../providers/anthropic";
 import { MODELS } from "../models";
 import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
-import { briefToPrompt } from "../content-brief";
+import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brief";
 import { exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import {
   BLOG_ARCHIVE_ID,
+  BLOG_DEFAULT_STRUCTURE,
   BLOG_PLAYBOOK,
   BLOG_PUBLICATION,
   BLOG_STYLE,
@@ -119,6 +120,60 @@ function parseDraftSections(
   return { headline, dateline, body, faqs, tags };
 }
 
+/**
+ * Make the draft's H2s the brief's headings — exactly.
+ *
+ * WHY THIS IS CODE AND NOT A PROMPT. The first live articles followed the
+ * client's outline section for section and still came back wrong, because
+ * every heading had been rephrased as a question. The client's brief is a
+ * document a person wrote and signed off; its headings are not suggestions
+ * for the model to improve on. So the prompt says "verbatim", and then this
+ * function makes it true: when the draft has the same number of H2s in the
+ * same order, each heading is REPLACED with the brief's. A model that keeps
+ * the sequence but drifts on wording — the failure actually observed — is
+ * corrected for free. A model that merged, split or dropped a section has not
+ * followed the brief, and that is thrown as an error naming the gap, so the
+ * stage fails loudly and the retry re-runs only the writer.
+ */
+function enforceOutline(body: string, outline: BriefSection[]): string {
+  const lines = body.split("\n");
+  const h2 = lines
+    .map((l, i) => ({ i, text: l.match(/^##\s+(.+?)\s*$/)?.[1] }))
+    .filter((x): x is { i: number; text: string } => Boolean(x.text));
+
+  if (h2.length !== outline.length) {
+    const have = h2.map((h) => `"${h.text}"`).join(", ") || "none";
+    throw new Error(
+      `The writer produced ${h2.length} H2 sections but the client's brief specifies ${outline.length}. ` +
+        `Brief: ${outline.map((o) => `"${o.title}"`).join(", ")}. ` +
+        `Draft: ${have}. The outline is a contract — retry the writer.`
+    );
+  }
+  h2.forEach((h, k) => {
+    lines[h.i] = `## ${outline[k].title}`;
+  });
+  return lines.join("\n");
+}
+
+/**
+ * The FAQ block uses the brief's questions, verbatim and in order. The model's
+ * answers are kept where it answered the right question; where it invented a
+ * different one, the brief's own answer text stands in — it was written by the
+ * client and is at least accurate to what they wanted said.
+ */
+function enforceFaqs(
+  produced: Array<{ q: string; a: string }>,
+  wanted: BriefFaq[]
+): Array<{ q: string; a: string }> {
+  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return wanted.map((w, k) => {
+    const exact = produced.find((p) => norm(p.q) === norm(w.q));
+    const positional = produced[k];
+    const a = exact?.a ?? positional?.a ?? w.a;
+    return { q: w.q, a };
+  });
+}
+
 export interface WriterInput {
   /** Threaded to the gateway so spend is attributed to a client and a run. */
   ctx?: CallContext;
@@ -211,14 +266,49 @@ it was retrieved and the brief was not. Where they differ on SHAPE — the
 sections, their order, the questions, the length — follow the brief.\n`
     : "";
 
+  // WHICH STRUCTURE GOVERNS. Exactly one of these two blocks is sent.
+  //
+  // With an outline in the client's brief, the headings are a contract: sent
+  // verbatim, numbered, with the instruction not to rephrase them — and then
+  // CHECKED IN CODE after the reply (see enforceOutline below), so a heading
+  // that drifts is caught here rather than by the client. Without an outline,
+  // the house default applies. Sending both is what produced the "extended
+  // FAQ": the model kept the client's sections and questionified every one.
+  const outline = brief.contentBrief?.outline ?? [];
+  const fixedStructure = outline.length > 0;
+  const structureBlock = fixedStructure
+    ? `STRUCTURE — FIXED BY THE CLIENT'S BRIEF. Use these H2 headings EXACTLY as
+written, in this order, one section each. Do not rephrase them, do not turn
+them into questions, do not merge or split sections, do not add sections.
+${outline
+  .map(
+    (sct) =>
+      `${sct.n}. ${sct.title}${sct.words ? ` (~${sct.words} words)` : ""}${
+        sct.focus ? `\n   Focus: ${sct.focus}` : ""
+      }`
+  )
+  .join("\n")}
+${
+  brief.contentBrief?.faqs?.length
+    ? `\nThe FAQ block uses EXACTLY the ${brief.contentBrief.faqs.length} questions in the brief, in order, and no others.`
+    : `\nNo FAQ block unless the outline above includes one.`
+}
+Target ${type ? `${type.words[0]}-${type.words[1]}` : "1200-1800"} words in total${
+        outline.some((sct) => sct.words)
+          ? ", allocated per section as marked"
+          : ""
+      }.`
+    : `${BLOG_DEFAULT_STRUCTURE}
+FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}`;
+
   const user = `${BLOG_STYLE}
 ${voiceBlock}${clientBrief}
 ---
 
-FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}
+${structureBlock}
 ${pillar ? `PILLAR: ${pillar.name}. Link to the hub at ${pillar.hub} using descriptive anchor text.` : ""}
 
-WORKING TITLE (improve it if it is clumsy, keep the keyword):
+TITLE — fixed, use it exactly as the H1:
 ${brief.title}
 
 PRIMARY KEYWORD: ${research.primaryKeyword}
@@ -244,12 +334,16 @@ ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- nothing sup
 INTERNAL LINKS TO WORK IN:
 ${(research.internalLinks ?? []).map((l) => `- ${l}`).join("\n") || "- the pillar hub"}
 
-SUGGESTED H2s:
+${
+  fixedStructure
+    ? ""
+    : `SUGGESTED H2s:
 ${research.suggestedHeadings.map((h) => `- ${h}`).join("\n")}
 
 FAQ CANDIDATES:
 ${research.faqCandidates.map((f) => `- ${f}`).join("\n")}
-
+`
+}
 RISK NOTES YOU MUST RESPECT:
 ${research.riskNotes.map((r) => `- ${r}`).join("\n") || "- none"}
 
@@ -306,6 +400,15 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
   let parsed: Omit<Draft, "wordCount">;
   try {
     parsed = parseDraftSections(r.text, { stage: "writer", stopReason: r.stopReason, maxTokens: ceiling });
+    // The title is the client's, or the planner's approved one. The model was
+    // told not to change it; this makes sure the instruction was not needed.
+    parsed.headline = brief.title;
+    if (fixedStructure) {
+      parsed.body = enforceOutline(parsed.body, outline);
+      if (brief.contentBrief?.faqs?.length) {
+        parsed.faqs = enforceFaqs(parsed.faqs, brief.contentBrief.faqs);
+      }
+    }
   } catch (e) {
     throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: 0 });
   }

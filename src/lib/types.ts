@@ -63,6 +63,12 @@ export interface Brief {
   /** The client's content brief, as structure. See `content-brief.ts`. */
   contentBrief?: ContentBrief;
   /**
+   * The queue topic this run was written for, when it was one of the client's.
+   * Lets a rewrite restore the client's exact title even if an earlier stage
+   * had changed it, and lets the queue show which topic a run belongs to.
+   */
+  seedTopicId?: string;
+  /**
    * A Coinpresso page this post exists to link to. Outreach rows in the content
    * calendar carry one; ordinary posts do not.
    */
