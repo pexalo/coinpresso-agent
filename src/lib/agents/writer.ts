@@ -156,6 +156,32 @@ function enforceOutline(body: string, outline: BriefSection[]): string {
 }
 
 /**
+ * There must be an introduction before the first section.
+ *
+ * Checked rather than merely asked for, like the outline: the first rewrite
+ * came back structurally perfect and opened on "## Section 1" with nothing in
+ * front of it, and the client noticed before the code did. Sixty words is a
+ * floor, not a target — it separates "a real opening" from "one sentence and
+ * a heading".
+ */
+function enforceIntro(body: string): void {
+  const firstH2 = body.search(/^##\s+/m);
+  const intro = firstH2 === -1 ? body : body.slice(0, firstH2);
+  const words = intro.split(/\s+/).filter(Boolean).length;
+  if (words < 60) {
+    throw new Error(
+      `The article opens on its first section with ${words} words of introduction before it. ` +
+        `Every post needs one to two scene-setting paragraphs before the first H2 — retry the writer.`
+    );
+  }
+}
+
+/** "Q2: How can…" → "How can…". The imported briefs carry these labels. */
+function stripFaqLabel(q: string): string {
+  return q.replace(/^\s*(?:FAQ|Q)?\s*\d+\s*[:.)\-–]\s*/i, "").trim();
+}
+
+/**
  * The FAQ block uses the brief's questions, verbatim and in order. The model's
  * answers are kept where it answered the right question; where it invented a
  * different one, the brief's own answer text stands in — it was written by the
@@ -165,12 +191,15 @@ function enforceFaqs(
   produced: Array<{ q: string; a: string }>,
   wanted: BriefFaq[]
 ): Array<{ q: string; a: string }> {
-  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const norm = (t: string) => stripFaqLabel(t).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   return wanted.map((w, k) => {
     const exact = produced.find((p) => norm(p.q) === norm(w.q));
     const positional = produced[k];
     const a = exact?.a ?? positional?.a ?? w.a;
-    return { q: w.q, a };
+    // The label is the brief author's numbering, not part of the question. In
+    // the first rewrite the block read "Does E-E-A-T…", "Q2: How can…",
+    // "Q3: Do…" — one stripped, four not — because the import had kept them.
+    return { q: stripFaqLabel(w.q), a };
   });
 }
 
@@ -276,8 +305,21 @@ sections, their order, the questions, the length — follow the brief.\n`
   // FAQ": the model kept the client's sections and questionified every one.
   const outline = brief.contentBrief?.outline ?? [];
   const fixedStructure = outline.length > 0;
+  // Every post opens with an introduction BEFORE the first H2 — one to two
+  // paragraphs that set the scene for the whole piece and say what the reader
+  // will get. Not a heading of its own. The client flagged this on the first
+  // rewrite: the article "went straight in" to section one. It applies to both
+  // paths below because it is how the house reads, whoever wrote the outline.
+  const introRule = `INTRODUCTION. Before the first H2, write one to two paragraphs (80-150
+words) with NO heading: set the scene — the reader's current reality and why it
+has changed — and say what this piece will take them through. The first H2
+comes after it. Section 1 then develops the opening in depth; it does not repeat
+the introduction.`;
+
   const structureBlock = fixedStructure
-    ? `STRUCTURE — FIXED BY THE CLIENT'S BRIEF. Use these H2 headings EXACTLY as
+    ? `${introRule}
+
+STRUCTURE — FIXED BY THE CLIENT'S BRIEF. Use these H2 headings EXACTLY as
 written, in this order, one section each. Do not rephrase them, do not turn
 them into questions, do not merge or split sections, do not add sections.
 ${outline
@@ -298,7 +340,9 @@ Target ${type ? `${type.words[0]}-${type.words[1]}` : "1200-1800"} words in tota
           ? ", allocated per section as marked"
           : ""
       }.`
-    : `${BLOG_DEFAULT_STRUCTURE}
+    : `${introRule}
+
+${BLOG_DEFAULT_STRUCTURE}
 FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}`;
 
   const user = `${BLOG_STYLE}
@@ -403,6 +447,7 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
     // The title is the client's, or the planner's approved one. The model was
     // told not to change it; this makes sure the instruction was not needed.
     parsed.headline = brief.title;
+    enforceIntro(parsed.body);
     if (fixedStructure) {
       parsed.body = enforceOutline(parsed.body, outline);
       if (brief.contentBrief?.faqs?.length) {
