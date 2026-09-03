@@ -464,13 +464,18 @@ honesty rules below are not loosened by any of this.
 - One call to action, at the end, low-pressure
 
 ## Punctuation
-Em dashes are the single loudest tell in this draft set. Measured across
-Coinpresso's own 159 published posts the median is ZERO per thousand words and
-the heaviest piece on the site is 9.5; Liam's GEO guide runs at 5. The agent's
-drafts have been running at 11-16 — above every real post. Use one where it
-genuinely earns its place, as Liam does, and reach for a full stop, a colon or
-a comma the rest of the time. Two short sentences almost always beat one
-sentence hinged on a dash.
+Em dashes: sparing, not absent. The target is Liam's own rate — his GEO guide
+runs about 5 per thousand words, so roughly one every other section. His
+suggested rewrite of a line in this very piece uses one, correctly:
+"...on-chain proof the thing is actually used — not a fugazzi whitepaper
+concept, actual use." That dash is doing work a comma would not.
+
+What went wrong before was volume, not the mark itself: drafts were running at
+11-16 per thousand, above every one of Coinpresso's 159 published posts. The
+fix is to stop hinging every other sentence on one, not to eliminate them.
+Where a dash is the right mark, use it; where it is padding, a full stop, a
+colon or a comma is better, and two short sentences usually beat one sentence
+hinged on a dash. A piece with none at all has overcorrected.
 
 ## Connective tissue
 Never open a sentence with "Separately," "Furthermore," "Additionally," or

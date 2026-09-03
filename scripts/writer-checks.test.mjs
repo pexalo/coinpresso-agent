@@ -69,6 +69,28 @@ t("budget is prose-derived, not body-derived",
   W.emDashBudgetFor(heavy) === W.emDashBudget(W.wordCount(W.proseOf(heavy))), true);
 t("code untouched by softenToBudget", softened.split("```")[1], heavy.split("```")[1]);
 
+console.log("\nblog link survives the cap (Liam: landing pages AND blogs):");
+// The live E-E-A-T draft's shape: service pages early, posts named late. Six
+// internal links against a cap of five, with the post last.
+const svc = ["crypto-seo", "web3-ghostwriting", "crypto-link-building-services", "crypto-pr", "crypto-content"];
+const late = `Intro paragraph long enough to open this piece for a reader.\n\n` +
+  svc.map((sl, k) => `## S${k}\n\nProse about ${cp(sl, sl.replace(/-/g, " "))} here.`).join("\n\n") +
+  `\n\n## Six\n\nWe covered this in [the llms.txt guide](https://coinpresso.io/blog/llms-txt-for-crypto-web3-sites-do-you-need-one-in-2026).` +
+  `\n\n## Conclusion and FAQ\n\nSee ${cp("geo-llm-optimization-for-crypto-web3", "crypto GEO")}.`;
+const trimmedLate = W.trimLinks(late, hub);
+t("internal capped at 5", shape(trimmedLate)[0], 5);
+t("the blog post link survives", /\/blog\/llms-txt/.test(trimmedLate), true);
+t("the pillar link survives", /geo-llm-optimization/.test(trimmedLate), true);
+// Three service pages survive (earliest in document order); two are dropped
+// so the protected pillar and post can both fit inside the cap of five.
+const svcKept = svc.filter((sl) => trimmedLate.includes(`](https://coinpresso.io/${sl})`)).length;
+t("3 service pages kept, 2 unlinked to make room", svcKept, 3);
+t("dropped service pages keep their words", trimmedLate.includes("crypto content") && trimmedLate.includes("crypto pr"), true);
+
+console.log("\nem dash guidance is a ceiling, not a target:");
+t("budget for a 2,100-word piece", W.emDashBudget(2100), 12);
+t("Liam's own rate passes", (() => { try { W.enforceProse("word ".repeat(2000) + "a — b. ".repeat(10)); return "passes"; } catch { return "fails"; } })(), "passes");
+
 console.log("\nenforceOutline:");
 const ol = [{ n: 1, title: "One" }, { n: 2, title: "Two" }];
 const fenced = "Intro.\n\n## a\n\n```md\n## example\n```\n\n## b";

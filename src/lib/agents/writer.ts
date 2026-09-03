@@ -208,6 +208,13 @@ const AI_OPENERS = /(^|[.!?]\s+|\n)(Separately|Furthermore|Additionally|Moreover
  * name why.
  */
 const EM_DASH_PER_1000 = 6;
+// Six, not zero. Liam's own guide runs about five per thousand and his
+// suggested rewrite of a line in the E-E-A-T piece uses a dash correctly, so
+// the target is his rate with a little headroom. The first version of this
+// guidance said "the house sits near zero" — quoting the median across 159
+// posts — and the writer duly produced a 2,100-word piece with none at all,
+// having stripped the dash out of Liam's own sentence to get there. A budget
+// is a ceiling, not a target.
 
 /**
  * Fenced blocks and inline spans, hidden from everything that edits prose.
@@ -387,7 +394,7 @@ export function enforceProse(body: string): void {
       .map((x) => `      "${x.length > 150 ? `${x.slice(0, 150)}…` : x}"`)
       .join("\n");
     problems.push(
-      `${dashes} em dashes in ${words} words (${((dashes / Math.max(words, 1)) * 1000).toFixed(1)} per thousand; the house sits near zero and its heaviest post is 9.5). Keep at most ${allowed}. Rewrite these sentences without the dash — a full stop, a colon or a comma does the work:\n${guilty}`
+      `${dashes} em dashes in ${words} words (${((dashes / Math.max(words, 1)) * 1000).toFixed(1)} per thousand; the house runs about 5, so at most ${allowed} here). Keep the ones doing real work and rewrite the rest — a full stop, a colon or a comma does the job:\n${guilty}`
     );
   }
 
@@ -484,11 +491,25 @@ export function trimLinks(
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const pillar = pillarHub ? normaliseUrl(pillarHub) : null;
 
-  // The pillar link is not negotiable — every post links its own pillar — so
-  // its first appearance is protected before any counting starts.
-  const protectedIdx = pillar
-    ? links.findIndex((m) => isInternal(m[2]) && normaliseUrl(m[2]) === pillar)
-    : -1;
+  // Two internal links are not negotiable, and are claimed before any
+  // counting starts.
+  //
+  // The pillar, because every post links its own pillar.
+  //
+  // And one post, because Liam asked for links to "coinpresso landing pages
+  // AND blogs" and document order alone does not deliver that: service pages
+  // come up early in a piece and posts get referenced late, so the cap was
+  // being filled by five landing pages while three Coinpresso posts sat named
+  // in the prose with no link on them — including the llms.txt guide, which is
+  // exactly the newer-post case he raised.
+  const protect: number[] = [];
+  const claim = (i: number) => {
+    if (i >= 0 && !protect.includes(i)) protect.push(i);
+  };
+  if (pillar) {
+    claim(links.findIndex((m) => isInternal(m[2]) && normaliseUrl(m[2]) === pillar));
+  }
+  claim(links.findIndex((m) => isInternal(m[2]) && /\/blog\//i.test(m[2])));
 
   const drop = new Set<number>();
   const seen = new Set<string>();
@@ -503,7 +524,7 @@ export function trimLinks(
       return;
     }
     if (isInternal(m[2])) {
-      if (internal >= maxInternal && i !== protectedIdx) {
+      if (internal >= maxInternal && !protect.includes(i)) {
         drop.add(i);
         return;
       }
@@ -518,9 +539,9 @@ export function trimLinks(
     seen.add(url);
   };
 
-  if (protectedIdx >= 0) consider(protectedIdx);
+  for (const i of protect) consider(i);
   for (let i = 0; i < links.length; i++) {
-    if (i !== protectedIdx) consider(i);
+    if (!protect.includes(i)) consider(i);
   }
 
   // Whatever survived may still cluster. Count per paragraph and shed the
@@ -536,7 +557,7 @@ export function trimLinks(
   }
   for (const idxs of byPara.values()) {
     for (const i of idxs.slice(maxPerParagraph).reverse()) {
-      if (i !== protectedIdx) drop.add(i);
+      if (!protect.includes(i)) drop.add(i);
     }
   }
 
@@ -895,6 +916,12 @@ as markdown links, each where its topic comes up in the body, with anchor text
 naming that topic (the words "crypto SEO" link to the crypto SEO page). Do not
 invent any other coinpresso.io path; at least two of them sit in the body
 before the final section.
+
+AT LEAST ONE must be a post from the RECENT POSTS list below, not only service
+pages — the client asked for landing pages AND blogs. And if you name a
+Coinpresso post anywhere in the prose, link it there: a post referred to as
+"our earlier guide" or "a recent guide on X" with no link on it is a miss, and
+it sends the reader hunting for something you could have handed them.
 ${internalLinkTargets(pillar?.hub)}
 ${
   recentPosts
