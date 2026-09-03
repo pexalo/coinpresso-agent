@@ -125,7 +125,7 @@ for (const file of fs.readdirSync(runsDir).sort()) {
   const draft = { ...run.draft };
   const hub = PILLARS.find((p) => p.id === run.brief?.pillar)?.hub;
   draft.body = W.trimLinks(draft.body, hub);
-  draft.body = W.softenEmDashes(draft.body, W.emDashBudget(W.wordCount(draft.body)));
+  draft.body = W.softenToBudget(draft.body);
 
   const problems = [];
   for (const [name, fn] of CHECKS) {
@@ -158,7 +158,7 @@ for (const file of fs.readdirSync(runsDir).sort()) {
   const c = control(run);
   if (!c) continue;
   let body = W.trimLinks(c.draft.body, c.hub);
-  body = W.softenEmDashes(body, W.emDashBudget(W.wordCount(body)));
+  body = W.softenToBudget(body);
   const d = { ...c.draft, body };
   const broke = [];
   for (const [name, fn] of CHECKS) {

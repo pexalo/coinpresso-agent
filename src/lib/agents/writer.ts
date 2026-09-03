@@ -141,7 +141,12 @@ function parseDraftSections(
  * stage fails loudly and the retry re-runs only the writer.
  */
 export function enforceOutline(body: string, outline: BriefSection[]): string {
-  const lines = body.split("\n");
+  // Code is hidden first. A post about schema markup shows the reader what a
+  // heading looks like, and a "## " line inside a fence was being counted as a
+  // real section — which failed the outline check on a correct draft, and, when
+  // the count happened to match, rewrote the heading inside the example.
+  const { masked, restore } = maskCode(body);
+  const lines = masked.split("\n");
   const h2 = lines
     .map((l, i) => ({ i, text: l.match(/^##\s+(.+?)\s*$/)?.[1] }))
     .filter((x): x is { i: number; text: string } => Boolean(x.text));
@@ -157,7 +162,7 @@ export function enforceOutline(body: string, outline: BriefSection[]): string {
   h2.forEach((h, k) => {
     lines[h.i] = `## ${outline[k].title}`;
   });
-  return lines.join("\n");
+  return restore(lines.join("\n"));
 }
 
 /**
@@ -170,6 +175,7 @@ export function enforceOutline(body: string, outline: BriefSection[]): string {
  * a heading".
  */
 export function enforceIntro(body: string): void {
+  body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
   const intro = firstH2 === -1 ? body : body.slice(0, firstH2);
   const words = intro.split(/\s+/).filter(Boolean).length;
@@ -202,6 +208,57 @@ const AI_OPENERS = /(^|[.!?]\s+|\n)(Separately|Furthermore|Additionally|Moreover
  * name why.
  */
 const EM_DASH_PER_1000 = 6;
+
+/**
+ * Fenced blocks and inline spans, hidden from everything that edits prose.
+ *
+ * Every check and every mechanical fix was reading the whole body, code
+ * included, and three separate bugs fell out of that:
+ *
+ *   softenEmDashes rewrote a JSON string, turning
+ *     "A self-custody wallet — non-custodial, open source"
+ *   into "...wallet. Non-custodial..." inside a schema sample a reader is
+ *   meant to copy and paste. Silent corruption of the deliverable.
+ *
+ *   trimLinks unlinked a markdown example inside a code fence, destroying the
+ *   very thing the code block was demonstrating.
+ *
+ *   enforceProse counted dashes inside JSON. A schema post with five dashes in
+ *   its example strings failed the prose check at 128 per thousand words, and
+ *   no rewrite could have saved it: the writer cannot remove those dashes
+ *   without changing the schema it is documenting. Three attempts, then a dead
+ *   run, on a post that was correct.
+ *
+ * The schema markup post carries fourteen fences and sixteen inline spans, so
+ * this is not hypothetical — it is the next post in the queue.
+ *
+ * Code is swapped for a private-use sentinel before anything looks at the
+ * text, and put back afterwards. Transforms only ever delete or replace other
+ * characters, never reorder, so restoring in order is sound.
+ */
+const CODE_SPAN = /```[\s\S]*?```|`[^`\n]+`/g;
+const SENTINEL = "\uE000";
+
+export function maskCode(body: string): {
+  masked: string;
+  restore: (s: string) => string;
+} {
+  const blocks: string[] = [];
+  const masked = body
+    .split(SENTINEL)
+    .join("")
+    .replace(CODE_SPAN, (m) => {
+      blocks.push(m);
+      return SENTINEL;
+    });
+  let i = 0;
+  return { masked, restore: (s) => s.replace(/\uE000/g, () => blocks[i++] ?? "") };
+}
+
+/** The body as prose only — what a reader reads, minus the code. */
+export function proseOf(body: string): string {
+  return maskCode(body).masked.split(SENTINEL).join(" ");
+}
 
 /**
  * A dash between digits is a range, not a rhetorical dash. "2024-2026" and
@@ -237,10 +294,11 @@ const CONTINUES = new Set([
  * one in the opening — untouched.
  */
 export function softenEmDashes(body: string, allowed: number): string {
-  const hits = [...body.matchAll(PROSE_DASH)].map((m) => m.index!);
+  const { masked, restore } = maskCode(body);
+  const hits = [...masked.matchAll(PROSE_DASH)].map((m) => m.index!);
   if (hits.length <= allowed) return body;
 
-  let out = body;
+  let out = masked;
   for (const i of hits.slice(allowed).reverse()) {
     // The dash, and any spaces hugging it.
     let start = i;
@@ -259,7 +317,7 @@ export function softenEmDashes(body: string, allowed: number): string {
       out = `${out.slice(0, start)}. ${capped}`;
     }
   }
-  return out;
+  return restore(out);
 }
 
 /**
@@ -278,7 +336,28 @@ export function emDashBudget(words: number): number {
   return Math.max(3, Math.floor((EM_DASH_PER_1000 * words) / 1000));
 }
 
+/**
+ * The budget for a specific body, and the ONLY way callers should compute it.
+ *
+ * The fixer and the checker have now disagreed twice about the denominator.
+ * First over whether " — " is a word (it is a token, not a word). Then over
+ * whether code counts (it does not, once the checks stopped reading it) — the
+ * schema post lost a third of its length to fenced JSON, so a body-derived
+ * budget softened it to 16 dashes against a prose-derived limit of 11 and the
+ * draft failed after being fixed. Two functions computing the same number from
+ * two different strings is the bug; there is one function now.
+ */
+export function emDashBudgetFor(body: string): number {
+  return emDashBudget(wordCount(proseOf(body)));
+}
+
+/** Soften a body to its own budget. What production calls. */
+export function softenToBudget(body: string): string {
+  return softenEmDashes(body, emDashBudgetFor(body));
+}
+
 export function enforceProse(body: string): void {
+  body = proseOf(body);
   const problems: string[] = [];
 
   const hits = [...body.matchAll(AI_OPENERS)].map((m) => m[2]);
@@ -290,11 +369,12 @@ export function enforceProse(body: string): void {
     );
   }
 
-  const words = wordCount(body);
   const dashes = (body.match(PROSE_DASH) ?? []).length;
+  const words = wordCount(body);
   // A floor of three, so the rate cannot fire on a short piece where one dash
   // is a large share of very few words. At real article length (1,400-2,700
   // words here) the rate is what binds.
+  // `body` is already prose here, so this is the same denominator softenToBudget used.
   const allowed = emDashBudget(words);
   if (dashes > allowed) {
     // Quoting the sentences gives the model something it can act on. "Cut to
@@ -397,7 +477,8 @@ export function trimLinks(
   maxExternal = 5,
   maxPerParagraph = 2
 ): string {
-  const links = [...body.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)];
+  const { masked, restore } = maskCode(body);
+  const links = [...masked.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)];
   if (!links.length) return body;
 
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
@@ -447,7 +528,7 @@ export function trimLinks(
   const kept = links
     .map((m, i) => ({ i, start: m.index! }))
     .filter(({ i }) => !drop.has(i));
-  const paraOf = (pos: number) => body.lastIndexOf("\n\n", pos);
+  const paraOf = (pos: number) => masked.lastIndexOf("\n\n", pos);
   const byPara = new Map<number, number[]>();
   for (const { i, start } of kept) {
     const key = paraOf(start);
@@ -462,12 +543,12 @@ export function trimLinks(
   if (!drop.size) return body;
 
   // Rebuild back to front so earlier offsets stay valid.
-  let out = body;
+  let out = masked;
   for (const i of [...drop].sort((a, b) => b - a)) {
     const m = links[i];
     out = out.slice(0, m.index!) + m[1] + out.slice(m.index! + m[0].length);
   }
-  return out;
+  return restore(out);
 }
 
 /**
@@ -487,6 +568,7 @@ export function enforceLinks(
   known: Map<string, string>,
   pillarHub?: string
 ): void {
+  body = proseOf(body);
   const all = [...body.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => ({
     anchor: m[1],
     url: m[2],
@@ -568,7 +650,7 @@ export function enforceLinks(
  * the same way.
  */
 export function enforceNoLedgerMarkers(body: string, faqs: Array<{ q: string; a: string }>): void {
-  const hay = [body, ...faqs.map((f) => `${f.q} ${f.a}`)].join("\n");
+  const hay = [proseOf(body), ...faqs.map((f) => `${f.q} ${f.a}`)].join("\n");
   const found = hay.match(/\[s\d+\]/g) ?? [];
   if (found.length) {
     throw new Error(
@@ -945,7 +1027,7 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // voice should not be thrown away over dash count — the one rule in
       // this set a language model demonstrably cannot follow.
       if (attempt === MAX_WRITER_ATTEMPTS) {
-        parsed.body = softenEmDashes(parsed.body, emDashBudget(wordCount(parsed.body)));
+        parsed.body = softenToBudget(parsed.body);
       }
 
       enforceIntro(parsed.body);

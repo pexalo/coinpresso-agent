@@ -23,8 +23,12 @@ export default function OutlinePanel({
   const outline = brief?.outline ?? [];
   if (!outline.length) return null;
 
+  // Fenced code is stripped first: a post demonstrating markdown contains
+  // "## " lines that are examples, not sections, and counting them here made
+  // the tick list disagree with what the writer actually enforced.
+  const prose = draft?.body.replace(/```[\s\S]*?```/g, "") ?? "";
   const h2s = draft
-    ? [...draft.body.matchAll(/^##\s+(.+?)\s*$/gm)].map((m) => m[1])
+    ? [...prose.matchAll(/^##\s+(.+?)\s*$/gm)].map((m) => m[1])
     : [];
   const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const matched = outline.map((s) => h2s.some((h) => norm(h) === norm(s.title)));
