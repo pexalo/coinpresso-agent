@@ -14,7 +14,7 @@ import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
 import type { CallContext } from "../providers/routing";
-import { CONTENT_TYPES, PILLARS } from "../blog";
+import { CONTENT_TYPES, PILLARS, internalLinkTargets } from "../blog";
 
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
 crypto PR programme. You do not write articles. You produce the research brief a
@@ -164,6 +164,10 @@ TITLE (fixed): ${brief.title}
 TARGET KEYWORDS: ${brief.keywords.join(", ")}
 ${pillar ? `PILLAR: ${pillar.name} — the post links to ${pillar.hub}\nWhat this buyer is worried about: ${pillar.buyerQuestion}` : ""}
 ${type ? `FORMAT: ${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : ""}
+
+COINPRESSO PAGES THAT EXIST — internal links come from this list and nowhere
+else; do not invent a coinpresso.io path:
+${internalLinkTargets(pillar?.hub)}
 ${brief.notes ? `\nOPERATOR NOTES: ${brief.notes}` : ""}${
     brief.contentBrief
       ? `
@@ -233,7 +237,7 @@ Research this and return JSON:
   "opportunityGap": "the reason this post deserves to exist",
   "moonbergAngle": "Coinpresso's specific angle — the experience or position that makes this theirs",
   "proofPoints": ["what would make this genuinely original: a named example, a figure Coinpresso holds, a stated limitation"],
-  "internalLinks": ["the pillar hub, plus sibling posts worth linking"],
+  "internalLinks": ["3-5 URLs from the COINPRESSO PAGES list whose topic this post will naturally touch — the pillar first"],
   "presaleState": { "raised": "n/a", "stage": "n/a", "note": "blog track" },
   "comparisonAssets": ["named alternatives, tools or approaches worth contrasting"],
   "structureVariant": "single_asset",

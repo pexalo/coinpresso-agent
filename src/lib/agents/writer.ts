@@ -12,7 +12,9 @@ import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
 import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brief";
 import { exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
+import { feedbackBlock, readFeedback } from "../feedback";
 import {
+  internalLinkTargets,
   BLOG_ARCHIVE_ID,
   BLOG_DEFAULT_STRUCTURE,
   BLOG_PLAYBOOK,
@@ -177,6 +179,63 @@ function enforceIntro(body: string): void {
 }
 
 /** "Q2: How can…" → "How can…". The imported briefs carry these labels. */
+/**
+ * The sentence openers Liam named as the clearest AI tell — "Separately, a
+ * related analysis found…" — plus their siblings. A person making a point
+ * says what two facts mean together; a model announces that a second fact
+ * exists. Prompt-only for one round would be optimism: every structural rule
+ * on this track that was prompt-only got ignored at least once.
+ */
+const AI_OPENERS = /(^|[.!?]\s+|\n)(Separately|Furthermore|Additionally|Moreover|In conclusion|It is worth noting|It's worth noting)\b/g;
+
+function enforceProse(body: string): void {
+  const hits = [...body.matchAll(AI_OPENERS)].map((m) => m[2]);
+  if (hits.length) {
+    throw new Error(
+      `The draft opens ${hits.length} sentence${hits.length === 1 ? "" : "s"} with ${[...new Set(hits)]
+        .map((h) => `"${h}"`)
+        .join(", ")} — the connective tissue the client flagged as AI-derived. Retry the writer.`
+    );
+  }
+}
+
+/**
+ * Liam's blend per post: 3-5 internal links to real coinpresso.io pages,
+ * spread through the body, and 3-5 external links each carrying one claim.
+ * Counted here rather than trusted, because the previous drafts carried a
+ * pillar link to a page that did not exist and nobody could tell.
+ */
+function enforceLinks(body: string, ledgerSize: number): void {
+  const links = [...body.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => m[1]);
+  const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
+  const internal = new Set(links.filter(isInternal));
+  const external = new Set(links.filter((u) => !isInternal(u)));
+  const problems: string[] = [];
+  if (internal.size < 3) {
+    problems.push(`${internal.size} internal link${internal.size === 1 ? "" : "s"} to coinpresso.io (needs 3-5)`);
+  }
+  const wantExternal = Math.min(3, ledgerSize);
+  if (external.size < wantExternal) {
+    problems.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
+  }
+  const crowded = body
+    .split(/\n\s*\n/)
+    .filter((para) => (para.match(/\]\(https?:\/\//g) ?? []).length > 2).length;
+  if (crowded) {
+    problems.push(`${crowded} paragraph${crowded === 1 ? "" : "s"} with three or more links — the citation dump the client flagged`);
+  }
+  // Every internal link in the closing section and none before it is the
+  // "stuffed on to the conclusion" pattern. Compare where they fall.
+  const lastH2 = body.lastIndexOf("\n## ");
+  if (lastH2 > 0 && internal.size >= 3) {
+    const before = [...body.slice(0, lastH2).matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => isInternal(m[1])).length;
+    if (before === 0) problems.push("every internal link sits in the final section — spread them through the body");
+  }
+  if (problems.length) {
+    throw new Error(`Linking: ${problems.join("; ")}. Retry the writer.`);
+  }
+}
+
 function stripFaqLabel(q: string): string {
   return q.replace(/^\s*(?:FAQ|Q)?\s*\d+\s*[:.)\-–]\s*/i, "").trim();
 }
@@ -253,6 +312,12 @@ async function writeBlog(input: WriterInput): Promise<{
     // the archive, and a wider sample of the house voice is worth the tokens.
     limit: 3,
   });
+  // The client's standing corrections — every point Liam has already made
+  // once, as rules. Read per run so a note added on the Style page reaches
+  // the next draft without a deploy.
+  const feedback = input.ctx?.clientRef
+    ? feedbackBlock(await readFeedback(input.ctx.clientRef), "writer")
+    : "";
   const voiceBlock = exemplars.length
     ? `\n\n${exemplarBlock(exemplars)}\n`
     : `\n\nNo published examples have been imported from coinpresso.io yet, so you
@@ -346,7 +411,7 @@ ${BLOG_DEFAULT_STRUCTURE}
 FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}`;
 
   const user = `${BLOG_STYLE}
-${voiceBlock}${clientBrief}
+${feedback ? `\n${feedback}\n` : ""}${voiceBlock}${clientBrief}
 ---
 
 ${structureBlock}
@@ -375,8 +440,15 @@ WHAT WOULD MAKE IT ORIGINAL — use what is true, and where something is missing
 write around the gap honestly rather than inventing it:
 ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- nothing supplied"}
 
-INTERNAL LINKS TO WORK IN:
-${(research.internalLinks ?? []).map((l) => `- ${l}`).join("\n") || "- the pillar hub"}
+INTERNAL LINKS — the ONLY coinpresso.io pages that exist. Link 3-5 of them
+as markdown links, each where its topic comes up in the body, with anchor text
+naming that topic (the words "crypto SEO" link to the crypto SEO page). Do not
+invent any other coinpresso.io path; do not put them all in the last section.
+${internalLinkTargets(pillar?.hub)}
+
+EXTERNAL LINKS — 3-5 markdown links to ledger URLs, each attached to the
+sentence making the claim it supports. Never more than two links in one
+paragraph.
 
 ${
   fixedStructure
@@ -448,6 +520,8 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
     // told not to change it; this makes sure the instruction was not needed.
     parsed.headline = brief.title;
     enforceIntro(parsed.body);
+    enforceProse(parsed.body);
+    enforceLinks(parsed.body, research.sources.length);
     if (fixedStructure) {
       parsed.body = enforceOutline(parsed.body, outline);
       if (brief.contentBrief?.faqs?.length) {

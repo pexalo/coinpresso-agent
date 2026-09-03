@@ -1,5 +1,7 @@
 import { BLOG_PLAYBOOK, BLOG_STYLE } from "@/lib/blog";
 import { MODELS } from "@/lib/models";
+import { readFeedback } from "@/lib/feedback";
+import FeedbackLog from "@/components/FeedbackLog";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +12,13 @@ export const dynamic = "force-dynamic";
  * the page and the prompt can drift apart, the page becomes decoration and the
  * client stops trusting it.
  */
-export default function BlogStylePage() {
+export default async function BlogStylePage({
+  params,
+}: {
+  params: Promise<{ ref: string }>;
+}) {
+  const { ref } = await params;
+  const feedback = await readFeedback(ref);
   return (
     <div className="space-y-5 pt-2">
       <div>
@@ -53,6 +61,8 @@ export default function BlogStylePage() {
           </div>
         ))}
       </div>
+
+      <FeedbackLog initial={feedback} />
 
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--line)]">

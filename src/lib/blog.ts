@@ -37,7 +37,12 @@ export const BLOG_PUBLICATION = "coinpresso.io";
 export interface Pillar {
   id: string;
   name: string;
-  /** The money page the cluster links to. */
+  /**
+   * The money page the cluster links to — the REAL, absolute URL on
+   * coinpresso.io. These were "/services/geo"-style paths that do not exist on
+   * the site (it has no /services/ prefix at all), and because the link check
+   * only inspects absolute URLs, a relative 404 sailed through every draft.
+   */
   hub: string;
   /** What a buyer of this service is actually worried about. */
   buyerQuestion: string;
@@ -60,7 +65,7 @@ export const PILLARS: Pillar[] = [
     id: "geo",
     wp: { id: 40, slug: "crypto-ai-seo" },
     name: "Generative Engine Optimisation",
-    hub: "/services/geo",
+    hub: "https://coinpresso.io/geo-llm-optimization-for-crypto-web3",
     buyerQuestion:
       "ChatGPT does not mention my project when people ask about it. Can that be changed, and how would I know if it worked?",
     clusters: [
@@ -75,7 +80,7 @@ export const PILLARS: Pillar[] = [
     id: "presale-marketing",
     wp: { id: 38, slug: "crypto-presale-marketing" },
     name: "Presale marketing",
-    hub: "/services/presale-marketing",
+    hub: "https://coinpresso.io/crypto-presale-marketing-services",
     buyerQuestion:
       "I have eight weeks and a fixed budget. What actually moves a presale, and what is theatre?",
     clusters: [
@@ -90,7 +95,7 @@ export const PILLARS: Pillar[] = [
     id: "crypto-pr",
     wp: { id: 25, slug: "crypto-pr" },
     name: "Crypto PR",
-    hub: "/services/crypto-pr",
+    hub: "https://coinpresso.io/crypto-pr",
     buyerQuestion:
       "Wire placements cost real money. Which ones are worth it and what should a release actually do?",
     clusters: [
@@ -105,7 +110,7 @@ export const PILLARS: Pillar[] = [
     id: "clipping",
     wp: { id: 46, slug: "crypto-clipping" },
     name: "Crypto clipping",
-    hub: "/services/crypto-clipping",
+    hub: "https://coinpresso.io/crypto-clipping-strategy-for-viral-growth",
     buyerQuestion:
       "Everyone says short-form works. How do I run it without paying for views that never convert?",
     clusters: [
@@ -119,7 +124,7 @@ export const PILLARS: Pillar[] = [
     id: "community",
     wp: { id: 33, slug: "crypto-social-media" },
     name: "Community management",
-    hub: "/services/community-management",
+    hub: "https://coinpresso.io/crypto-community-management",
     buyerQuestion:
       "My Telegram is either dead or full of bots. What does a real community operation look like?",
     clusters: [
@@ -133,7 +138,7 @@ export const PILLARS: Pillar[] = [
     id: "paid",
     wp: { id: 43, slug: "crypto-programmatic-ads" },
     name: "PPC and programmatic",
-    hub: "/services/ppc",
+    hub: "https://coinpresso.io/crypto-ppc-marketing",
     buyerQuestion:
       "Crypto ads get rejected everywhere. Where can I actually buy attention, and does it pay back?",
     clusters: [
@@ -144,6 +149,62 @@ export const PILLARS: Pillar[] = [
     ],
   },
 ];
+
+/**
+ * The landing pages a post may link to, with the words that link to them.
+ *
+ * Liam's rule: "crypto SEO should have an anchor text link to the crypto SEO
+ * page, crypto generative engine optimisation with anchor text link to the
+ * GEO page." That only works if the writer knows which pages exist. Until now
+ * it did not — the research stage was asked to name "sibling posts worth
+ * linking" and invented paths. These URLs are taken from coinpresso.io's own
+ * navigation (checked 3 Sep 2026); add to the list when the site does.
+ */
+export interface SitePage {
+  url: string;
+  /** What the page is about, so the writer links it where that topic arises. */
+  topic: string;
+}
+
+export const COINPRESSO_PAGES: SitePage[] = [
+  { url: "https://coinpresso.io/crypto-seo", topic: "crypto SEO" },
+  { url: "https://coinpresso.io/crypto-seo/for-web3", topic: "Web3 SEO" },
+  { url: "https://coinpresso.io/geo-llm-optimization-for-crypto-web3", topic: "generative engine optimisation (GEO) for crypto and Web3" },
+  { url: "https://coinpresso.io/llm-optimization-for-crypto-web3-websites", topic: "LLM optimisation for crypto websites" },
+  { url: "https://coinpresso.io/crypto-link-building-services", topic: "crypto link building" },
+  { url: "https://coinpresso.io/parasite-seo-services", topic: "parasite SEO" },
+  { url: "https://coinpresso.io/crypto-pr", topic: "crypto PR" },
+  { url: "https://coinpresso.io/crypto-pr/web3-pr", topic: "Web3 PR" },
+  { url: "https://coinpresso.io/crypto-earned-media", topic: "crypto earned media" },
+  { url: "https://coinpresso.io/crypto-presale-marketing-services", topic: "crypto presale marketing" },
+  { url: "https://coinpresso.io/ico-marketing", topic: "ICO marketing" },
+  { url: "https://coinpresso.io/ido-marketing", topic: "IDO marketing" },
+  { url: "https://coinpresso.io/crypto-clipping-strategy-for-viral-growth", topic: "crypto clipping" },
+  { url: "https://coinpresso.io/crypto-ppc-marketing", topic: "crypto PPC" },
+  { url: "https://coinpresso.io/crypto-google-ads", topic: "crypto Google Ads" },
+  { url: "https://coinpresso.io/crypto-programmatic-ads", topic: "crypto programmatic advertising" },
+  { url: "https://coinpresso.io/crypto-content", topic: "crypto content production" },
+  { url: "https://coinpresso.io/web3-ghostwriting", topic: "Web3 ghostwriting" },
+  { url: "https://coinpresso.io/crypto-community-management", topic: "crypto community management" },
+  { url: "https://coinpresso.io/smm-for-crypto", topic: "crypto social media marketing" },
+  { url: "https://coinpresso.io/twitter-crypto-marketing", topic: "crypto X/Twitter marketing" },
+  { url: "https://coinpresso.io/crypto-influencer-marketing", topic: "crypto influencer marketing" },
+  { url: "https://coinpresso.io/crypto-email-marketing", topic: "crypto email marketing" },
+  { url: "https://coinpresso.io/defi-marketing", topic: "DeFi marketing" },
+  { url: "https://coinpresso.io/nft-marketing", topic: "NFT marketing" },
+  { url: "https://coinpresso.io/rwa-marketing", topic: "RWA marketing" },
+  { url: "https://coinpresso.io/crypto-ai-token-marketing", topic: "AI token marketing" },
+  { url: "https://coinpresso.io/crypto-airdrop-marketing", topic: "crypto airdrop marketing" },
+  { url: "https://coinpresso.io/pump-fun-launch-marketing", topic: "pump.fun launch marketing" },
+  { url: "https://coinpresso.io/blog", topic: "the Coinpresso blog" },
+];
+
+/** The prompt block listing where a post may link internally. */
+export function internalLinkTargets(pillarHub?: string): string {
+  return COINPRESSO_PAGES.map(
+    (p) => `- ${p.url} — ${p.topic}${p.url === pillarHub ? " (THIS POST'S PILLAR — must be linked)" : ""}`
+  ).join("\n");
+}
 
 export type ContentTypeId =
   | "guide"
@@ -361,6 +422,11 @@ A metaphor that breaks a point down in one line is worth more here than a
 sentence of qualification. Every piece needs several moments like this, not
 just the opening line — the whole draft is checked against this, not only
 the intro.
+
+The hyperbole lives in the framing, never in the facts. "Major surgery on its
+internal organs" is a picture; "22% of the time" is a figure and stays exactly
+what the source says. Bold about what it means, exact about what it is — the
+honesty rules below are not loosened by any of this.
 
 ## Mechanics
 - Second person for the reader ("your presale"), first person plural sparingly

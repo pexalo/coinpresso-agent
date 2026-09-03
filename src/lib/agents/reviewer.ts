@@ -16,6 +16,7 @@ import { PUBLICATIONS } from "../publications";
 import { LIAM_STYLE_PROFILE } from "../style-profile";
 import { recent } from "../archive";
 import { BLOG_PLAYBOOK, BLOG_STYLE, CONTENT_TYPES } from "../blog";
+import { feedbackBlock, readFeedback } from "../feedback";
 import type { CallContext } from "../providers/routing";
 import type {
   Brief,
@@ -233,7 +234,12 @@ SEVERITY
 - major: reads as generic agency marketing; the direct answer is buried; no
   internal link to the pillar; banned vocabulary; the format asked for is not
   the format delivered; a claim that fails "compared to what, by how much,
-  says who?".
+  says who?"; reads as AI-derived — a sentence opening on "Separately",
+  "Furthermore", "Additionally" or "Moreover", or a piece with no bold line
+  and no metaphor anywhere in it where the house voice demands several; no
+  scene-setting introduction before the first H2; fewer than 3 internal or 3
+  external links, or every internal link bunched into the final section; three
+  or more citations in one paragraph.
 - minor: rhythm, a heading that could be sharper, a list that should be prose.
 
 Any blocker means "revise". Three or more majors means "revise".
@@ -249,13 +255,16 @@ async function reviewBlog(input: ReviewerInput): Promise<{
   const type = brief.contentType
     ? CONTENT_TYPES[brief.contentType as keyof typeof CONTENT_TYPES]
     : undefined;
+  const feedback = input.ctx?.clientRef
+    ? feedbackBlock(await readFeedback(input.ctx.clientRef), "reviewer")
+    : "";
 
   const user = `${BLOG_STYLE}
 
 ---
 
 ${BLOG_PLAYBOOK}
-
+${feedback ? `\n---\n\n${feedback}\n` : ""}
 ---
 
 FORMAT ASKED FOR: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words (draft is ${draft.wordCount}).` : "Guide."}
