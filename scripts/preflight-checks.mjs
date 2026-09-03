@@ -64,7 +64,51 @@ const CHECKS = [
     const o = r.brief?.contentBrief?.outline ?? [];
     if (o.length) W.enforceOutline(d.body, o);
   }],
+  ["faqs", (d, r) => {
+    const want = r.brief?.contentBrief?.faqs ?? [];
+    if (want.length) W.enforceFaqs(d.faqs ?? [], want);
+  }],
 ];
+
+// ---------------------------------------------------------------------------
+// CONTROL. A draft built to satisfy every rule.
+//
+// Without this the harness only ever proves that old drafts fail, which a
+// check rejecting absolutely everything would also do. The control is the
+// guard against my own over-strictness: if it fails, the suite is
+// unsatisfiable and no amount of retrying will produce a publishable post.
+// ---------------------------------------------------------------------------
+function control(run) {
+  const outline = run.brief.contentBrief?.outline ?? [];
+  if (outline.length < 3) return null;
+  const hub = PILLARS.find((p) => p.id === run.brief.pillar)?.hub;
+  if (!hub) return null;
+  const pages = COINPRESSO_PAGES.slice(0, 6);
+
+  const intro =
+    "Most crypto teams still treat trust as a checkbox. A team page here, an " +
+    "audit badge there, a whitepaper nobody finishes. The engines now answering " +
+    "your buyers' questions do not read any of it that way, and the gap between " +
+    "what projects publish and what gets quoted back has become the most " +
+    "expensive blind spot in Web3 marketing. Founders keep optimising for a " +
+    "results page fewer people look at every quarter. This piece walks through " +
+    "what actually moves the needle, section by section, and marks the received " +
+    "wisdom clearly where it is simply wrong.";
+
+  const body = [
+    intro,
+    ...outline.map((sec, i) => {
+      const pg = pages[i % pages.length];
+      return `## ${sec.title}\n\nThe short answer sits here, and it is not the one most founders expect. [${pg.topic}](${pg.url}) is where this connects to the wider programme.\n\nEvidence beats assertion, so [a 2026 analysis](https://example${i}.org/study) is worth reading in full.`;
+    }),
+    `That is the whole picture. See our [crypto GEO](${hub}) work for how it is run in practice.`,
+  ].join("\n\n");
+
+  return {
+    draft: { body, faqs: (run.brief.contentBrief?.faqs ?? []).map((f) => ({ q: f.q, a: "A short answer." })) },
+    hub,
+  };
+}
 
 let failures = 0;
 let drafts = 0;
@@ -79,6 +123,8 @@ for (const file of fs.readdirSync(runsDir).sort()) {
   // Mirror the last-attempt behaviour: mechanical fixes are applied before the
   // draft is judged, so this reports what a real final attempt would see.
   const draft = { ...run.draft };
+  const hub = PILLARS.find((p) => p.id === run.brief?.pillar)?.hub;
+  draft.body = W.trimLinks(draft.body, hub);
   draft.body = W.softenEmDashes(draft.body, W.emDashBudget(W.wordCount(draft.body)));
 
   const problems = [];
@@ -103,8 +149,34 @@ for (const file of fs.readdirSync(runsDir).sort()) {
   }
 }
 
+// The control, built from the first run that carries a real brief.
+let controlVerdict = "not run (no stored brief with an outline)";
+for (const file of fs.readdirSync(runsDir).sort()) {
+  if (!file.endsWith(".json")) continue;
+  const run = JSON.parse(fs.readFileSync(path.join(runsDir, file), "utf8"));
+  if (run.brief?.track !== "blog") continue;
+  const c = control(run);
+  if (!c) continue;
+  let body = W.trimLinks(c.draft.body, c.hub);
+  body = W.softenEmDashes(body, W.emDashBudget(W.wordCount(body)));
+  const d = { ...c.draft, body };
+  const broke = [];
+  for (const [name, fn] of CHECKS) {
+    try {
+      fn(d, run);
+    } catch (e) {
+      broke.push(`${name}: ${e.message.replace(/\s*Retry the writer\.$/, "").split("\n")[0]}`);
+    }
+  }
+  controlVerdict = broke.length
+    ? `FAILS — the suite is unsatisfiable\n         ${broke.join("\n         ")}`
+    : "passes every check";
+  break;
+}
+
 console.log(`\n${"─".repeat(72)}`);
-console.log(`${drafts} drafts · ${drafts - failures} pass · ${failures} fail`);
+console.log(`control (a draft built to comply): ${controlVerdict}`);
+console.log(`${drafts} stored drafts · ${drafts - failures} pass · ${failures} fail`);
 if (tally.size) {
   console.log("\nBy check:");
   for (const [name, n] of [...tally].sort((a, b) => b[1] - a[1])) {

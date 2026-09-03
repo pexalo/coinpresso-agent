@@ -371,6 +371,106 @@ const normaliseUrl = (u: string) =>
   u.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
 
 /**
+ * Take a surplus link off, keeping the words.
+ *
+ * The writer overshoots. Asked for 3-5 it produced 9 internal and 9 external,
+ * three attempts running, exactly as it produced 27 em dashes three times:
+ * holding a running total across two thousand words is not something it can
+ * do, so every retry bought the same answer at full price.
+ *
+ * Nothing is lost by fixing this in code. Unlinking turns [words](url) back
+ * into words — the sentence, the claim and the attribution by name all survive,
+ * and only the hyperlink goes. That is precisely the remedy the client asked
+ * for: fewer links, not less substance.
+ *
+ * ONLY EVER REMOVES. A missing link is a writing task and stays the writer's
+ * job; a surplus one is arithmetic and is settled here. Order of sacrifice:
+ * repeats of a URL already linked, then anything past the cap, then whatever
+ * still crowds a paragraph. Document order decides what survives, which keeps
+ * the body's links and sheds the conclusion's — the "stuffed on the end"
+ * pattern goes first.
+ */
+export function trimLinks(
+  body: string,
+  pillarHub?: string,
+  maxInternal = 5,
+  maxExternal = 5,
+  maxPerParagraph = 2
+): string {
+  const links = [...body.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)];
+  if (!links.length) return body;
+
+  const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
+  const pillar = pillarHub ? normaliseUrl(pillarHub) : null;
+
+  // The pillar link is not negotiable — every post links its own pillar — so
+  // its first appearance is protected before any counting starts.
+  const protectedIdx = pillar
+    ? links.findIndex((m) => isInternal(m[2]) && normaliseUrl(m[2]) === pillar)
+    : -1;
+
+  const drop = new Set<number>();
+  const seen = new Set<string>();
+  let internal = 0;
+  let external = 0;
+
+  const consider = (i: number) => {
+    const m = links[i];
+    const url = normaliseUrl(m[2]);
+    if (seen.has(url)) {
+      drop.add(i);
+      return;
+    }
+    if (isInternal(m[2])) {
+      if (internal >= maxInternal && i !== protectedIdx) {
+        drop.add(i);
+        return;
+      }
+      internal++;
+    } else {
+      if (external >= maxExternal) {
+        drop.add(i);
+        return;
+      }
+      external++;
+    }
+    seen.add(url);
+  };
+
+  if (protectedIdx >= 0) consider(protectedIdx);
+  for (let i = 0; i < links.length; i++) {
+    if (i !== protectedIdx) consider(i);
+  }
+
+  // Whatever survived may still cluster. Count per paragraph and shed the
+  // extras, latest first, so the earliest link in a paragraph is the one kept.
+  const kept = links
+    .map((m, i) => ({ i, start: m.index! }))
+    .filter(({ i }) => !drop.has(i));
+  const paraOf = (pos: number) => body.lastIndexOf("\n\n", pos);
+  const byPara = new Map<number, number[]>();
+  for (const { i, start } of kept) {
+    const key = paraOf(start);
+    byPara.set(key, [...(byPara.get(key) ?? []), i]);
+  }
+  for (const idxs of byPara.values()) {
+    for (const i of idxs.slice(maxPerParagraph).reverse()) {
+      if (i !== protectedIdx) drop.add(i);
+    }
+  }
+
+  if (!drop.size) return body;
+
+  // Rebuild back to front so earlier offsets stay valid.
+  let out = body;
+  for (const i of [...drop].sort((a, b) => b - a)) {
+    const m = links[i];
+    out = out.slice(0, m.index!) + m[1] + out.slice(m.index! + m[0].length);
+  }
+  return out;
+}
+
+/**
  * Liam's blend per post, counted rather than trusted.
  *
  * "3-5 INTERNAL links to coinpresso landing pages and blogs, seamlessly
@@ -487,7 +587,7 @@ function stripFaqLabel(q: string): string {
  * different one, the brief's own answer text stands in — it was written by the
  * client and is at least accurate to what they wanted said.
  */
-function enforceFaqs(
+export function enforceFaqs(
   produced: Array<{ q: string; a: string }>,
   wanted: BriefFaq[]
 ): Array<{ q: string; a: string }> {
@@ -831,6 +931,11 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // The title is the client's, or the planner's approved one. The model was
       // told not to change it; this makes sure the instruction was not needed.
       parsed.headline = brief.title;
+
+      // Surplus links come off on every attempt. This only ever removes, so
+      // there is nothing to be gained by spending a paid attempt discovering
+      // the writer overshot a cap it cannot count to.
+      parsed.body = trimLinks(parsed.body, pillar?.hub);
 
       // LAST ATTEMPT: fix the punctuation rather than bin the article.
       //
