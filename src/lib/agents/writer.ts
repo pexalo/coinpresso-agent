@@ -458,6 +458,76 @@ const normaliseUrl = (u: string) =>
   u.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
 
 /**
+ * Put the pillar link on a phrase the draft already wrote.
+ *
+ * "The pillar page is not linked" killed three attempts in a row, and it is
+ * the one rule in this suite the CLIENT never asked for — it comes from the
+ * cluster strategy in the playbook, not from Liam. Failing an otherwise
+ * publishable article over it is disproportionate.
+ *
+ * It is also unnecessary. Checked across all seven stored drafts, every single
+ * one already says the pillar's topic somewhere in the prose — "generative
+ * engine optimisation", or "GEO" — and simply does not link it. So the link is
+ * not missing content, only missing markup, and markup is mechanical.
+ *
+ * This is Liam's own instruction carried out in code rather than requested in
+ * a prompt: "crypto generative engine optimization with anchor text link to
+ * GEO page". The first unlinked mention gets the link, longest phrase first so
+ * the anchor is the specific one rather than the bare acronym. Nothing is
+ * written, moved or invented — a phrase already on the page becomes clickable.
+ * If the draft never mentions the topic at all there is nothing to link, and
+ * the check still sends it back.
+ */
+export function ensurePillarLink(body: string, hub?: string, topic?: string): string {
+  if (!hub) return body;
+  const { masked, restore } = maskCode(body);
+  const target = normaliseUrl(hub);
+
+  const linkSpans = [...masked.matchAll(/\[[^\]]*\]\([^)\s]*\)/g)].map((m) => [
+    m.index!,
+    m.index! + m[0].length,
+  ]);
+  // Already linked somewhere? Then there is nothing to do.
+  for (const m of masked.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) {
+    if (normaliseUrl(m[1]) === target) return body;
+  }
+
+  const bare = (topic ?? "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  const acronym = (topic ?? "").match(/\(([A-Z]{2,})\)/)?.[1];
+  const phrases = [
+    bare,
+    bare.split(/\s+for\s+/i)[0],
+    ...(acronym ? [acronym] : []),
+  ]
+    .map((x) => x.trim())
+    .filter((x) => x.length > 2)
+    // en-GB and en-US spellings of the same word are the same phrase.
+    .flatMap((x) => [x, x.replace(/ization\b/gi, "isation"), x.replace(/isation\b/gi, "ization")])
+    .filter((x, i, a) => a.indexOf(x) === i)
+    .sort((a, b) => b.length - a.length);
+
+  for (const phrase of phrases) {
+    // An acronym is matched case-sensitively so "GEO" does not hit "geography";
+    // ordinary phrases are matched however the writer cased them.
+    const isAcronym = /^[A-Z]{2,}$/.test(phrase);
+    const re = new RegExp(
+      `(?<![\\w-])(${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})(?![\\w-])`,
+      isAcronym ? "g" : "gi"
+    );
+    for (const m of masked.matchAll(re)) {
+      const at = m.index!;
+      if (linkSpans.some(([a, b]) => at >= a && at < b)) continue;
+      const lineStart = masked.lastIndexOf("\n", at) + 1;
+      if (/^\s*#{1,6}\s/.test(masked.slice(lineStart, at + 1))) continue;
+      const out =
+        masked.slice(0, at) + `[${m[1]}](${hub})` + masked.slice(at + m[1].length);
+      return restore(out);
+    }
+  }
+  return body;
+}
+
+/**
  * Take a surplus link off, keeping the words.
  *
  * The writer overshoots. Asked for 3-5 it produced 9 internal and 9 external,
@@ -628,6 +698,21 @@ export function enforceLinks(
         `the anchor "${l.anchor}" points at the ${topic} page — the anchor text has to name where it goes`
       );
     }
+  }
+
+  // A root-relative link slips past every check above: the matcher only sees
+  // absolute URLs, so "[the pillar page](/services/geo)" counts as no link at
+  // all — not internal, not verified against the page list, and invisible to
+  // the link checker, which is exactly how the old /services/ 404s reached
+  // seven drafts. Two of the stored drafts still carry them.
+  const relative = [...body.matchAll(/\[([^\]]+)\]\((\/[^)\s]*)\)/g)];
+  if (relative.length) {
+    problems.push(
+      `${relative.length} relative link${relative.length === 1 ? "" : "s"} (${relative
+        .slice(0, 3)
+        .map((m) => `"${m[2]}"`)
+        .join(", ")}) — link the full https://coinpresso.io/... URL from the list, or nothing checks it`
+    );
   }
 
   if (pillarHub && !internal.has(normaliseUrl(pillarHub))) {
@@ -1040,6 +1125,15 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // The title is the client's, or the planner's approved one. The model was
       // told not to change it; this makes sure the instruction was not needed.
       parsed.headline = brief.title;
+
+      // The pillar link goes on a phrase the draft already wrote, before the
+      // trimmer counts anything, so it occupies a slot rather than competing
+      // for one.
+      parsed.body = ensurePillarLink(
+        parsed.body,
+        pillar?.hub,
+        COINPRESSO_PAGES.find((pg) => pg.url === pillar?.hub)?.topic ?? pillar?.name
+      );
 
       // Surplus links come off on every attempt. This only ever removes, so
       // there is nothing to be gained by spending a paid attempt discovering

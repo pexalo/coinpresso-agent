@@ -124,6 +124,7 @@ for (const file of fs.readdirSync(runsDir).sort()) {
   // draft is judged, so this reports what a real final attempt would see.
   const draft = { ...run.draft };
   const hub = PILLARS.find((p) => p.id === run.brief?.pillar)?.hub;
+  draft.body = W.ensurePillarLink(draft.body, hub, COINPRESSO_PAGES.find((pg) => pg.url === hub)?.topic);
   draft.body = W.trimLinks(draft.body, hub);
   draft.body = W.softenToBudget(draft.body);
 
@@ -157,7 +158,8 @@ for (const file of fs.readdirSync(runsDir).sort()) {
   if (run.brief?.track !== "blog") continue;
   const c = control(run);
   if (!c) continue;
-  let body = W.trimLinks(c.draft.body, c.hub);
+  let body = W.ensurePillarLink(c.draft.body, c.hub, COINPRESSO_PAGES.find((pg) => pg.url === c.hub)?.topic);
+  body = W.trimLinks(body, c.hub);
   body = W.softenToBudget(body);
   const d = { ...c.draft, body };
   const broke = [];

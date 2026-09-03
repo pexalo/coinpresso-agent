@@ -91,6 +91,27 @@ console.log("\nem dash guidance is a ceiling, not a target:");
 t("budget for a 2,100-word piece", W.emDashBudget(2100), 12);
 t("Liam's own rate passes", (() => { try { W.enforceProse("word ".repeat(2000) + "a — b. ".repeat(10)); return "passes"; } catch { return "fails"; } })(), "passes");
 
+console.log("\nensurePillarLink (Liam's anchor rule, done in code):");
+const topic = "generative engine optimisation (GEO) for crypto and Web3";
+const pl = (b) => W.ensurePillarLink(b, hub, topic);
+const hasPillar = (b) => /\]\(https:\/\/coinpresso\.io\/geo-llm[^)]*\)/.test(pl(b));
+t("links a spelled-out mention", hasPillar("Any generative engine optimisation strategy needs this."), true);
+t("links the acronym when that is all there is", hasPillar("Your GEO strategy has to change."), true);
+t("en-US spelling too", hasPillar("A generative engine optimization strategy."), true);
+t("does not match inside a word", pl("The geography shifted.") , "The geography shifted.");
+t("skips a mention already inside a link", pl("Read [our GEO guide](https://coinpresso.io/blog/x)."), "Read [our GEO guide](https://coinpresso.io/blog/x).");
+t("skips headings, uses the body", /## Generative/.test(pl("## Generative engine optimisation\n\nThe GEO discipline.")), true);
+t("no mention → unchanged", pl("Nothing relevant here."), "Nothing relevant here.");
+t("code left alone", pl("Set `GEO` in config. Later GEO matters.").includes("`GEO`"), true);
+t("already linked → untouched", pl(`See [crypto GEO](${hub}) work.`), `See [crypto GEO](${hub}) work.`);
+
+console.log("\nrelative links can no longer slip through:");
+const rel = `Intro paragraph long enough to open this piece for a reader.\n\n## A\n\nSee [the pillar page](/services/geo) here.\n\n## B\n\n${cp("crypto-seo","crypto SEO")}\n\n## C\n\n${cp("crypto-pr","crypto PR")}\n\n## D\n\n${cp("geo-llm-optimization-for-crypto-web3","crypto GEO")}`;
+let relVerdict = "not flagged";
+try { W.enforceLinks(rel, 0, new Map([["https://coinpresso.io/crypto-seo","crypto SEO"],["https://coinpresso.io/crypto-pr","crypto PR"],["https://coinpresso.io/geo-llm-optimization-for-crypto-web3", topic]]), hub); }
+catch (e) { relVerdict = /relative link/.test(e.message) ? "flagged" : e.message.slice(0, 60); }
+t("a relative link is caught", relVerdict, "flagged");
+
 console.log("\nenforceOutline:");
 const ol = [{ n: 1, title: "One" }, { n: 2, title: "Two" }];
 const fenced = "Intro.\n\n## a\n\n```md\n## example\n```\n\n## b";
