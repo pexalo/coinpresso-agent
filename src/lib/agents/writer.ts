@@ -14,6 +14,7 @@ import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brie
 import { allArticles, exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import { feedbackBlock, readFeedback } from "../feedback";
 import {
+  COINPRESSO_PAGES,
   internalLinkTargets,
   BLOG_ARCHIVE_ID,
   BLOG_OFF_GENRE_TITLE,
@@ -237,36 +238,134 @@ function enforceProse(body: string): void {
  * Counted here rather than trusted, because the previous drafts carried a
  * pillar link to a page that did not exist and nobody could tell.
  */
-function enforceLinks(body: string, ledgerSize: number): void {
-  const links = [...body.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => m[1]);
+/**
+ * Words too generic to prove an anchor points at the right page.
+ *
+ * "crypto SEO" and "crypto GEO" share "crypto" and mean different pages, which
+ * is exactly the mistake Liam caught: an anchor reading "crypto SEO guide"
+ * pointing at a years-old SEO post when the GEO guide was the relevant one.
+ * Matching has to happen on the distinctive word, so the common ones are
+ * dropped before comparing.
+ */
+const GENERIC_ANCHOR_WORDS = new Set([
+  "crypto", "cryptocurrency", "web3", "coinpresso", "guide", "guides", "page",
+  "pages", "blog", "blogs", "post", "posts", "article", "the", "a", "an", "our",
+  "your", "for", "and", "of", "to", "in", "on", "with", "marketing", "agency",
+  "agencies", "service", "services", "complete", "ultimate", "best", "top",
+  "how", "what", "why", "we", "us", "read", "more", "here", "this", "that",
+  "2024", "2025", "2026", "work", "team",
+]);
+
+function anchorTokens(text: string): Set<string> {
+  const words = text
+    .toLowerCase()
+    // en-GB and en-US spellings of the same term must match each other.
+    .replace(/isation\b/g, "ization")
+    .replace(/ise\b/g, "ize")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+
+  const out = new Set(
+    words.filter((w) => w.length > 1 && !GENERIC_ANCHOR_WORDS.has(w))
+  );
+
+  // A page titled "Generative Engine Optimization…" is the page an anchor calls
+  // "the GEO guide". Without this the correct anchor is rejected for using the
+  // acronym the industry actually says, which would fail the draft and retry
+  // it into the same wording.
+  for (let i = 0; i < words.length; i++) {
+    for (const n of [3, 4]) {
+      if (i + n > words.length) continue;
+      const initials = words.slice(i, i + n).map((w) => w[0]).join("");
+      if (initials.length >= 3) out.add(initials);
+    }
+  }
+  return out;
+}
+
+const normaliseUrl = (u: string) =>
+  u.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+
+/**
+ * Liam's blend per post, counted rather than trusted.
+ *
+ * "3-5 INTERNAL links to coinpresso landing pages and blogs, seamlessly
+ * integrated in a natural way throughout the content, not stuffed on to
+ * conclusions as an 'after the fact'. Crypto SEO should have an anchor text
+ * link to crypto SEO page, crypto generative engine optimization with anchor
+ * text link to GEO page etc." Every clause of that is checked here: the count,
+ * both bounds, that the page exists, that the anchor names the destination,
+ * and where in the piece the links fall.
+ */
+function enforceLinks(
+  body: string,
+  ledgerSize: number,
+  known: Map<string, string>,
+  pillarHub?: string
+): void {
+  const all = [...body.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => ({
+    anchor: m[1],
+    url: m[2],
+  }));
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
-  const internal = new Set(links.filter(isInternal));
-  const external = new Set(links.filter((u) => !isInternal(u)));
+  const internalLinks = all.filter((l) => isInternal(l.url));
+  const internal = new Set(internalLinks.map((l) => normaliseUrl(l.url)));
+  const external = new Set(all.filter((l) => !isInternal(l.url)).map((l) => normaliseUrl(l.url)));
   const problems: string[] = [];
+
   if (internal.size < 3) {
     problems.push(`${internal.size} internal link${internal.size === 1 ? "" : "s"} to coinpresso.io (needs 3-5)`);
+  } else if (internal.size > 5) {
+    problems.push(`${internal.size} internal links (the client asked for 3-5 — more reads as stuffing)`);
   }
+
   const wantExternal = Math.min(3, ledgerSize);
   if (external.size < wantExternal) {
     problems.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
+  } else if (external.size > 5) {
+    problems.push(`${external.size} external links (the client asked for 3-5)`);
   }
+
+  // A coinpresso.io path the site does not have is a 404 on the agency's own
+  // domain. The link checker would catch it a stage later by fetching it; catching
+  // it here costs nothing and retries the writer instead of failing the run.
+  for (const l of internalLinks) {
+    const topic = known.get(normaliseUrl(l.url));
+    if (!topic) {
+      problems.push(`"${l.url}" is not a page on coinpresso.io — link only what you were given`);
+      continue;
+    }
+    const shared = [...anchorTokens(l.anchor)].some((w) => anchorTokens(topic).has(w));
+    if (!shared) {
+      problems.push(
+        `the anchor "${l.anchor}" points at the ${topic} page — the anchor text has to name where it goes`
+      );
+    }
+  }
+
+  if (pillarHub && !internal.has(normaliseUrl(pillarHub))) {
+    problems.push(`the pillar page (${pillarHub}) is not linked — every post links its own pillar`);
+  }
+
   const crowded = body
     .split(/\n\s*\n/)
     .filter((para) => (para.match(/\]\(https?:\/\//g) ?? []).length > 2).length;
   if (crowded) {
     problems.push(`${crowded} paragraph${crowded === 1 ? "" : "s"} with three or more links — the citation dump the client flagged`);
   }
+
   // Every internal link in the closing section and none before it is the
   // "stuffed on to the conclusion" pattern. Compare where they fall.
   const lastH2 = body.lastIndexOf("\n## ");
   if (lastH2 > 0 && internal.size >= 3) {
-    const before = [...body.slice(0, lastH2).matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => isInternal(m[1])).length;
+    const before = [...body.slice(0, lastH2).matchAll(/\[[^\]]+\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => isInternal(m[1])).length;
     if (before < 2) {
       problems.push(
         `${before === 0 ? "every internal link sits" : "all but one internal link sit"} in the final section — the client read that as "stuffed on the end, after the fact"; at least two belong in the body`
       );
     }
   }
+
   if (problems.length) {
     throw new Error(`Linking: ${problems.join("; ")}. Retry the writer.`);
   }
@@ -393,12 +492,24 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   // E-E-A-T piece: the draft linked "crypto SEO guide" to a years-old post
   // when the crypto GEO guide from a few weeks earlier was the relevant one.
   // The writer can only prefer the newer post if it can see the dates.
-  const recentPosts = (await allArticles(BLOG_ARCHIVE_ID))
+  const recent = (await allArticles(BLOG_ARCHIVE_ID))
     .filter((a) => a.kind !== "competitor" && a.url && a.publishedAt)
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .slice(0, 15)
+    .slice(0, 15);
+  const recentPosts = recent
     .map((a) => `- ${a.publishedAt.slice(0, 10)} · ${a.title} — ${a.url}`)
     .join("\n");
+
+  // Every coinpresso.io page the writer is allowed to link, and what each one
+  // is about — the same list it is shown, so the check and the instruction
+  // cannot drift apart. A post's title is its topic for anchor matching.
+  const knownPages = new Map<string, string>();
+  for (const pg of COINPRESSO_PAGES) {
+    knownPages.set(pg.url.replace(/\/+$/, "").toLowerCase(), pg.topic);
+  }
+  for (const a of recent) {
+    if (a.url) knownPages.set(a.url.replace(/\/+$/, "").toLowerCase(), a.title);
+  }
 
   const sourceLedger = research.sources
     .map(
@@ -607,7 +718,7 @@ tags, no keywords list — the post belongs to its category and that is all.`;
     enforceIntro(parsed.body);
     enforceProse(parsed.body);
     enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
-    enforceLinks(parsed.body, research.sources.length);
+    enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);
     if (fixedStructure) {
       parsed.body = enforceOutline(parsed.body, outline);
       if (brief.contentBrief?.faqs?.length) {
