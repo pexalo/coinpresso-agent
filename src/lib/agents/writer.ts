@@ -700,44 +700,91 @@ tags, no keywords list — the post belongs to its category and that is all.`;
   const targetWords = type?.words?.[1] ?? 2200;
   const ceiling = Math.round(3000 + targetWords * 2.5);
 
-  const r = await callClaude({
-    model: MODELS.writer,
-    system: BLOG_SYSTEM,
-    user,
-    maxTokens: ceiling,
-    temperature: 0.65,
-    context: { ...input.ctx, stage: input.fixes ? "revision" : "writer" },
-  });
+  // BOUNDED RETRY, WITH THE REJECTION HANDED BACK.
+  //
+  // Ten checks now run on every draft — the introduction, the AI openers, the
+  // em dash rate, the ledger markers, six separate linking clauses, the
+  // outline and the FAQ list. Each one throws a message naming precisely what
+  // to fix, and until now nothing read those messages: the stage failed, the
+  // run stopped, and a person had to press retry to buy a fresh attempt that
+  // knew nothing about why the last one was rejected. Every message ends
+  // "Retry the writer", which was an instruction to a reader who did not
+  // exist.
+  //
+  // Three attempts, because a model given the specific sentence it broke
+  // almost always fixes it on the next pass, and a fourth attempt on the same
+  // failure is paying twice for the same answer. Tokens from every attempt are
+  // billed — they were genuinely spent.
+  const MAX_WRITER_ATTEMPTS = 3;
+  let tokensIn = 0;
+  let tokensOut = 0;
+  let rejection = "";
+  let lastError: unknown;
 
-  let parsed: Omit<Draft, "wordCount">;
-  try {
-    parsed = parseDraftSections(r.text, { stage: "writer", stopReason: r.stopReason, maxTokens: ceiling });
-    // The title is the client's, or the planner's approved one. The model was
-    // told not to change it; this makes sure the instruction was not needed.
-    parsed.headline = brief.title;
-    enforceIntro(parsed.body);
-    enforceProse(parsed.body);
-    enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
-    enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);
-    if (fixedStructure) {
-      parsed.body = enforceOutline(parsed.body, outline);
-      if (brief.contentBrief?.faqs?.length) {
-        parsed.faqs = enforceFaqs(parsed.faqs, brief.contentBrief.faqs);
+  for (let attempt = 1; attempt <= MAX_WRITER_ATTEMPTS; attempt++) {
+    const r = await callClaude({
+      model: MODELS.writer,
+      system: BLOG_SYSTEM,
+      user: rejection
+        ? `${user}\n\n---\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED BEFORE ANYONE READ IT:\n${rejection}\n\nWrite the piece again in full, fixing exactly that. Everything else about the brief is unchanged.`
+        : user,
+      maxTokens: ceiling,
+      temperature: 0.65,
+      context: {
+        ...input.ctx,
+        stage: input.fixes ? "revision" : "writer",
+      },
+    });
+    tokensIn += r.tokensIn;
+    tokensOut += r.tokensOut;
+
+    try {
+      const parsed = parseDraftSections(r.text, {
+        stage: "writer",
+        stopReason: r.stopReason,
+        maxTokens: ceiling,
+      });
+      // The title is the client's, or the planner's approved one. The model was
+      // told not to change it; this makes sure the instruction was not needed.
+      parsed.headline = brief.title;
+      enforceIntro(parsed.body);
+      enforceProse(parsed.body);
+      enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
+      enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);
+      if (fixedStructure) {
+        parsed.body = enforceOutline(parsed.body, outline);
+        if (brief.contentBrief?.faqs?.length) {
+          parsed.faqs = enforceFaqs(parsed.faqs, brief.contentBrief.faqs);
+        }
       }
+
+      const draft: Draft = {
+        ...parsed,
+        dateline: null,
+        faqs: parsed.faqs || [],
+        // Liam: "What is this tags piece? It is not a CMS feature nor a GEO/SEO
+        // requirement." The post has its category; nothing else is published.
+        tags: [],
+        wordCount: (parsed.body || "").split(/\s+/).filter(Boolean).length,
+      };
+      return { draft, tokensIn, tokensOut };
+    } catch (e) {
+      lastError = e;
+      rejection = e instanceof Error ? e.message : String(e);
+      // A reply that was cut off mid-article is not a rule the model broke;
+      // asking it to "fix that" wastes an attempt. Fail now and say so.
+      if (r.stopReason === "max_tokens") break;
     }
-  } catch (e) {
-    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: 0 });
   }
-  const draft: Draft = {
-    ...parsed,
-    dateline: null,
-    faqs: parsed.faqs || [],
-    // Liam: "What is this tags piece? It is not a CMS feature nor a GEO/SEO
-    // requirement." The post has its category; nothing else is published.
-    tags: [],
-    wordCount: (parsed.body || "").split(/\s+/).filter(Boolean).length,
-  };
-  return { draft, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+
+  throw billed(
+    new Error(
+      `The writer could not produce a publishable draft in ${MAX_WRITER_ATTEMPTS} attempts. Last rejection: ${
+        lastError instanceof Error ? lastError.message : String(lastError)
+      }`
+    ),
+    { tokensIn, tokensOut, searchRequests: 0 }
+  );
 }
 
 export async function runWriter(input: WriterInput): Promise<{
