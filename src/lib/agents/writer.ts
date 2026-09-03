@@ -203,6 +203,69 @@ const AI_OPENERS = /(^|[.!?]\s+|\n)(Separately|Furthermore|Additionally|Moreover
  */
 const EM_DASH_PER_1000 = 6;
 
+/**
+ * A dash between digits is a range, not a rhetorical dash. "2024-2026" and
+ * "5-10%" must not count against a prose budget.
+ */
+const PROSE_DASH = /(?<![0-9]\s?)[—–](?!\s?[0-9])/g;
+
+/**
+ * Tails that continue the sentence rather than starting a new one. After one
+ * of these a comma is right; after anything else a full stop is safe, and a
+ * fragment is a shape this voice already uses.
+ */
+const CONTINUES = new Set([
+  "and", "but", "or", "nor", "yet", "so", "because", "which", "who", "whom",
+  "whose", "while", "though", "although", "unless", "until", "if", "when",
+  "where", "than", "rather", "especially", "including", "such", "like",
+  "plus", "not", "with", "without", "from", "for", "as",
+]);
+
+/**
+ * Bring the em dash count down to the budget, deterministically.
+ *
+ * The model cannot do this. Asked to "cut to 11 or fewer" it produced 27, then
+ * 27 again, then 27 again: counting its own punctuation across two thousand
+ * words is not something it can hold, so three attempts bought three identical
+ * drafts and the run failed on a formatting detail while the article underneath
+ * was fine. Punctuation is mechanical, so a machine should do it.
+ *
+ * Measured on the real drafts, almost every dash is "clause — but/because/
+ * which clause", so a comma is correct after a continuing word and a full stop
+ * is correct otherwise. Dashes are converted from the end backwards until the
+ * budget is met, which leaves the earliest — usually the strongest, and the
+ * one in the opening — untouched.
+ */
+function softenEmDashes(body: string, allowed: number): string {
+  const hits = [...body.matchAll(PROSE_DASH)].map((m) => m.index!);
+  if (hits.length <= allowed) return body;
+
+  let out = body;
+  for (const i of hits.slice(allowed).reverse()) {
+    // The dash, and any spaces hugging it.
+    let start = i;
+    let end = i + 1;
+    while (start > 0 && out[start - 1] === " ") start--;
+    while (end < out.length && out[end] === " ") end++;
+
+    const tail = out.slice(end);
+    const firstWord = (tail.match(/^([A-Za-z']+)/)?.[1] ?? "").toLowerCase();
+
+    if (CONTINUES.has(firstWord)) {
+      out = `${out.slice(0, start)}, ${tail}`;
+    } else {
+      // Full stop, and the tail now opens a sentence.
+      const capped = tail.charAt(0).toUpperCase() + tail.slice(1);
+      out = `${out.slice(0, start)}. ${capped}`;
+    }
+  }
+  return out;
+}
+
+function emDashBudget(words: number): number {
+  return Math.max(3, Math.floor((EM_DASH_PER_1000 * words) / 1000));
+}
+
 function enforceProse(body: string): void {
   const problems: string[] = [];
 
@@ -216,14 +279,23 @@ function enforceProse(body: string): void {
   }
 
   const words = body.split(/\s+/).filter(Boolean).length;
-  const dashes = (body.match(/[—–]/g) ?? []).length;
+  const dashes = (body.match(PROSE_DASH) ?? []).length;
   // A floor of three, so the rate cannot fire on a short piece where one dash
   // is a large share of very few words. At real article length (1,400-2,700
   // words here) the rate is what binds.
-  const allowed = Math.max(3, Math.floor((EM_DASH_PER_1000 * words) / 1000));
+  const allowed = emDashBudget(words);
   if (dashes > allowed) {
+    // Quoting the sentences gives the model something it can act on. "Cut to
+    // 11" is a counting task it cannot do; "rewrite these six sentences" is a
+    // writing task it can.
+    const guilty = (body.match(/[^.!?\n]*[—–][^.!?\n]*[.!?]/g) ?? [])
+      .map((x) => x.trim())
+      .filter((x) => PROSE_DASH.test(x))
+      .slice(0, 6)
+      .map((x) => `      "${x.length > 150 ? `${x.slice(0, 150)}…` : x}"`)
+      .join("\n");
     problems.push(
-      `${dashes} em dashes in ${words} words (${((dashes / Math.max(words, 1)) * 1000).toFixed(1)} per thousand; the house sits near zero and its heaviest post is 9.5). Cut to ${allowed} or fewer — full stops, colons and commas do this work`
+      `${dashes} em dashes in ${words} words (${((dashes / Math.max(words, 1)) * 1000).toFixed(1)} per thousand; the house sits near zero and its heaviest post is 9.5). Keep at most ${allowed}. Rewrite these sentences without the dash — a full stop, a colon or a comma does the work:\n${guilty}`
     );
   }
 
@@ -747,6 +819,21 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // The title is the client's, or the planner's approved one. The model was
       // told not to change it; this makes sure the instruction was not needed.
       parsed.headline = brief.title;
+
+      // LAST ATTEMPT: fix the punctuation rather than bin the article.
+      //
+      // Two attempts are spent asking the writer to do it, because a sentence
+      // it rewrites itself reads better than one a regular expression edits.
+      // But an article that is right about structure, links, sourcing and
+      // voice should not be thrown away over dash count — the one rule in
+      // this set a language model demonstrably cannot follow.
+      if (attempt === MAX_WRITER_ATTEMPTS) {
+        parsed.body = softenEmDashes(
+          parsed.body,
+          emDashBudget(parsed.body.split(/\s+/).filter(Boolean).length)
+        );
+      }
+
       enforceIntro(parsed.body);
       enforceProse(parsed.body);
       enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
