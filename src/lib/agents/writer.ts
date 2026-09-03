@@ -16,6 +16,8 @@ import { feedbackBlock, readFeedback } from "../feedback";
 import {
   internalLinkTargets,
   BLOG_ARCHIVE_ID,
+  BLOG_OFF_GENRE_TITLE,
+  BLOG_VOICE_EXEMPLARS,
   BLOG_DEFAULT_STRUCTURE,
   BLOG_PLAYBOOK,
   BLOG_PUBLICATION,
@@ -308,6 +310,10 @@ async function writeBlog(input: WriterInput): Promise<{
   const exemplars = await styleExemplars(BLOG_ARCHIVE_ID, {
     publication: BLOG_PUBLICATION,
     excludeAngle: brief.pillar,
+    // The client's own benchmark first, then the best of the rest — with the
+    // "Best X Agencies" listicles ranked out of the way.
+    pinnedUrls: BLOG_VOICE_EXEMPLARS,
+    avoidTitle: BLOG_OFF_GENRE_TITLE,
     // Three rather than two: on this track the exemplars are the whole point of
     // the archive, and a wider sample of the house voice is worth the tokens.
     limit: 3,

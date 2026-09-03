@@ -33,6 +33,29 @@ export const BLOG_ARCHIVE_ID = "coinpresso-blog";
 /** How posts on coinpresso.io are labelled in the archive's publication field. */
 export const BLOG_PUBLICATION = "coinpresso.io";
 
+/**
+ * The posts the writer is always shown as the house voice.
+ *
+ * Liam names this piece as the benchmark — "when I think about mine or
+ * Coinpresso blog posts, I think of bold, sometimes borderline hyperbolic
+ * statements" — and it is his own. Recency scoring had it ranked sixth of
+ * 159 and it was never selected; a benchmark that ages out is not one.
+ */
+export const BLOG_VOICE_EXEMPLARS = [
+  "https://coinpresso.io/blog/generative-engine-optimization-for-crypto-projects-the-complete-2026-guide",
+];
+
+/**
+ * Titles that are a different genre from an editorial post.
+ *
+ * The four most recent posts in the archive are all "Best X Agencies in 2026"
+ * listicles — a commercial comparison format with its own shape and a flatter
+ * register. They were the three exemplars every editorial post was learning
+ * from, because they were the newest. Ranked last rather than removed: if the
+ * archive ever holds nothing else, an example still beats no example.
+ */
+export const BLOG_OFF_GENRE_TITLE = /^best\b|\bagencies\b|\btop \d+\b/i;
+
 /** A pillar is a service Coinpresso sells. Clusters hang off it. */
 export interface Pillar {
   id: string;

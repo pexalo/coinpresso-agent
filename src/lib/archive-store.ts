@@ -135,33 +135,69 @@ export async function deleteArticle(
  * varies more by outlet than by asset; then recency, because the voice drifts;
  * then a different angle from the one being written, so the exemplar teaches
  * cadence without inviting the writer to reuse its argument.
+ *
+ * Two corrections came out of Coinpresso's 159-post import (Sep 2026):
+ *
+ * `pinnedUrls` — recency alone had the client's own voice benchmark ranked
+ * sixth, so it was never shown. A piece the client names as "this is how we
+ * write" should not have to be recent to be an example.
+ *
+ * `avoidTitle` — the four most recent posts were all commercial listicles
+ * ("Best Crypto PPC Agencies in 2026"), so every editorial post was being
+ * taught by a genre with a different job, a different shape and a flatter
+ * register. Recency is a proxy for current voice; it stops being one when
+ * the recent run is all one format.
  */
 export async function styleExemplars(
   campaignId: string,
-  opts: { publication: string; excludeAngle?: string; limit?: number }
+  opts: {
+    publication: string;
+    excludeAngle?: string;
+    limit?: number;
+    /** Always shown, whatever their age. Matched on URL, first one first. */
+    pinnedUrls?: string[];
+    /** Titles matching this are a different genre — kept, but ranked last. */
+    avoidTitle?: RegExp;
+  }
 ): Promise<StoredArticle[]> {
   const withText = (await allArticles(campaignId)).filter(
     (a) => a.kind !== "competitor" && a.body && a.body.length > 400
   );
   if (!withText.length) return [];
 
-  const scored = withText.map((a) => {
-    let score = 0;
-    if (a.publication === opts.publication) score += 10;
-    if (opts.excludeAngle && a.angle === opts.excludeAngle) score -= 4;
-    // Recency, in days, capped so an old-but-same-wire piece still wins.
-    const age = Math.max(
-      0,
-      (Date.now() - Date.parse(a.publishedAt)) / 86_400_000
-    );
-    score += Math.max(0, 6 - age / 7);
-    return { a, score };
-  });
+  const limit = opts.limit ?? 2;
+  const norm = (u: string) => u.replace(/\/+$/, "").toLowerCase();
+  const pins = (opts.pinnedUrls ?? []).map(norm);
+  const pinned = pins
+    .map((u) => withText.find((a) => norm(a.url ?? "") === u))
+    .filter((a): a is StoredArticle => Boolean(a))
+    .slice(0, limit);
 
-  return scored
-    .sort((x, y) => y.score - x.score)
-    .slice(0, opts.limit ?? 2)
-    .map((x) => x.a);
+  const scored = withText
+    .filter((a) => !pinned.includes(a))
+    .map((a) => {
+      let score = 0;
+      if (a.publication === opts.publication) score += 10;
+      if (opts.excludeAngle && a.angle === opts.excludeAngle) score -= 4;
+      // Enough to drop a listicle below every editorial post that shares its
+      // publication, without discarding it when there is nothing else.
+      if (opts.avoidTitle?.test(a.title)) score -= 8;
+      // Recency, in days, capped so an old-but-same-wire piece still wins.
+      const age = Math.max(
+        0,
+        (Date.now() - Date.parse(a.publishedAt)) / 86_400_000
+      );
+      score += Math.max(0, 6 - age / 7);
+      return { a, score };
+    });
+
+  return [
+    ...pinned,
+    ...scored
+      .sort((x, y) => y.score - x.score)
+      .slice(0, limit - pinned.length)
+      .map((x) => x.a),
+  ];
 }
 
 /** The few-shot block injected into the writer prompt. */
