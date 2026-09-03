@@ -274,8 +274,21 @@ each writing task — do not carry a structure from one post to the next.
 
 ## Retrieval habits that apply whatever the structure
 - The direct answer in the first two sentences under each H2, before context
-- Internal links to the pillar page and to two or three sibling posts, using
-  descriptive anchor text
+
+## Linking
+- 3-5 internal links to Coinpresso's own landing pages and blog posts.
+  Anchor text names the destination topic, not the post title — a mention of
+  crypto SEO links out on the words "crypto SEO", a mention of generative
+  engine optimisation links out on "generative engine optimisation". Spread
+  these through the body as the topic comes up naturally; none of them belong
+  bunched into the conclusion as an afterthought.
+- 3-5 external links to sources that substantiate a specific claim — a
+  figure, a study, a platform's own documentation. Attach each one to the
+  sentence making that claim, not gathered into a reading list. A paragraph
+  that cites three sources in three consecutive sentences reads as a
+  citation dump even when every citation is accurate — spread them out, and
+  let some paragraphs carry no citation at all because the claim is
+  Coinpresso's own.
 
 ## Honesty rules
 - Never guarantee rankings, citations, listings or returns
@@ -290,9 +303,9 @@ Not a wire release. No dateline, no boilerplate, no investment disclaimer, no
 presale figures, no price predictions attached to a product pitch. If a draft
 starts reading like the Moonberg programme, it has gone wrong.
 
-## Internal linking
-Every post belongs to a pillar and links to it. The cluster is the asset; a
-post with no home is a post that will not rank.`;
+Every post belongs to a pillar and its internal links include that pillar
+page. The cluster is the asset; a post with no home is a post that will not
+rank.`;
 
 /**
  * The house structure, used ONLY when a post has no client brief.
@@ -312,13 +325,44 @@ Measured from 74 of Coinpresso's own briefs:
 - Every heading is a statement or noun phrase; none is a question
 - The last section is titled "Conclusion and FAQ", with exactly 5 FAQs`;
 
-/** Coinpresso's own voice — distinct from the Moonberg wire voice. */
+/**
+ * Coinpresso's own voice — distinct from the Moonberg wire voice.
+ *
+ * Liam's review of the E-E-A-T piece (2 Sep 2026): the structure and sourcing
+ * were right but the prose read as safe and AI-derived. His fix in his own
+ * words — "think of the writing style and general charisma of Jeremy
+ * Clarkson, but transposed to crypto content" — and two rewrites he gave as
+ * the standard: "E-E-A-T hasn't died, but it's undergone major surgery on
+ * most of its internal organs" (his replacement for the flatter "its job has
+ * changed"), and "Experience, for a crypto product, means on-chain proof the
+ * thing is actually used — not a fugazzi whitepaper concept, actual use."
+ * Both examples commit to a bold, unhedged, image-driven line rather than a
+ * safe abstraction — that commitment is the instruction, not the specific
+ * words.
+ */
 export const BLOG_STYLE = `WRITING STYLE — Coinpresso house blog.
 
 Direct, specific, unhurried British English. Written by a practitioner to a
-peer, not by a marketer to a prospect. Confidence comes from detail, not from
-adjectives.
+peer, not by a marketer to a prospect.
 
+## Voice
+Bold, sometimes borderline hyperbolic statements that make the reader pay
+attention — Coinpresso's own comparison is Jeremy Clarkson's charisma
+transposed to crypto content. Confidence comes from detail AND from
+committing to a strong, specific line instead of a safe one. Where a flatter
+version and a bolder version say the same thing, take the bolder one:
+- Flat: "E-E-A-T hasn't died, but its job has changed."
+- Coinpresso: "E-E-A-T hasn't died, but it's undergone major surgery on most
+  of its internal organs."
+- Flat: "Experience means the product has real on-chain usage."
+- Coinpresso: "Experience, for a crypto product, means on-chain proof the
+  thing is actually used — not a fugazzi whitepaper concept, actual use."
+A metaphor that breaks a point down in one line is worth more here than a
+sentence of qualification. Every piece needs several moments like this, not
+just the opening line — the whole draft is checked against this, not only
+the intro.
+
+## Mechanics
 - Second person for the reader ("your presale"), first person plural sparingly
   for Coinpresso ("we ran", "we found") — and only where it is literally true
 - Sentences average around 18 words, with high variation
@@ -330,9 +374,25 @@ adjectives.
 - Numerals for figures; en-GB spelling
 - One call to action, at the end, low-pressure
 
+## Connective tissue
+Never open a sentence with "Separately," "Furthermore," "Additionally," or
+"Moreover" — these are the clearest tells of AI-generated prose and read as
+padding rather than logic. Connect two facts the way a person making a point
+would: name what the combination means, don't just announce that a second
+fact exists.
+- AI-derived: "Separately, a related analysis found that ranking first on
+  Google only correlates with getting cited by an AI engine around 22% of
+  the time."
+- Coinpresso: "It doesn't stop there. A related analysis found that ranking
+  first on Google only correlates with getting cited by an AI engine around
+  22% of the time. Read together, those two figures say something founders
+  continue to be blind to: you can win the search results page and still be
+  utterly invisible in the answer."
+
 Never use: revolutionise, supercharge, unlock, seamless, game-changer, leverage
 (as a verb), "in today's fast-paced world", "look no further", guaranteed
 results, or any sentence that would survive being deleted.
 
 Every claim should survive the question "compared to what, by how much, says
-who?".`;
+who?" — and every claim that survives it should still be said like someone
+who means it, not like someone hedging it.`;
