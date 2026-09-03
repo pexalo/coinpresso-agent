@@ -140,7 +140,7 @@ function parseDraftSections(
  * followed the brief, and that is thrown as an error naming the gap, so the
  * stage fails loudly and the retry re-runs only the writer.
  */
-function enforceOutline(body: string, outline: BriefSection[]): string {
+export function enforceOutline(body: string, outline: BriefSection[]): string {
   const lines = body.split("\n");
   const h2 = lines
     .map((l, i) => ({ i, text: l.match(/^##\s+(.+?)\s*$/)?.[1] }))
@@ -169,7 +169,7 @@ function enforceOutline(body: string, outline: BriefSection[]): string {
  * floor, not a target — it separates "a real opening" from "one sentence and
  * a heading".
  */
-function enforceIntro(body: string): void {
+export function enforceIntro(body: string): void {
   const firstH2 = body.search(/^##\s+/m);
   const intro = firstH2 === -1 ? body : body.slice(0, firstH2);
   const words = intro.split(/\s+/).filter(Boolean).length;
@@ -236,7 +236,7 @@ const CONTINUES = new Set([
  * budget is met, which leaves the earliest — usually the strongest, and the
  * one in the opening — untouched.
  */
-function softenEmDashes(body: string, allowed: number): string {
+export function softenEmDashes(body: string, allowed: number): string {
   const hits = [...body.matchAll(PROSE_DASH)].map((m) => m.index!);
   if (hits.length <= allowed) return body;
 
@@ -262,11 +262,23 @@ function softenEmDashes(body: string, allowed: number): string {
   return out;
 }
 
-function emDashBudget(words: number): number {
+/**
+ * Words, not tokens. " — " is its own token when a string is split on
+ * whitespace, so counting naively meant softening the dashes SHRANK the word
+ * count, which shrank the budget, which left the draft over the line it had
+ * just been brought under. The preflight harness caught this on a 2,646-word
+ * draft that came out at 16 dashes against a budget that had quietly dropped
+ * from 16 to 15. A token with no letter or digit in it is punctuation.
+ */
+export function wordCount(text: string): number {
+  return text.split(/\s+/).filter((t) => /[\p{L}\p{N}]/u.test(t)).length;
+}
+
+export function emDashBudget(words: number): number {
   return Math.max(3, Math.floor((EM_DASH_PER_1000 * words) / 1000));
 }
 
-function enforceProse(body: string): void {
+export function enforceProse(body: string): void {
   const problems: string[] = [];
 
   const hits = [...body.matchAll(AI_OPENERS)].map((m) => m[2]);
@@ -278,7 +290,7 @@ function enforceProse(body: string): void {
     );
   }
 
-  const words = body.split(/\s+/).filter(Boolean).length;
+  const words = wordCount(body);
   const dashes = (body.match(PROSE_DASH) ?? []).length;
   // A floor of three, so the rate cannot fire on a short piece where one dash
   // is a large share of very few words. At real article length (1,400-2,700
@@ -369,7 +381,7 @@ const normaliseUrl = (u: string) =>
  * both bounds, that the page exists, that the anchor names the destination,
  * and where in the piece the links fall.
  */
-function enforceLinks(
+export function enforceLinks(
   body: string,
   ledgerSize: number,
   known: Map<string, string>,
@@ -455,7 +467,7 @@ function enforceLinks(
  * nothing a reader can open. Both tracks are checked; both build the ledger
  * the same way.
  */
-function enforceNoLedgerMarkers(body: string, faqs: Array<{ q: string; a: string }>): void {
+export function enforceNoLedgerMarkers(body: string, faqs: Array<{ q: string; a: string }>): void {
   const hay = [body, ...faqs.map((f) => `${f.q} ${f.a}`)].join("\n");
   const found = hay.match(/\[s\d+\]/g) ?? [];
   if (found.length) {
@@ -828,10 +840,7 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // voice should not be thrown away over dash count — the one rule in
       // this set a language model demonstrably cannot follow.
       if (attempt === MAX_WRITER_ATTEMPTS) {
-        parsed.body = softenEmDashes(
-          parsed.body,
-          emDashBudget(parsed.body.split(/\s+/).filter(Boolean).length)
-        );
+        parsed.body = softenEmDashes(parsed.body, emDashBudget(wordCount(parsed.body)));
       }
 
       enforceIntro(parsed.body);
