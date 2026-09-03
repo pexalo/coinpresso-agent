@@ -34,6 +34,11 @@ export interface FeedbackEntry {
 
 export interface FeedbackLog {
   entries: FeedbackEntry[];
+  /**
+   * Seed ids someone deleted on purpose. Without this, a new seed shipped in
+   * code would be indistinguishable from a deleted one and would come back.
+   */
+  dismissed?: string[];
   updatedAt: string;
 }
 
@@ -97,6 +102,33 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
       "The sourcing is strong — keep it — but spread citations through the piece. Several in consecutive sentences read as a citation dump.",
     active: true,
   },
+  {
+    id: "liam-eeat-web3-vocab",
+    source: "Liam, E-E-A-T review (second pass)",
+    date: "2026-09-03",
+    rule:
+      "Use Web3-native vocabulary. Web2 and e-commerce agency terms sound like a different industry — \"named consultancy\" is not a Web3 term. Say what a crypto founder would say: a named team, a protocol, a project, a launch.",
+    before: "a named consultancy",
+    active: true,
+  },
+  {
+    id: "liam-eeat-newest-post",
+    source: "Liam, E-E-A-T review (second pass)",
+    date: "2026-09-03",
+    rule:
+      "When linking a Coinpresso post, link the most recent one on that topic and name it for what it is. The GEO guide from a few weeks ago is \"the crypto GEO guide\" — never send the reader to a years-old SEO guide when a newer, more relevant post exists.",
+    before: "our existing crypto SEO guide",
+    after: "our crypto GEO guide",
+    active: true,
+  },
+  {
+    id: "liam-eeat-links-in-body",
+    source: "Liam, E-E-A-T review (second pass)",
+    date: "2026-09-03",
+    rule:
+      "Internal links go where the topic comes up, in the body. A cluster of them at the end reads as \"stuffed on after the fact\" even when the anchor text is right.",
+    active: true,
+  },
 ];
 
 function fileFor(clientRef: string): string {
@@ -111,11 +143,24 @@ function seeded(): FeedbackLog {
   };
 }
 
+/**
+ * Stored log, plus any seed shipped since it was last written.
+ *
+ * The client's feedback arrives in rounds and each round adds seeds in code.
+ * An install that has already saved the file must still pick the new ones
+ * up — merged by id, so a seed that was edited or deleted stays as it is.
+ */
 export async function readFeedback(clientRef: string): Promise<FeedbackLog> {
   try {
     const raw = await fs.readFile(fileFor(clientRef), "utf8");
     const parsed = JSON.parse(raw) as Partial<FeedbackLog>;
-    return { entries: parsed.entries ?? [], updatedAt: parsed.updatedAt ?? "" };
+    const entries = parsed.entries ?? [];
+    const known = new Set([...entries.map((e) => e.id), ...(parsed.dismissed ?? [])]);
+    const now = new Date().toISOString();
+    for (const seed of SEED_FEEDBACK) {
+      if (!known.has(seed.id)) entries.push({ ...seed, addedAt: now });
+    }
+    return { entries, dismissed: parsed.dismissed ?? [], updatedAt: parsed.updatedAt ?? "" };
   } catch {
     return seeded();
   }
@@ -161,6 +206,9 @@ export async function setFeedbackActive(
 export async function removeFeedback(clientRef: string, id: string): Promise<FeedbackLog> {
   const log = await readFeedback(clientRef);
   log.entries = log.entries.filter((x) => x.id !== id);
+  if (SEED_FEEDBACK.some((sd) => sd.id === id)) {
+    log.dismissed = [...new Set([...(log.dismissed ?? []), id])];
+  }
   return write(clientRef, log);
 }
 
@@ -178,7 +226,9 @@ export function feedbackBlock(log: FeedbackLog, audience: "writer" | "reviewer")
         ? `\n   Not this: "${e.before}"\n   This: "${e.after}"`
         : e.after
           ? `\n   For example: "${e.after}"`
-          : "";
+          : e.before
+            ? `\n   Not this: "${e.before}"`
+            : "";
     return `${i + 1}. ${e.rule} (${e.source}, ${e.date})${ex}`;
   });
   const head =

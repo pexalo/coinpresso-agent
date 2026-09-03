@@ -11,7 +11,7 @@ import { MODELS } from "../models";
 import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
 import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brief";
-import { exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
+import { allArticles, exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import { feedbackBlock, readFeedback } from "../feedback";
 import {
   internalLinkTargets,
@@ -231,7 +231,11 @@ function enforceLinks(body: string, ledgerSize: number): void {
   const lastH2 = body.lastIndexOf("\n## ");
   if (lastH2 > 0 && internal.size >= 3) {
     const before = [...body.slice(0, lastH2).matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => isInternal(m[1])).length;
-    if (before === 0) problems.push("every internal link sits in the final section — spread them through the body");
+    if (before < 2) {
+      problems.push(
+        `${before === 0 ? "every internal link sits" : "all but one internal link sit"} in the final section — the client read that as "stuffed on the end, after the fact"; at least two belong in the body`
+      );
+    }
   }
   if (problems.length) {
     throw new Error(`Linking: ${problems.join("; ")}. Retry the writer.`);
@@ -332,6 +336,17 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   const type = brief.contentType
     ? CONTENT_TYPES[brief.contentType as keyof typeof CONTENT_TYPES]
     : undefined;
+
+  // Recent posts the writer may link, newest first. Liam's correction on the
+  // E-E-A-T piece: the draft linked "crypto SEO guide" to a years-old post
+  // when the crypto GEO guide from a few weeks earlier was the relevant one.
+  // The writer can only prefer the newer post if it can see the dates.
+  const recentPosts = (await allArticles(BLOG_ARCHIVE_ID))
+    .filter((a) => a.kind !== "competitor" && a.url && a.publishedAt)
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+    .slice(0, 15)
+    .map((a) => `- ${a.publishedAt.slice(0, 10)} · ${a.title} — ${a.url}`)
+    .join("\n");
 
   const sourceLedger = research.sources
     .map(
@@ -449,9 +464,19 @@ ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- nothing sup
 INTERNAL LINKS — the ONLY coinpresso.io pages that exist. Link 3-5 of them
 as markdown links, each where its topic comes up in the body, with anchor text
 naming that topic (the words "crypto SEO" link to the crypto SEO page). Do not
-invent any other coinpresso.io path; do not put them all in the last section.
+invent any other coinpresso.io path; at least two of them sit in the body
+before the final section.
 ${internalLinkTargets(pillar?.hub)}
-
+${
+  recentPosts
+    ? `
+RECENT COINPRESSO POSTS — also linkable, newest first. Where two posts cover
+the same ground, link the newer one and name it for what it is (a post on GEO
+is "the crypto GEO guide", not "the crypto SEO guide"):
+${recentPosts}
+`
+    : ""
+}
 EXTERNAL LINKS — 3-5 markdown links to ledger URLs, each attached to the
 sentence making the claim it supports. Never more than two links in one
 paragraph.
@@ -492,10 +517,9 @@ Q: first question
 A: its answer
 Q: second question
 A: its answer
-===TAGS===
-comma, separated, tags
 
-Start your reply with ===HEADLINE=== and end it after the tags line.`;
+Start your reply with ===HEADLINE=== and end it after the last answer. No
+tags, no keywords list — the post belongs to its category and that is all.`;
 
   // DERIVED FROM THE WORD TARGET THIS FORMAT ACTUALLY ASKS FOR.
   //
@@ -541,7 +565,9 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
     ...parsed,
     dateline: null,
     faqs: parsed.faqs || [],
-    tags: parsed.tags || [],
+    // Liam: "What is this tags piece? It is not a CMS feature nor a GEO/SEO
+    // requirement." The post has its category; nothing else is published.
+    tags: [],
     wordCount: (parsed.body || "").split(/\s+/).filter(Boolean).length,
   };
   return { draft, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
