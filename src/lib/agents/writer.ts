@@ -250,12 +250,6 @@ function enforceLinks(body: string, ledgerSize: number): void {
   if (external.size < wantExternal) {
     problems.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
   }
-  const markers = (body.match(/\[s\d+\]/g) ?? []).length;
-  if (markers) {
-    problems.push(
-      `${markers} "[s1]"-style reference marker${markers === 1 ? "" : "s"} instead of links — the ledger's index is not a citation format, a reader cannot click it`
-    );
-  }
   const crowded = body
     .split(/\n\s*\n/)
     .filter((para) => (para.match(/\]\(https?:\/\//g) ?? []).length > 2).length;
@@ -275,6 +269,28 @@ function enforceLinks(body: string, ledgerSize: number): void {
   }
   if (problems.length) {
     throw new Error(`Linking: ${problems.join("; ")}. Retry the writer.`);
+  }
+}
+
+/**
+ * The ledger's own index, printed in the article.
+ *
+ * The ledger reaches the writer as `[s1] Publisher — "title" / URL: ...` so it
+ * can tell which URL backs which claim. Seven blog drafts copied that
+ * labelling straight into the prose, and because a marker contains no URL the
+ * link check had nothing to inspect and passed them clean. Published, they
+ * would have read "...for its AI Overviews or AI Mode features [s13]." on
+ * coinpresso.io — an internal key in the middle of a sentence, pointing at
+ * nothing a reader can open. Both tracks are checked; both build the ledger
+ * the same way.
+ */
+function enforceNoLedgerMarkers(body: string, faqs: Array<{ q: string; a: string }>): void {
+  const hay = [body, ...faqs.map((f) => `${f.q} ${f.a}`)].join("\n");
+  const found = hay.match(/\[s\d+\]/g) ?? [];
+  if (found.length) {
+    throw new Error(
+      `The draft cites with ${found.length} ledger marker${found.length === 1 ? "" : "s"} (${[...new Set(found)].slice(0, 4).join(", ")}${found.length > 4 ? ", …" : ""}) instead of links. Those labels index the ledger FOR YOU — a reader cannot click "[s1]". Put a link on the words making each claim. Retry the writer.`
+    );
   }
 }
 
@@ -590,6 +606,7 @@ tags, no keywords list — the post belongs to its category and that is all.`;
     parsed.headline = brief.title;
     enforceIntro(parsed.body);
     enforceProse(parsed.body);
+    enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
     enforceLinks(parsed.body, research.sources.length);
     if (fixedStructure) {
       parsed.body = enforceOutline(parsed.body, outline);
@@ -744,7 +761,9 @@ ${research.riskNotes.map((r) => `- ${r}`).join("\n") || "- none"}
 
 ---
 
-SOURCE LEDGER — the ONLY URLs you may use:
+SOURCE LEDGER — the ONLY URLs you may use. The [s1] labels are how this list
+is indexed FOR YOU; they are not a citation format and must never appear in
+the piece. Cite by the link style stated above.
 ${sourceLedger || "(empty — write the piece without external links and note the gap)"}
 
 ---
@@ -792,6 +811,7 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
   let parsed: Omit<Draft, "wordCount">;
   try {
     parsed = parseDraftSections(r.text, { stage: "writer", stopReason: r.stopReason, maxTokens: ceiling });
+    enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
   } catch (e) {
     throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: 0 });
   }
