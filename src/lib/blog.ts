@@ -463,6 +463,15 @@ honesty rules below are not loosened by any of this.
 - Numerals for figures; en-GB spelling
 - One call to action, at the end, low-pressure
 
+## Punctuation
+Em dashes are the single loudest tell in this draft set. Measured across
+Coinpresso's own 159 published posts the median is ZERO per thousand words and
+the heaviest piece on the site is 9.5; Liam's GEO guide runs at 5. The agent's
+drafts have been running at 11-16 — above every real post. Use one where it
+genuinely earns its place, as Liam does, and reach for a full stop, a colon or
+a comma the rest of the time. Two short sentences almost always beat one
+sentence hinged on a dash.
+
 ## Connective tissue
 Never open a sentence with "Separately," "Furthermore," "Additionally," or
 "Moreover" — these are the clearest tells of AI-generated prose and read as

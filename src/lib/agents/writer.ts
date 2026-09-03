@@ -190,14 +190,44 @@ function enforceIntro(body: string): void {
  */
 const AI_OPENERS = /(^|[.!?]\s+|\n)(Separately|Furthermore|Additionally|Moreover|In conclusion|It is worth noting|It's worth noting)\b/g;
 
+/**
+ * Em dashes per thousand words, capped just above the house's own heaviest use.
+ *
+ * Measured over Coinpresso's 159 published posts: median 0, ninetieth
+ * percentile 1.2, single heaviest piece 9.5. Liam's own GEO guide runs at 5,
+ * so this is not a ban — it is his rate with headroom. The seven drafts in the
+ * queue ran at 11.4 to 15.7, above every real post on the domain, which is
+ * exactly the texture a reader clocks as machine-written without being able to
+ * name why.
+ */
+const EM_DASH_PER_1000 = 6;
+
 function enforceProse(body: string): void {
+  const problems: string[] = [];
+
   const hits = [...body.matchAll(AI_OPENERS)].map((m) => m[2]);
   if (hits.length) {
-    throw new Error(
-      `The draft opens ${hits.length} sentence${hits.length === 1 ? "" : "s"} with ${[...new Set(hits)]
+    problems.push(
+      `${hits.length} sentence${hits.length === 1 ? "" : "s"} opening with ${[...new Set(hits)]
         .map((h) => `"${h}"`)
-        .join(", ")} — the connective tissue the client flagged as AI-derived. Retry the writer.`
+        .join(", ")} — the connective tissue the client flagged as AI-derived`
     );
+  }
+
+  const words = body.split(/\s+/).filter(Boolean).length;
+  const dashes = (body.match(/[—–]/g) ?? []).length;
+  // A floor of three, so the rate cannot fire on a short piece where one dash
+  // is a large share of very few words. At real article length (1,400-2,700
+  // words here) the rate is what binds.
+  const allowed = Math.max(3, Math.floor((EM_DASH_PER_1000 * words) / 1000));
+  if (dashes > allowed) {
+    problems.push(
+      `${dashes} em dashes in ${words} words (${((dashes / Math.max(words, 1)) * 1000).toFixed(1)} per thousand; the house sits near zero and its heaviest post is 9.5). Cut to ${allowed} or fewer — full stops, colons and commas do this work`
+    );
+  }
+
+  if (problems.length) {
+    throw new Error(`The draft reads as machine-written: ${problems.join("; ")}. Retry the writer.`);
   }
 }
 
@@ -219,6 +249,12 @@ function enforceLinks(body: string, ledgerSize: number): void {
   const wantExternal = Math.min(3, ledgerSize);
   if (external.size < wantExternal) {
     problems.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
+  }
+  const markers = (body.match(/\[s\d+\]/g) ?? []).length;
+  if (markers) {
+    problems.push(
+      `${markers} "[s1]"-style reference marker${markers === 1 ? "" : "s"} instead of links — the ledger's index is not a citation format, a reader cannot click it`
+    );
   }
   const crowded = body
     .split(/\n\s*\n/)
@@ -496,7 +532,10 @@ ${research.riskNotes.map((r) => `- ${r}`).join("\n") || "- none"}
 
 ---
 
-SOURCE LEDGER — the ONLY URLs you may cite:
+SOURCE LEDGER — the ONLY URLs you may cite. The [s1] labels below are how the
+ledger is indexed FOR YOU; they are not a citation format. Never write "[s1]"
+in the article. A cited claim carries a markdown link on the words making the
+claim — [what the source found](URL) — because a reader cannot click "[s1]".
 ${sourceLedger || "(empty — write without external citations and say so where a figure would have gone)"}
 ${revisionBlock}
 
