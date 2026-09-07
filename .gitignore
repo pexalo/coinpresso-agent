@@ -17,3 +17,4 @@ _to_delete/
 # shipped tarballs and data snapshots — never commit
 _incoming/
 *.snapshot.gz
+drafts/
