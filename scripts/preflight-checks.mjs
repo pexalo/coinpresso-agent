@@ -51,6 +51,7 @@ if (fs.existsSync(archive)) {
 
 const CHECKS = [
   ["intro", (d) => W.enforceIntro(d.body)],
+  ["closer", (d) => W.enforceCloser(d.body)],
   ["prose", (d) => W.enforceProse(d.body)],
   ["markers", (d) => W.enforceNoLedgerMarkers(d.body, d.faqs ?? [])],
   ["links", (d, r) =>
@@ -85,15 +86,23 @@ function control(run) {
   if (!hub) return null;
   const pages = COINPRESSO_PAGES.slice(0, 6);
 
+  // House length, house register: ~180 words, talks to the reader, names the
+  // method, opens on a move that is not one of the spent ones.
   const intro =
-    "Most crypto teams still treat trust as a checkbox. A team page here, an " +
-    "audit badge there, a whitepaper nobody finishes. The engines now answering " +
-    "your buyers' questions do not read any of it that way, and the gap between " +
-    "what projects publish and what gets quoted back has become the most " +
-    "expensive blind spot in Web3 marketing. Founders keep optimising for a " +
-    "results page fewer people look at every quarter. This piece walks through " +
-    "what actually moves the needle, section by section, and marks the received " +
-    "wisdom clearly where it is simply wrong.";
+    "Coinbase takes 13% of all crypto citations in AI search. Kraken 9%. Gemini " +
+    "5.5%. Every founder in Web3 has seen that league table by now, usually in an " +
+    "agency deck, and almost nobody has asked the only question that matters if " +
+    "your protocol is not one of those three: what exactly are those sites doing " +
+    "on the page that yours is not?\n\n" +
+    "The lazy answer is that they are Coinbase, and it is wrong, or at least far " +
+    "less true than it looks. Citation share tracks a specific and surprisingly " +
+    "copyable set of structural habits, how risk gets disclosed, how figures get " +
+    "presented, how hard a claim gets hedged, and not one of them requires a " +
+    "nine-figure balance sheet or a licence in forty jurisdictions. We pulled the " +
+    "most-cited exchange pages apart to find the pattern, then ran our own prompts " +
+    "to check it held. This piece is what came out: the AI Citation Hierarchy as " +
+    "far as the evidence supports it, and how a smaller protocol borrows it " +
+    "without pretending to be something it is not.";
 
   const body = [
     intro,

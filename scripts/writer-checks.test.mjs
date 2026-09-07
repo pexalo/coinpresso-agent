@@ -112,6 +112,55 @@ try { W.enforceLinks(rel, 0, new Map([["https://coinpresso.io/crypto-seo","crypt
 catch (e) { relVerdict = /relative link/.test(e.message) ? "flagged" : e.message.slice(0, 60); }
 t("a relative link is caught", relVerdict, "flagged");
 
+console.log("\nassigned openings and closers (Liam: the intros all sound alike):");
+const { introMoveFor, closeMoveFor, assignMoves } = await import("../src/lib/blog.ts");
+const queue = [
+  ["What schema markup do crypto exchanges, wallets and DeFi protocols need?", "guide"],
+  ["What makes a crypto comparison page get cited by AI search?", "teardown"],
+  ["How do AI search engines evaluate DeFi and exchange websites?", "data"],
+  ["Why don't ChatGPT and Perplexity cite crypto brands?", "opinion"],
+  ["What does E-E-A-T actually mean for a crypto website in 2026?", "guide"],
+  ["How do you check if ChatGPT, Claude, Gemini and Perplexity already know your project?", "guide"],
+  ["Generative engine optimization for crypto projects: the complete 2026 guide", "guide"],
+];
+// Batch assignment is what production uses: the day's posts laid out together.
+const batch = assignMoves(queue.map(([title, contentType]) => ({ title, contentType })));
+const intros = batch.map((b) => b.introMove);
+const closes = batch.map((b) => b.closeMove);
+t("the four Liam read open four different ways", new Set(intros.slice(0, 4)).size, 4);
+t("the four Liam read close four different ways", new Set(closes.slice(0, 4)).size, 4);
+t("7 posts: no opening used more than twice", Math.max(...Object.values(intros.reduce((a, x) => ({ ...a, [x]: (a[x] ?? 0) + 1 }), {}))) <= 2, true);
+t("assignment is stable across re-plans", JSON.stringify(assignMoves(queue.map(([title, contentType]) => ({ title, contentType })))) === JSON.stringify(batch), true);
+// A queue rewritten one at a time: siblings already stamped keep theirs, the
+// new one avoids them.
+const partial = queue.map(([title, contentType], i) => ({ title, contentType, ...(i < 3 ? batch[i] : {}) }));
+const later = assignMoves(partial);
+t("stamped siblings are kept verbatim", later.slice(0, 3).every((m, i) => m.introMove === batch[i].introMove), true);
+t("the next post avoids what its siblings took", intros.slice(0, 3).includes(later[3].introMove) ? "collided" : "distinct", "distinct");
+t("per-post fallback still works with no batch", typeof introMoveFor(queue[0][0], "guide").id, "string");
+
+const pad = (n) => " " + "word ".repeat(n);
+const spent = [
+  "Ask ChatGPT about most crypto protocols and you get a shrug dressed up as an answer." + pad(120) + "\n\n## A\n\nBody.",
+  "If ChatGPT doesn't mention your project when someone asks about it, schema won't fix that." + pad(120) + "\n\n## A\n\nBody.",
+  "You rank first page on Google. Ask ChatGPT about your category and you don't exist." + pad(120) + "\n\n## A\n\nBody.",
+];
+for (const b of spent) {
+  let v = "passed"; try { W.enforceIntro(b); } catch (e) { v = /will not mention you/.test(e.message) ? "caught" : "wrong reason"; }
+  t(`spent opener caught: "${b.slice(0, 44)}…"`, v, "caught");
+}
+const fresh = "Coinbase takes 13% of crypto citations in AI search. Kraken 9%. Gemini 5.5%. Every founder has seen that league table." + pad(110) + "\n\n## A\n\nBody.";
+let fv = "passed"; try { W.enforceIntro(fresh); } catch (e) { fv = e.message.slice(0, 60); }
+t("a fresh opening passes", fv, "passed");
+let short = "passed"; try { W.enforceIntro("Coinbase takes 13%." + pad(70) + "\n\n## A\n\nBody."); } catch (e) { short = /floor is 110/.test(e.message) ? "caught" : e.message.slice(0, 50); }
+t("a 72-word intro is caught by the house floor", short, "caught");
+
+const spentClose = "Intro." + pad(120) + "\n\n## A\n\nBody.\n\nIf you want a second opinion on where your project stands, that's a conversation worth having before you spend another quarter.";
+let cv = "passed"; try { W.enforceCloser(spentClose); } catch (e) { cv = /second opinion/.test(e.message) ? "caught" : "wrong reason"; }
+t("spent closer caught", cv, "caught");
+let cok = "passed"; try { W.enforceCloser("Intro." + pad(120) + "\n\n## A\n\nBody.\n\nContact Coinpresso for a free mini GEO audit and we will tell you which of these three you are missing."); } catch (e) { cok = e.message.slice(0, 50); }
+t("Liam's own kind of closer passes", cok, "passed");
+
 console.log("\nenforceOutline:");
 const ol = [{ n: 1, title: "One" }, { n: 2, title: "Two" }];
 const fenced = "Intro.\n\n## a\n\n```md\n## example\n```\n\n## b";

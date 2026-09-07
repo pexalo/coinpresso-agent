@@ -14,9 +14,10 @@
 
 import { NextResponse } from "next/server";
 import { getClient } from "@/lib/clients";
-import { getRun, saveRun } from "@/lib/store";
+import { getRun, listRuns, saveRun } from "@/lib/store";
 import { listSeeds } from "@/lib/blog-seed";
 import { executeRun } from "@/lib/pipeline";
+import { assignMoves } from "@/lib/blog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,6 +93,30 @@ export async function POST(
       run.brief.seedTopicId = seed.id;
       if (seed.keywords.length) run.brief.keywords = seed.keywords;
       if (seed.brief) run.brief.contentBrief = seed.brief;
+    }
+
+    // AN OPENING AND A CLOSER, DISTINCT FROM THE OTHER POSTS IN THE QUEUE.
+    // Runs planned before moves existed carry none, and a queue rewritten one
+    // post at a time cannot spread them out unless each rewrite looks at its
+    // siblings. So: every unpublished blog run is laid out together, the ones
+    // already stamped keep theirs, and this one takes the least-used move left.
+    if (run.brief.track === "blog" && !run.brief.introMove) {
+      const siblings = (await listRuns(ref))
+        .filter((r) => r.brief.track === "blog" && r.status !== "approved")
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const assigned = assignMoves(
+        siblings.map((r) => ({
+          title: r.brief.title,
+          contentType: r.brief.contentType,
+          introMove: r.id === run.id ? undefined : r.brief.introMove,
+          closeMove: r.id === run.id ? undefined : r.brief.closeMove,
+        }))
+      );
+      const mine = assigned[siblings.findIndex((r) => r.id === run.id)];
+      if (mine) {
+        run.brief.introMove = mine.introMove;
+        run.brief.closeMove = mine.closeMove;
+      }
     }
 
     run.status = "failed"; // executeRun flips it to running and resumes after strategy

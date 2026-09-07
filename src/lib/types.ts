@@ -69,6 +69,14 @@ export interface Brief {
    */
   seedTopicId?: string;
   /**
+   * How this post opens and closes, assigned when the day's batch is planned
+   * so that no two posts in the batch share one. See INTRO_MOVES and
+   * CLOSE_MOVES in blog.ts. Absent on a brief made outside a batch, in which
+   * case the writer derives one from the title.
+   */
+  introMove?: string;
+  closeMove?: string;
+  /**
    * A Coinpresso page this post exists to link to. Outreach rows in the content
    * calendar carry one; ordinary posts do not.
    */

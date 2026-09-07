@@ -410,6 +410,193 @@ Measured from 74 of Coinpresso's own briefs:
 - The last section is titled "Conclusion and FAQ", with exactly 5 FAQs`;
 
 /**
+ * Ways in and ways out, assigned rather than chosen.
+ *
+ * The introduction instruction used to be one formula — "set the scene: the
+ * reader's current reality and why it has changed, then say what the piece
+ * covers" — and the writer followed it faithfully seven times. Four of seven
+ * queued posts opened on the identical premise, "an AI engine will not mention
+ * you", sometimes almost the same sentence, and the client read four in a row
+ * and said so. The closer had the same problem from the other end: "If you
+ * want a second opinion… that's a conversation worth having before you spend"
+ * ended four of the seven. A template followed faithfully produces templated
+ * writing; the fault was the template.
+ *
+ * So the move is ASSIGNED, deterministically, from the format and the title.
+ * A model told to "vary your openings" has no idea what the other seven posts
+ * did and drifts back to whichever shape it likes best. Two posts of the same
+ * format on the same day still open and close differently by construction.
+ */
+export interface Move {
+  id: string;
+  how: string;
+}
+
+export const INTRO_MOVES: Move[] = [
+  {
+    id: "claim",
+    how: `Open with a flat claim about the subject itself, then concede at once what
+is awkward about it. Liam's own GEO guide does exactly this: "Generative Engine
+Optimization is a necessity, not a luxury, for crypto projects. A bold
+statement, however..." State the position in one line, admit the objection in
+the next, then spend the paragraph earning it.`,
+  },
+  {
+    id: "figure",
+    how: `Open on one number from the research, front-loaded, in a complete sentence.
+The number is the first thing on the page — no preamble, no "according to" —
+but it arrives inside a full sentence with a subject and a verb, and the
+sentences after it are full sentences too. A first attempt at this move read
+"Not the domain. Not a content programme. One page, out-earning entire
+portfolios." and the client called it word salad. Fragments stacked for effect
+are not his voice. Use only a figure the research has verified; if the risk
+notes flag it, it does not open the piece.`,
+  },
+  {
+    id: "scoreboard",
+    how: `Open with what the reader already knows — the league table, the consensus,
+the line every agency deck repeats — then turn on it with the one question
+nobody in that conversation has asked. The shape is: "everyone has seen this;
+almost nobody has asked why."`,
+  },
+  {
+    id: "verdict",
+    how: `Open with a blunt two-sentence verdict addressed straight at the reader,
+correcting what they believe is happening to them. Short sentences, no
+preamble, no scene-setting. Then explain why the distinction changes what they
+do next.`,
+  },
+  {
+    id: "scene",
+    how: `Open on one concrete thing teams actually do, described precisely enough
+that the reader recognises themselves — the specific file, the specific click,
+the specific line of config — and then name what it costs them.`,
+  },
+  {
+    id: "belief",
+    how: `Open by naming a belief this reader holds about the topic and killing it in
+a single line, then spend the rest of the paragraph on what is true instead.`,
+  },
+];
+
+export const CLOSE_MOVES: Move[] = [
+  {
+    id: "offer",
+    how: `End the way Liam ends his own guide: a direct, named offer in plain words.
+"Contact Coinpresso for a free mini GEO audit" — say what the reader gets and
+what it costs them (nothing, or an hour), not that "a conversation is worth
+having".`,
+  },
+  {
+    id: "dare",
+    how: `End on a one-line dare: name the single thing the reader could check on
+their own site tonight that would tell them whether this piece applies to them.
+Then one sentence on what Coinpresso does when it does.`,
+  },
+  {
+    id: "callback",
+    how: `End by returning to the image or number the piece opened on, now that the
+reader knows what it meant. One paragraph, and the offer sits inside it in half
+a sentence, not bolted on after.`,
+  },
+  {
+    id: "priority",
+    how: `End by telling the reader what to fix FIRST and what to leave alone, in
+that order, as a working instruction from someone who has done it. The offer is
+the last clause: this is the list Coinpresso works through.`,
+  },
+];
+
+/** Moves that suit each format. The title picks within the list. */
+const INTRO_BY_TYPE: Record<string, string[]> = {
+  data: ["figure", "scoreboard"],
+  teardown: ["figure", "scene"],
+  opinion: ["verdict", "belief"],
+  guide: ["claim", "belief", "scene"],
+  comparison: ["scoreboard", "figure"],
+  "case-note": ["scene", "figure"],
+  faq: ["belief", "verdict"],
+};
+
+function hashOf(text: string): number {
+  let h = 0;
+  for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h;
+}
+
+export function introMoveFor(title: string, contentType?: string): Move {
+  const ids = INTRO_BY_TYPE[contentType ?? ""] ?? INTRO_MOVES.map((m) => m.id);
+  const id = ids[hashOf(title) % ids.length];
+  return INTRO_MOVES.find((m) => m.id === id) ?? INTRO_MOVES[0];
+}
+
+/** A different hash seed from the intro, so intro and closer pair up unpredictably. */
+export function closeMoveFor(title: string): Move {
+  return CLOSE_MOVES[hashOf(`close:${title}`) % CLOSE_MOVES.length];
+}
+
+/**
+ * Assign openings and closers across a whole batch, so no two posts written
+ * on the same day share one.
+ *
+ * Hashing a title picks a move per post, but with two or three moves per
+ * format and four posts in a day, two of them collide about half the time —
+ * and two colliding is exactly what the client read as "they all sound the
+ * same". A batch knows all its posts at once, so it can hand them out: each
+ * post takes the least-used move that suits its format, ties broken by the
+ * title hash so the choice is still stable across re-plans.
+ */
+export function assignMoves(
+  posts: Array<{ title: string; contentType?: string; introMove?: string; closeMove?: string }>
+): Array<{ introMove: string; closeMove: string }> {
+  const introUse = new Map<string, number>();
+  const closeUse = new Map<string, number>();
+  // Posts that already carry a move keep it and count against the pool, so a
+  // queue rewritten one post at a time still spreads out — each retry sees
+  // what its siblings were given and takes something else.
+  for (const p of posts) {
+    if (p.introMove) introUse.set(p.introMove, (introUse.get(p.introMove) ?? 0) + 1);
+    if (p.closeMove) closeUse.set(p.closeMove, (closeUse.get(p.closeMove) ?? 0) + 1);
+  }
+  const pick = (ids: string[], use: Map<string, number>, seed: string): string => {
+    const start = hashOf(seed) % ids.length;
+    // Rotate so the hash-preferred move is tried first, then take the least used.
+    const order = [...ids.slice(start), ...ids.slice(0, start)];
+    const best = order.reduce((a, b) => ((use.get(b) ?? 0) < (use.get(a) ?? 0) ? b : a));
+    use.set(best, (use.get(best) ?? 0) + 1);
+    return best;
+  };
+  return posts.map((p) => ({
+    introMove:
+      p.introMove ??
+      pick(INTRO_BY_TYPE[p.contentType ?? ""] ?? INTRO_MOVES.map((m) => m.id), introUse, p.title),
+    closeMove: p.closeMove ?? pick(CLOSE_MOVES.map((m) => m.id), closeUse, `close:${p.title}`),
+  }));
+}
+
+export function moveById(list: Move[], id?: string): Move | undefined {
+  return id ? list.find((m) => m.id === id) : undefined;
+}
+
+/**
+ * Openings and closers that are spent. Each was used on three or more of the
+ * first seven posts. Matched against the first two sentences (openers) and the
+ * last paragraph (closers), because a writer told "do not do X" does it
+ * slightly differently and needs to be caught rather than trusted.
+ */
+export const SPENT_OPENERS: RegExp[] = [
+  /\b(ask(ed)? (chatgpt|perplexity|claude|gemini|an ai engine)|(chatgpt|perplexity|ai engines?) (doesn't|does not|never|won't|will not) (mention|say|name|cite))/i,
+  /\byou (don't|do not) exist\b/i,
+  /\bgot a (hedge|shrug)\b/i,
+];
+
+export const SPENT_CLOSERS: RegExp[] = [
+  /\bsecond (opinion|pair of eyes)\b/i,
+  /\ba conversation worth having\b/i,
+  /\bbefore you spend (another|on)\b/i,
+];
+
+/**
  * Coinpresso's own voice — distinct from the Moonberg wire voice.
  *
  * Liam's review of the E-E-A-T piece (2 Sep 2026): the structure and sourcing
@@ -461,7 +648,35 @@ honesty rules below are not loosened by any of this.
 - Bullet lists are allowed here, unlike the wire work, but never more than one
   list per two screens of prose
 - Numerals for figures; en-GB spelling
-- One call to action, at the end, low-pressure
+- One call to action, at the end — direct and named, the way Liam's own
+  guide does it ("contact Coinpresso for a free mini GEO audit"), never the
+  soft "a conversation worth having"
+
+## Register — measured off Liam's own writing, not described
+Liam's GEO guide, the benchmark he named, runs about 190 words of introduction
+with sentences averaging 21 words and one that runs to 52. He addresses the
+reader directly ("your Web3 brand", "your project") four times before the first
+heading, he names the Coinpresso method by its name ("the proprietary Crypto GEO
+Trust Framework"), and he reaches for the idiom a founder would use over the
+phrase a consultant would: "needs must", "nice to have", "buy-in", "cut through
+the smoke". A first pass at matching his voice came out a third too short, in
+dry editorial wit rather than swagger, and never once said "you" in two of four
+pieces. So:
+- Talk to the reader. "You" and "your" belong in every introduction and most
+  sections.
+- Name the thing. If the brief gives the method a name — the AI Citation
+  Hierarchy, the objective-arbiter positioning, the invisible YMYL filter — use
+  it, capitalised, as Liam would.
+- Long sentences are welcome when they are real sentences. Liam's 52-word
+  sentence is one clause joined to the next with conjunctions, and it parses.
+  What is NOT his voice is a chain of fragments separated by commas ("Not the
+  domain, not a content programme, one comparison page, out-earning entire
+  portfolios") or a list of four noun phrases hung off a colon. He read one of
+  those and called it word salad. One idea per sentence, a conjunction where
+  two ideas join, a full stop where they do not. The schema-markup introduction
+  he approved is the model: every sentence complete, one image, no stacking.
+- One idiom per section is right. Three is a tic.
+- Swagger in the framing, never in the figures.
 
 ## Punctuation
 Em dashes: sparing, not absent. The target is Liam's own rate — his GEO guide

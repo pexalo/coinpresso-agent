@@ -14,8 +14,15 @@ import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brie
 import { allArticles, exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import { feedbackBlock, readFeedback } from "../feedback";
 import {
+  CLOSE_MOVES,
   COINPRESSO_PAGES,
+  INTRO_MOVES,
+  SPENT_CLOSERS,
+  SPENT_OPENERS,
+  closeMoveFor,
   internalLinkTargets,
+  introMoveFor,
+  moveById,
   BLOG_ARCHIVE_ID,
   BLOG_OFF_GENRE_TITLE,
   BLOG_VOICE_EXEMPLARS,
@@ -174,15 +181,56 @@ export function enforceOutline(body: string, outline: BriefSection[]): string {
  * floor, not a target — it separates "a real opening" from "one sentence and
  * a heading".
  */
+/**
+ * The introduction: long enough, and not one of the openings that is spent.
+ *
+ * The floor was 60 words against a house length of ~190; a 52-word opener
+ * passed. It is 110 now — a third under Liam's own, which is as low as an
+ * introduction can go and still set a scene. Then the first two sentences are
+ * checked against the openers four of seven posts shared, because a writer
+ * told not to use one does it slightly differently, and slightly differently
+ * is still the same opening to a reader.
+ */
 export function enforceIntro(body: string): void {
   body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
   const intro = firstH2 === -1 ? body : body.slice(0, firstH2);
-  const words = intro.split(/\s+/).filter(Boolean).length;
-  if (words < 60) {
+  const words = wordCount(intro);
+  if (words < 110) {
     throw new Error(
-      `The article opens on its first section with ${words} words of introduction before it. ` +
-        `Every post needs one to two scene-setting paragraphs before the first H2 — retry the writer.`
+      `The introduction is ${words} words; the house runs about 190 and the floor is 110. ` +
+        `Two paragraphs before the first H2 that talk to the reader and set the scene — retry the writer.`
+    );
+  }
+  const opening = intro.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+  const spent = SPENT_OPENERS.find((re) => re.test(opening));
+  if (spent) {
+    throw new Error(
+      `The piece opens "${opening.slice(0, 120)}…" — the "an AI engine will not mention you" opening ` +
+        `that four of the first seven posts used. Open it the way the brief assigns, not this way. Retry the writer.`
+    );
+  }
+}
+
+/**
+ * The closer: not the one that ended four of seven posts.
+ *
+ * "If you want a second opinion… that's a conversation worth having before
+ * you spend" is the intro problem from the other end, and it reads even worse
+ * there because it is the last thing a founder sees. Liam ends his own guide
+ * on a direct, named offer. Checked on the last paragraph of prose.
+ */
+export function enforceCloser(body: string): void {
+  const paras = proseOf(body)
+    .split(/\n\s*\n/)
+    .map((x) => x.trim())
+    .filter((x) => x && !/^#{1,6}\s/.test(x));
+  const last = paras[paras.length - 1] ?? "";
+  const spent = SPENT_CLOSERS.find((re) => re.test(last));
+  if (spent) {
+    throw new Error(
+      `The piece ends "${last.slice(0, 120)}…" — the "second opinion / conversation worth having" closer ` +
+        `four of the first seven posts used. End it the way the brief assigns: a direct, named offer, a dare, a callback, or a priority list. Retry the writer.`
     );
   }
 }
@@ -931,11 +979,32 @@ sections, their order, the questions, the length — follow the brief.\n`
   // will get. Not a heading of its own. The client flagged this on the first
   // rewrite: the article "went straight in" to section one. It applies to both
   // paths below because it is how the house reads, whoever wrote the outline.
-  const introRule = `INTRODUCTION. Before the first H2, write one to two paragraphs (80-150
-words) with NO heading: set the scene — the reader's current reality and why it
-has changed — and say what this piece will take them through. The first H2
-comes after it. Section 1 then develops the opening in depth; it does not repeat
-the introduction.`;
+  // Both ends of the piece are ASSIGNED a move rather than left to habit. One
+  // formula for the intro produced four posts out of seven opening on the same
+  // premise; one habit for the closer ended four of seven on "a second
+  // opinion". See INTRO_MOVES / CLOSE_MOVES in blog.ts.
+  const intro =
+    moveById(INTRO_MOVES, brief.introMove) ?? introMoveFor(brief.title, brief.contentType);
+  const closer = moveById(CLOSE_MOVES, brief.closeMove) ?? closeMoveFor(brief.title);
+  const introRule = `INTRODUCTION. Before the first H2, write two paragraphs, 150-220 words in
+total, with NO heading. That is the house length: Liam's own guide runs 190.
+Talk to the reader ("you", "your") and, where the brief names the method, name
+it. The first H2 comes after; section 1 develops the opening rather than
+repeating it.
+
+OPEN IT THIS WAY — "${intro.id}":
+${intro.how}
+
+Do NOT open on the reader's situation and why it has changed — that was every
+previous post. Do NOT open on "ask ChatGPT about X and you get Y", "ChatGPT
+doesn't mention your project" or "you don't exist" — four of seven posts did,
+and the client noticed.
+
+CLOSING PARAGRAPH — "${closer.id}":
+${closer.how}
+
+Do NOT end on "if you want a second opinion / a second pair of eyes… that's a
+conversation worth having before you spend". Four of seven posts did.`;
 
   const structureBlock = fixedStructure
     ? `${introRule}
@@ -1152,6 +1221,7 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       }
 
       enforceIntro(parsed.body);
+      enforceCloser(parsed.body);
       enforceProse(parsed.body);
       enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
       enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);

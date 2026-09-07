@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { defaultCampaign, getClient, hasModule } from "@/lib/clients";
 import { resolveCampaign } from "@/lib/campaign-store";
 import { PUBLICATIONS } from "@/lib/publications";
-import { CONTENT_TYPES, PILLARS } from "@/lib/blog";
+import { CONTENT_TYPES, PILLARS, assignMoves } from "@/lib/blog";
 import {
   executeBatch,
   listBatches,
@@ -119,10 +119,21 @@ export async function POST(
   if (track === "blog") {
     // No campaign, no fact sheet, no banned-claims block: this is Coinpresso's
     // own domain, and nothing on it is selling a token.
-    briefs = items.map((i) => {
+    // Openings and closers are handed out across the batch here, where every
+    // post of the day is visible at once, so no two share one. Left to each
+    // post alone, two of four collided and the client read them as the same.
+    const moves = assignMoves(
+      items.map((i) => ({
+        title: i.title.trim(),
+        contentType: CONTENT_TYPES[i.contentType as ContentTypeId]?.id ?? "guide",
+      }))
+    );
+    briefs = items.map((i, idx) => {
       const pillar = PILLARS.find((p) => p.id === i.pillar);
       const type = CONTENT_TYPES[i.contentType as ContentTypeId];
       return {
+        introMove: moves[idx].introMove,
+        closeMove: moves[idx].closeMove,
         title: i.title.trim(),
         keywords: i.keywords ?? [],
         publication: "openpr" as PublicationId, // unused on this track
