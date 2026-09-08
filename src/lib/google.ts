@@ -207,22 +207,42 @@ export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
   const folder = process.env.GOOGLE_DRIVE_BLOG_FOLDER_ID || BLOG_FOLDER_FALLBACK;
   const title = run.draft.headline || run.brief.title;
 
-  const created = await fetch("https://docs.googleapis.com/v1/documents", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ title }),
-  });
+  // Create through Drive, not Docs.
+  //
+  // documents.create always makes the file in the caller's own My Drive, and a
+  // service account's My Drive has no storage of its own — which surfaces as a
+  // bare "The caller does not have permission" rather than anything about
+  // quota. Creating through Drive with an explicit parent puts the Doc straight
+  // into Coinpresso's folder, where the folder's owner provides the space, and
+  // skips the separate move step entirely.
+  const created = await fetch(
+    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        name: title,
+        mimeType: "application/vnd.google-apps.document",
+        parents: [folder],
+      }),
+    }
+  );
   if (!created.ok) {
-    throw new Error(`Docs create ${created.status}: ${await created.text()}`);
+    const detail = await created.text();
+    throw new Error(
+      created.status === 403 || created.status === 404
+        ? `Drive refused to create the Doc in folder ${folder} (${created.status}). Share that folder with ${sa.client_email} as an Editor, and check the Google Drive API is enabled on the same project the key came from. Google said: ${detail}`
+        : `Drive create ${created.status}: ${detail}`
+    );
   }
-  const doc = (await created.json()) as { documentId: string };
+  const doc = (await created.json()) as { id: string };
 
   const built = buildDoc(title, run.draft.body, run.draft.faqs ?? []);
   const styled = await fetch(
-    `https://docs.googleapis.com/v1/documents/${doc.documentId}:batchUpdate`,
+    `https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`,
     {
       method: "POST",
       headers: {
@@ -240,26 +260,16 @@ export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
     }
   );
   if (!styled.ok) {
-    throw new Error(`Docs write ${styled.status}: ${await styled.text()}`);
-  }
-
-  const moved = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${doc.documentId}?addParents=${folder}&removeParents=root&supportsAllDrives=true`,
-    { method: "PATCH", headers: { authorization: `Bearer ${token}` } }
-  );
-  if (!moved.ok) {
-    // The Doc exists and is written; it just could not be filed. Say where it
-    // is and who needs access, rather than failing silently in the client's
-    // Drive where nobody will ever look for it.
-    return {
-      docUrl: `https://docs.google.com/document/d/${doc.documentId}/edit`,
-      serviceAccount: sa.client_email,
-      skippedReason: `The Doc was created but could not be moved into the Coinpresso Blog folder (Drive said ${moved.status}). Share that folder with ${sa.client_email} as an Editor, then press the button again.`,
-    };
+    const detail = await styled.text();
+    throw new Error(
+      styled.status === 403
+        ? `The Doc was created in the folder but could not be written to (403). This is almost always the Google Docs API being disabled on the project the key came from — Drive and Docs are separate switches. Google said: ${detail}`
+        : `Docs write ${styled.status}: ${detail}`
+    );
   }
 
   return {
-    docUrl: `https://docs.google.com/document/d/${doc.documentId}/edit`,
+    docUrl: `https://docs.google.com/document/d/${doc.id}/edit`,
     serviceAccount: sa.client_email,
   };
 }
