@@ -38,9 +38,11 @@ export async function POST(
     }
     return NextResponse.json(result, { status: result.docUrl ? 200 : 409 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Upload failed" },
-      { status: 502 }
-    );
+    const message = err instanceof Error ? err.message : "Upload failed";
+    console.error("[export-doc]", message);
+    // Deliberately NOT a 5xx. Railway's edge replaces any 5xx body with its own
+    // "Bad gateway" page, which swallows the Google error text and leaves the
+    // operator staring at a generic proxy error. 424 travels intact.
+    return NextResponse.json({ error: message }, { status: 424 });
   }
 }
