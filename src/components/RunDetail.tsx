@@ -81,8 +81,39 @@ export default function RunDetail({
 
   const onGate = useCallback((g: GateState) => setGate(g), []);
 
+  const [driving, setDriving] = useState(false);
+  const [driveMsg, setDriveMsg] = useState<string | null>(null);
+  const [driveOk, setDriveOk] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryMsg, setRetryMsg] = useState<string | null>(null);
+
+  // Upload to Drive. Deliberately allowed before approval: the whole point is
+  // that the client reads and comments on the Doc while the draft is still open.
+  const uploadToDrive = useCallback(async () => {
+    setDriving(true);
+    setDriveMsg(null);
+    try {
+      const res = await fetch(
+        `/api/clients/${ref}/runs/${id}/export-doc`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      setDriveOk(Boolean(data.docUrl) && !data.skippedReason);
+      setDriveMsg(
+        data.skippedReason ??
+          data.error ??
+          "Uploaded to the Coinpresso Blog folder in Google Drive."
+      );
+      if (data.docUrl) {
+        setRun((r) => (r ? { ...r, docUrl: data.docUrl } : r));
+      }
+    } catch {
+      setDriveOk(false);
+      setDriveMsg("Could not reach the server.");
+    } finally {
+      setDriving(false);
+    }
+  }, [ref, id]);
 
   // Fire the retry, then fall back into the normal polling loop: the run's
   // status leaves "failed", the settled check stops matching, and the page
@@ -267,6 +298,16 @@ export default function RunDetail({
           )}
           {isBlog && run.draft && (
             <button
+              onClick={uploadToDrive}
+              disabled={driving}
+              title="Creates a formatted Google Doc in the Coinpresso Blog folder. Safe to press at any stage; it makes a new Doc each time."
+              className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              {driving ? "Uploading…" : "Upload to Drive"}
+            </button>
+          )}
+          {isBlog && run.draft && (
+            <button
               onClick={sendToWordPress}
               disabled={pushing || !(gateOpen || run.status === "approved")}
               title={
@@ -287,6 +328,32 @@ export default function RunDetail({
           This run executed in mock mode — no search was performed and no figure
           in it is real. Add <code>ANTHROPIC_API_KEY</code> and{" "}
           <code>OPENAI_API_KEY</code> to <code>.env.local</code> for live runs.
+        </div>
+      )}
+
+      {driveMsg && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-[12px] ${
+            driveOk
+              ? "border-[var(--success)]/30 bg-[var(--success)]/10 text-[var(--success)]"
+              : "border-[var(--warning)]/30 bg-[var(--warning)]/10 text-[var(--warning)]"
+          }`}
+        >
+          {driveMsg}
+          {driveOk && run.docUrl && (
+            <>
+              {" "}
+              <a
+                href={run.docUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline font-semibold"
+              >
+                Open it
+              </a>
+              .
+            </>
+          )}
         </div>
       )}
 

@@ -14,6 +14,7 @@ import crypto from "node:crypto";
 import type { Run } from "./types";
 import { PUBLICATIONS } from "./publications";
 import { renderPlainText } from "./render";
+import { buildDoc } from "./google-doc";
 
 interface ServiceAccount {
   client_email: string;
@@ -168,4 +169,97 @@ export async function exportRun(run: Run): Promise<ExportResult> {
   }
 
   return { docUrl, sheetUpdated };
+}
+
+/** The folder Coinpresso keeps blog drafts in. Overridable per deployment. */
+const BLOG_FOLDER_FALLBACK = "1-_FTFU7m1JFoPJdGyhkPNWMspyhNYGxx";
+
+export interface BlogExportResult {
+  docUrl: string | null;
+  skippedReason?: string;
+  /** Named so the operator knows who to share the folder with on a 403. */
+  serviceAccount?: string;
+}
+
+/**
+ * Put a blog draft in Drive as a formatted Google Doc, on demand.
+ *
+ * Separate from exportRun because the two want different things. That one fires
+ * once, at release, and writes a PR-shaped row to the campaign calendar. This
+ * one is a button next to a queued draft: it can be pressed while the post is
+ * still being argued over, so it must be safe to press twice, and it must not
+ * touch the calendar or the run's approval state.
+ */
+export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
+  const sa = credentials();
+  if (!sa) {
+    return {
+      docUrl: null,
+      skippedReason:
+        "GOOGLE_SERVICE_ACCOUNT_B64 is not set on this deployment, so there is no Google identity to create the Doc with.",
+    };
+  }
+  if (!run.draft) {
+    return { docUrl: null, skippedReason: "This run has no draft yet." };
+  }
+
+  const token = await accessToken(sa);
+  const folder = process.env.GOOGLE_DRIVE_BLOG_FOLDER_ID || BLOG_FOLDER_FALLBACK;
+  const title = run.draft.headline || run.brief.title;
+
+  const created = await fetch("https://docs.googleapis.com/v1/documents", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ title }),
+  });
+  if (!created.ok) {
+    throw new Error(`Docs create ${created.status}: ${await created.text()}`);
+  }
+  const doc = (await created.json()) as { documentId: string };
+
+  const built = buildDoc(title, run.draft.body, run.draft.faqs ?? []);
+  const styled = await fetch(
+    `https://docs.googleapis.com/v1/documents/${doc.documentId}:batchUpdate`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        // The insert has to land before anything styles it, and the styling
+        // ranges were measured against exactly this string.
+        requests: [
+          { insertText: { location: { index: 1 }, text: built.text } },
+          ...built.requests,
+        ],
+      }),
+    }
+  );
+  if (!styled.ok) {
+    throw new Error(`Docs write ${styled.status}: ${await styled.text()}`);
+  }
+
+  const moved = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${doc.documentId}?addParents=${folder}&removeParents=root&supportsAllDrives=true`,
+    { method: "PATCH", headers: { authorization: `Bearer ${token}` } }
+  );
+  if (!moved.ok) {
+    // The Doc exists and is written; it just could not be filed. Say where it
+    // is and who needs access, rather than failing silently in the client's
+    // Drive where nobody will ever look for it.
+    return {
+      docUrl: `https://docs.google.com/document/d/${doc.documentId}/edit`,
+      serviceAccount: sa.client_email,
+      skippedReason: `The Doc was created but could not be moved into the Coinpresso Blog folder (Drive said ${moved.status}). Share that folder with ${sa.client_email} as an Editor, then press the button again.`,
+    };
+  }
+
+  return {
+    docUrl: `https://docs.google.com/document/d/${doc.documentId}/edit`,
+    serviceAccount: sa.client_email,
+  };
 }
