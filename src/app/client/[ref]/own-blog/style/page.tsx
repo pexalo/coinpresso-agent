@@ -2,6 +2,7 @@ import { BLOG_PLAYBOOK, BLOG_STYLE } from "@/lib/blog";
 import { MODELS } from "@/lib/models";
 import { readFeedback } from "@/lib/feedback";
 import FeedbackLog from "@/components/FeedbackLog";
+import DesignerReferences from "@/components/DesignerReferences";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,8 @@ export default async function BlogStylePage({
       </div>
 
       <FeedbackLog initial={feedback} />
+
+      <DesignerReferences />
 
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--line)]">

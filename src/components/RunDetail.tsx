@@ -8,6 +8,7 @@ import ArticleView from "@/components/ArticleView";
 import ApprovalGate from "@/components/ApprovalGate";
 import SourceLedger from "@/components/SourceLedger";
 import OutlinePanel from "@/components/OutlinePanel";
+import FeaturedImage from "@/components/FeaturedImage";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -469,6 +470,16 @@ export default function RunDetail({
               the piece is sitting here. */}
           {run.draft && (
             <ApprovalGate clientRef={ref} runId={id} onGate={onGate} />
+          )}
+          {/* Blog only for now. The agent is general, but a wire release has
+              no featured image to attach one to. */}
+          {isBlog && (
+            <FeaturedImage
+              clientRef={ref}
+              runId={id}
+              headline={run.draft?.headline ?? run.brief.title}
+              hasDraft={Boolean(run.draft)}
+            />
           )}
           <RunTimeline stages={run.stages} />
           {isBlog && <OutlinePanel brief={run.brief.contentBrief} draft={run.draft} />}
