@@ -82,6 +82,40 @@ export function renderHtml(run: Run, opts: HtmlOptions = {}): string {
       const level = Math.min(h[1].length, 4);
       return `<h${level}>${inline(h[2])}</h${level}>`;
     }
+    // A markdown table. The client asked for real tables in the posts, so they
+    // have to survive the trip into WordPress — before this they arrived as a
+    // paragraph of pipe characters, which is worse than not having the table.
+    if (/^\s*\|.*\|\s*$/m.test(block) && block.split("\n").length >= 2) {
+      const rows = block
+        .split("\n")
+        .map((r) => r.trim())
+        .filter((r) => r.startsWith("|"));
+      // The --- row is the separator, not data.
+      const isRule = (r: string) => /^\|[\s:|-]+\|$/.test(r);
+      const cells = (r: string) =>
+        r.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const body = rows.filter((r) => !isRule(r));
+      if (body.length) {
+        const head = cells(body[0])
+          .map((c) => `<th>${inline(c)}</th>`)
+          .join("");
+        const rest = body
+          .slice(1)
+          .map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`)
+          .join("");
+        return `<figure class="wp-block-table"><table><thead><tr>${head}</tr></thead><tbody>${rest}</tbody></table></figure>`;
+      }
+    }
+
+    // Bullet and numbered lists, for the same reason.
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length && lines.every((l) => /^[-*+]\s+\S/.test(l))) {
+      return `<ul>${lines.map((l) => `<li>${inline(l.replace(/^[-*+]\s+/, ""))}</li>`).join("")}</ul>`;
+    }
+    if (lines.length && lines.every((l) => /^\d+\.\s+\S/.test(l))) {
+      return `<ol>${lines.map((l) => `<li>${inline(l.replace(/^\d+\.\s+/, ""))}</li>`).join("")}</ol>`;
+    }
+
     // A bare URL on its own line is a naked-style citation — keep it linked but
     // visually as the wire expects.
     if (/^https?:\/\/\S+$/.test(block)) {
@@ -117,6 +151,7 @@ export function renderHtml(run: Run, opts: HtmlOptions = {}): string {
         /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
         '<a href="$2">$1</a>'
       )
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
       .replace(/(^|[\s(])_([^_\n]+)_/g, "$1<em>$2</em>")

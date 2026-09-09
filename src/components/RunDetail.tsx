@@ -9,6 +9,7 @@ import ApprovalGate from "@/components/ApprovalGate";
 import SourceLedger from "@/components/SourceLedger";
 import OutlinePanel from "@/components/OutlinePanel";
 import FeaturedImage from "@/components/FeaturedImage";
+import PublishManually from "@/components/PublishManually";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -479,6 +480,24 @@ export default function RunDetail({
               runId={id}
               headline={run.draft?.headline ?? run.brief.title}
               hasDraft={Boolean(run.draft)}
+            />
+          )}
+          {/* Under the image, because the guide's fifth step needs it to
+              exist. Collapsed by default: most posts go through the button. */}
+          {isBlog && run.draft && run.rendered && (
+            <PublishManually
+              clientRef={ref}
+              runId={id}
+              headline={run.draft.headline}
+              html={run.rendered.html}
+              markdown={run.rendered.markdown}
+              slug={run.draft.headline
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-|-$/g, "")
+                .split("-")
+                .slice(0, 8)
+                .join("-")}
             />
           )}
           <RunTimeline stages={run.stages} />
