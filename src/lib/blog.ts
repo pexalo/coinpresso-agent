@@ -192,6 +192,37 @@ export interface SitePage {
 export const COINPRESSO_PAGES: SitePage[] = [
   { url: "https://coinpresso.io/crypto-seo", topic: "crypto SEO" },
   { url: "https://coinpresso.io/crypto-seo/for-web3", topic: "Web3 SEO" },
+  // Added 9 Sep: the client added this link by hand to the piece he approved,
+  // noting "internal linking is really solid, added one opportunity missed".
+  // It was missing from this list, so the writer could not have used it — a
+  // link to a page that is not here is rejected by enforceLinks.
+  {
+    url: "https://coinpresso.io/web3-marketing-agency",
+    topic: "Web3 marketing",
+  },
+  // Found in the same audit: five more live service pages the writer could
+  // never link because they were absent here. Verified against the live site
+  // before adding — a URL in this list that 404s is worse than a missing one.
+  {
+    url: "https://coinpresso.io/metaverse-marketing",
+    topic: "metaverse marketing",
+  },
+  {
+    url: "https://coinpresso.io/reddit-crypto-marketing",
+    topic: "crypto Reddit marketing",
+  },
+  {
+    url: "https://coinpresso.io/four-meme-marketing",
+    topic: "Four.meme launch marketing",
+  },
+  {
+    url: "https://coinpresso.io/smm-for-crypto/telegram-marketing",
+    topic: "crypto Telegram marketing",
+  },
+  {
+    url: "https://coinpresso.io/smm-for-crypto/discord-marketing",
+    topic: "crypto Discord marketing",
+  },
   { url: "https://coinpresso.io/geo-llm-optimization-for-crypto-web3", topic: "generative engine optimisation (GEO) for crypto and Web3" },
   { url: "https://coinpresso.io/llm-optimization-for-crypto-web3-websites", topic: "LLM optimisation for crypto websites" },
   { url: "https://coinpresso.io/crypto-link-building-services", topic: "crypto link building" },

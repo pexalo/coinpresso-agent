@@ -48,6 +48,24 @@ export interface FeedbackLog {
  * wins once anything has been saved.
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
+  {
+    id: "liam-what-good-looks-like",
+    source: "Liam, September batch (the piece he approved)",
+    date: "2026-09-09",
+    rule:
+      "What he praised, in his own words, on the only piece he passed without changes: 'Readability is there, it has a lot of good takeaways that can be implemented for free while also showcasing our expertise in this realm. Internal linking is really solid. Like the structure, flow, tone of voice. It reads pretty closely to my own writing style.' Two things to take from that. Give the reader things they can act on for free, and let the expertise show through the specificity of the advice rather than through claims about the agency.",
+    active: true,
+  },
+  {
+    id: "liam-link-in-the-opening",
+    source: "Liam, September batch (his own edit)",
+    date: "2026-09-09",
+    rule:
+      "An internal link belongs in the opening paragraph where a natural phrase carries one. He said 'internal linking is really solid, added one opportunity missed' and then added a Web3 marketing link to the first sentence himself. Scan the intro for the service phrase the piece already uses and link it there, rather than saving every internal link for the body.",
+    before: "There is a belief doing the rounds in Web3 marketing that if you rank well enough on Google…",
+    after: "There is a belief doing the rounds in [Web3 marketing](https://coinpresso.io/web3-marketing-agency) that if you rank well enough on Google…",
+    active: true,
+  },
   // ---- Round 5: the September batch. Four of five cleared to publish; the
   // E-E-A-T piece sent back. Every rule below is his wording, and each has a
   // matching check in writer.ts so it costs a rejection rather than a reviewer
