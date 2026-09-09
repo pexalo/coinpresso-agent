@@ -48,6 +48,76 @@ export interface FeedbackLog {
  * wins once anything has been saved.
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
+  // ---- Round 5: the September batch. Four of five cleared to publish; the
+  // E-E-A-T piece sent back. Every rule below is his wording, and each has a
+  // matching check in writer.ts so it costs a rejection rather than a reviewer
+  // noticing it later.
+  {
+    id: "liam-structure-paragraphs",
+    source: "Liam, September batch (E-E-A-T and DeFi)",
+    date: "2026-09-09",
+    rule:
+      "Keep paragraphs to two to four sentences. He said the agent 'seemed to forget structure and use of line breaks/new paragraphs' and that 'there are lots of big sections of text here which need to be broken up better'. He then went through three approved drafts and split the long paragraphs by hand — every one he split was over 125 words, and nothing under that was touched. Break at the turn in the argument, not mid-thought.",
+    before:
+      "What matters inside the block is specificity. operatingSystem and applicationCategory are the properties an engine uses to disambiguate… There is no dedicated schema property for 'audited by', so the working pattern is a review or citation pointing at the published audit, plus the audit firm named in author or publisher on that nested entity. It is a workaround, and it is the best one available until the vocabulary catches up.",
+    after:
+      "…plus the audit firm named in author or publisher on that nested entity.\n\nIt is a workaround, and it is the best one available until the vocabulary catches up.",
+    active: true,
+  },
+  {
+    id: "liam-anchor-length",
+    source: "Liam, September batch (E-E-A-T)",
+    date: "2026-09-09",
+    rule:
+      "Anchor text is the phrase a reader would click, not the whole claim. He flagged 'a lot of really long external links taking up whole sentences'. Cap anchors at about a dozen words and leave the rest of the sentence outside the link.",
+    before:
+      "[BrightEdge has tracked AI agent requests reaching 88% of human organic search volume as of April 2026](url)",
+    after:
+      "[BrightEdge has tracked AI agent requests](url) reaching 88% of human organic search volume as of April 2026",
+    active: true,
+  },
+  {
+    id: "liam-link-scatter",
+    source: "Liam, September batch (E-E-A-T)",
+    date: "2026-09-09",
+    rule:
+      "Scatter links through the piece rather than clustering them. His note: 'a lot of links stuffed into a small body of text. Links need to be naturally placed throughout, both internal and external.' Two links inside the same sentence or a dozen words apart is stuffing.",
+    active: true,
+  },
+  {
+    id: "liam-sentence-variety",
+    source: "Liam, September batch (comparison pages)",
+    date: "2026-09-09",
+    rule:
+      "Vary sentence length. He warned that the short punchy style, pushed too far, 'can go too far and come off as word salad' — and in the same breath warned against overcorrecting: 'don't wanna make it start writing encyclopaedias for one sentence, but there is a middle ground'. Never run more than about four short sentences together without a longer one carrying the argument.",
+    active: true,
+  },
+  {
+    id: "liam-render-what-you-promise",
+    source: "Liam, September batch (DeFi and Schema)",
+    date: "2026-09-09",
+    rule:
+      "If the prose says 'in a table' or calls something a checklist, render a real markdown table or list. He raised this twice in one round: 'We are referencing a table here but haven't formatted as a table?' and 'Referenced a checklist here. Should also be in a checklist format of which can then be crawled/parsed by AIs as a result and get us more mentions.' These posts argue that engines lift structured facts and skip prose claims, so describing a table in a paragraph fails the post's own advice in public.",
+    active: true,
+  },
+  {
+    id: "liam-american-spelling",
+    source: "Liam, September batch (inline edits)",
+    date: "2026-09-09",
+    rule:
+      "House spelling is American: centralized, recognize, optimization, analyze, behavior. He changed these by hand in the drafts rather than commenting on them.",
+    before: "a centralised exchange engines recognise",
+    after: "a centralized exchange engines recognize",
+    active: true,
+  },
+  {
+    id: "liam-structural-exemplar",
+    source: "Liam, September batch (verdicts)",
+    date: "2026-09-09",
+    rule:
+      "\"Why ChatGPT and Perplexity Don't Cite Crypto Brands\" is the structural exemplar. His words: 'The structure in that piece was perfect and should be what the agent follows. Readable, bite-sized paragraphs with naturally scattered links throughout.' When a structural choice is uncertain, match that piece.",
+    active: true,
+  },
   {
     id: "liam-eeat-voice",
     source: "Liam, E-E-A-T review",

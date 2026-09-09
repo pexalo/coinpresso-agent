@@ -678,6 +678,31 @@ pieces. So:
 - One idiom per section is right. Three is a tic.
 - Swagger in the framing, never in the figures.
 
+## Structure — the shape of the page, measured off what the client approved
+
+Paragraphs run two to four sentences. When the client reviewed the September
+batch he went through the approved drafts and split the long paragraphs by hand;
+every one he broke was over 125 words and nothing shorter was touched. Break at
+the turn in the argument, never mid-thought. A wall of text is the fastest way
+to have a piece sent back, and it was his single most repeated note.
+
+Links are scattered through the piece, not clustered. Anchor text is the phrase
+a reader would click — a dozen words at the outside — and the rest of the claim
+stays outside the link as ordinary prose. Two links a few words apart read as
+stuffing even when both are good.
+
+If you say "in a table" or call something a checklist, render one: a real
+markdown table with a header row, or a "- " list. These posts argue that engines
+lift structured facts and skip prose claims, so a post that describes a table in
+a paragraph is failing its own advice where the reader can see it.
+
+Spelling is American throughout: centralized, recognize, optimization, analyze,
+behavior.
+
+The structural model is "Why ChatGPT and Perplexity Don't Cite Crypto Brands",
+which the client called perfect: readable, bite-sized paragraphs with naturally
+scattered links. When a structural choice is uncertain, match that piece.
+
 ## Punctuation
 Em dashes: sparing, not absent. The target is Liam's own rate — his GEO guide
 runs about 5 per thousand words, so roughly one every other section. His

@@ -1209,6 +1209,11 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // the writer overshot a cap it cannot count to.
       parsed.body = trimLinks(parsed.body, pillar?.hub);
 
+      // House spelling is American. Mechanical, so it is corrected on every
+      // attempt rather than spending a paid one telling the writer that
+      // "centralised" should have been "centralized".
+      parsed.body = americanize(parsed.body);
+
       // LAST ATTEMPT: fix the punctuation rather than bin the article.
       //
       // Two attempts are spent asking the writer to do it, because a sentence
@@ -1225,6 +1230,14 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       enforceProse(parsed.body);
       enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
       enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);
+      // Round 5. All four are writing tasks — where to break a paragraph, how
+      // to shorten an anchor, which two short sentences to join — so they are
+      // rejections that feed the reason back, not silent code edits.
+      enforceAnchorLength(parsed.body);
+      enforceLinkSpacing(parsed.body);
+      enforceParagraphSize(parsed.body);
+      enforceSentenceVariety(parsed.body);
+      enforcePromisedStructures(parsed.body);
       if (fixedStructure) {
         parsed.body = enforceOutline(parsed.body, outline);
         if (brief.contentBrief?.faqs?.length) {
@@ -1455,4 +1468,221 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
   };
 
   return { draft, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+}
+
+// ---------------------------------------------------------------------------
+// Round 5, from Liam's annotations on the September batch.
+//
+// Every threshold below is measured off the piece he called perfect ("Why
+// ChatGPT and Perplexity Don't Cite Crypto Brands") or off the paragraph breaks
+// he inserted by hand while editing the others — not off anyone's taste. Where
+// a number is a judgement call the comment says which draft set it and why,
+// so the next person can argue with the evidence rather than the opinion.
+// ---------------------------------------------------------------------------
+
+/** Anchors this long stop being anchors and become the sentence. */
+const ANCHOR_MAX_WORDS = 12;
+/** Two links closer than this read as stuffed rather than scattered. */
+const LINK_MIN_GAP_WORDS = 15;
+/** The exemplar's longest paragraph, rounded up. A backstop, not the target. */
+const PARA_MAX_WORDS = 125;
+/** A sentence under this is a short one for run-length purposes. */
+const SHORT_SENTENCE_WORDS = 12;
+/** The comparison draft he called word salad ran five short ones together. */
+const MAX_SHORT_RUN = 4;
+
+function paragraphsOf(body: string): string[] {
+  return proseOf(body)
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter((p) => p && !p.startsWith("#"));
+}
+
+/** Anchor text with the link syntax removed, for counting real words. */
+function unlink(text: string): string {
+  return text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+}
+
+export function enforceAnchorLength(body: string): void {
+  const long = [...proseOf(body).matchAll(/\[([^\]]+)\]\([^)]*\)/g)]
+    .map((m) => m[1])
+    .filter((a) => wordCount(a) > ANCHOR_MAX_WORDS);
+  if (!long.length) return;
+  throw new Error(
+    `${long.length} link${long.length === 1 ? " has" : "s have"} anchor text longer than ${ANCHOR_MAX_WORDS} words. The client's note: "a lot of really long external links taking up whole sentences". Shorten the anchor to the phrase a reader would click, and leave the rest of the claim as ordinary prose outside the link:\n${long
+      .map((a) => `      "${a}"`)
+      .join("\n")}`
+  );
+}
+
+export function enforceLinkSpacing(body: string): void {
+  const tight: string[] = [];
+  for (const para of paragraphsOf(body)) {
+    const links = [...para.matchAll(/\[([^\]]+)\]\([^)]*\)/g)];
+    for (let i = 1; i < links.length; i++) {
+      const prev = links[i - 1];
+      const between = para.slice(
+        (prev.index ?? 0) + prev[0].length,
+        links[i].index
+      );
+      if (wordCount(between) < LINK_MIN_GAP_WORDS) {
+        tight.push(`"${links[i - 1][1]}" → "${links[i][1]}"`);
+      }
+    }
+  }
+  if (!tight.length) return;
+  throw new Error(
+    `${tight.length} pair${tight.length === 1 ? "" : "s"} of links sit less than ${LINK_MIN_GAP_WORDS} words apart. The client's note: "a lot of links stuffed into a small body of text... Links need to be naturally placed throughout". Move one of each pair to a different part of the piece, or drop it:\n${tight
+      .map((t) => `      ${t}`)
+      .join("\n")}`
+  );
+}
+
+export function enforceParagraphSize(body: string): void {
+  const fat = paragraphsOf(body)
+    .map((p) => ({ p, n: wordCount(unlink(p)) }))
+    .filter((x) => x.n > PARA_MAX_WORDS);
+  if (!fat.length) return;
+  throw new Error(
+    `${fat.length} paragraph${fat.length === 1 ? " is" : "s are"} over ${PARA_MAX_WORDS} words. The client's note: "There are lots of big sections of text here which need to be broken up better". Aim for two to four sentences a paragraph — split these at the natural turn in the argument:\n${fat
+      .map((x) => `      ${x.n} words: "${x.p.slice(0, 90)}…"`)
+      .join("\n")}`
+  );
+}
+
+export function enforceSentenceVariety(body: string): void {
+  const sentences = unlink(proseOf(body))
+    .replace(/^#.*$/gm, "")
+    .split(/(?<=[.!?])\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x.length > 1);
+
+  let run: string[] = [];
+  const worst: string[][] = [];
+  for (const sentence of sentences) {
+    if (wordCount(sentence) < SHORT_SENTENCE_WORDS) {
+      run.push(sentence);
+    } else {
+      if (run.length > MAX_SHORT_RUN) worst.push(run);
+      run = [];
+    }
+  }
+  if (run.length > MAX_SHORT_RUN) worst.push(run);
+  if (!worst.length) return;
+
+  throw new Error(
+    `${worst.length} stretch${worst.length === 1 ? "" : "es"} of more than ${MAX_SHORT_RUN} short sentences in a row. The client's note: "a lot of short, snappy, 1-liners in here... this can go too far and come off as word salad". He also warned against overcorrecting into encyclopedias, so join two or three of these into a longer sentence rather than padding each one:\n${worst
+      .map((r) => `      "${r.join(" ")}"`)
+      .join("\n")}`
+  );
+}
+
+/**
+ * A piece that says "checklist" or "in a table" has to contain one.
+ *
+ * Liam raised this twice in one round, and it is not only a reading-comfort
+ * point: these posts argue that engines lift structured facts and skip prose
+ * claims, so a post that describes a table in a paragraph is failing its own
+ * advice in public.
+ */
+export function enforcePromisedStructures(body: string): void {
+  const prose = proseOf(body);
+  const hasTable = /^\s*\|.+\|\s*$/m.test(prose);
+  const hasList = /^\s*(?:[-*+]|\d+\.)\s+\S/m.test(prose);
+  const missing: string[] = [];
+
+  const promisesTable =
+    /\b(?:in|as|a|the)\s+(?:dated\s+|comparison\s+|fee\s+)?table\b|\btable\s+(?:above|below)\b/i.test(
+      prose
+    );
+  const promisesList =
+    /\bchecklist\b|\bthe list (?:above|below)\b|\bshort, specific list\b/i.test(
+      prose
+    );
+
+  // A checklist rendered as a table counts, and vice versa. The client offered
+  // both — "A table? A checklist? Something that is easier for the reader and
+  // AIs to digest" — so what matters is that some real structure exists, not
+  // which of the two it is.
+  if (promisesTable && !hasTable && !hasList) missing.push("a table");
+  if (promisesList && !hasList && !hasTable) missing.push("a checklist or list");
+  if (!missing.length) return;
+
+  throw new Error(
+    `The draft refers to ${missing.join(" and ")} but never renders one in markdown. The client's note: "We are referencing a table here but haven't formatted as a table?" and "Should also be in a checklist format of which can then be crawled/parsed by AIs". Render it properly — a markdown table with a header row, or a "- " list — rather than describing it in a sentence.`
+  );
+}
+
+/**
+ * House spelling is American, per the client's inline edits (centralised →
+ * centralized, recognise → recognize).
+ *
+ * Mechanical, so it is fixed in code rather than costing a retry. It only
+ * rewrites whole words, and only ones with no ambiguous American reading, so
+ * it will not touch a proper noun, a quoted source or a URL.
+ */
+/**
+ * Every entry is a whole word with no ambiguous American reading. The
+ * replacement is a function so the original capitalization survives — a
+ * sentence starting "Behaviour" must not become "behavior".
+ */
+const SIMPLE_BRITISH: Array<[RegExp, string]> = [
+  [/behaviour/gi, "behavior"],
+  [/programme/gi, "program"],
+  [/artefact/gi, "artifact"],
+  [/afterwards/gi, "afterward"],
+  [/organisation/gi, "organization"],
+  [/licence/gi, "license"],
+  [/defence/gi, "defense"],
+  [/judgement/gi, "judgment"],
+  [/catalogue/gi, "catalog"],
+  [/favour/gi, "favor"],
+  [/labour/gi, "labor"],
+  [/colour/gi, "color"],
+  [/fulfil\b/gi, "fulfill"],
+  [/whilst/gi, "while"],
+  [/modelling/gi, "modeling"],
+  [/labelled/gi, "labeled"],
+  [/labelling/gi, "labeling"],
+  [/cancelled/gi, "canceled"],
+  [/signalled/gi, "signaled"],
+  [/fuelled/gi, "fueled"],
+  [/maths\b/gi, "math"],
+  [/travelling/gi, "traveling"],
+  [/practise/gi, "practice"],
+];
+
+/** Keep the original word's capitalization when swapping it. */
+function matchCase(original: string, replacement: string): string {
+  if (original[0] === original[0]?.toUpperCase()) {
+    return replacement[0].toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
+export function americanize(body: string): string {
+  const { masked, restore } = maskCode(body);
+  // Split on the URL half of a markdown link and never touch those segments: a
+  // coinpresso.io slug containing "optimisation" is an address, not prose, and
+  // rewriting it turns a working link into a 404.
+  const parts = masked.split(/(\]\([^)]*\))/g);
+  const fixed = parts.map((part, i) => {
+    if (i % 2 === 1) return part;
+    let out = part;
+    out = out.replace(/(\w*?)isation\b/gi, (m, stem: string) =>
+      matchCase(m, `${stem}ization`)
+    );
+    out = out.replace(
+      /\b(centrali|decentrali|recogni|optimi|organi|summari|categori|prioriti|standardi|visuali|maximi|minimi|utili|emphasi|apologi|reali|speciali|monetari|penali|critici|memori|normali|synthesi|scrutini)s(e|es|ed|ing)\b/gi,
+      (m, stem: string, tail: string) => matchCase(m, `${stem}z${tail}`)
+    );
+    out = out.replace(/\banalys(e|es|ed|ing)\b/gi, (m, tail: string) =>
+      matchCase(m, `analyz${tail}`)
+    );
+    for (const [re, to] of SIMPLE_BRITISH) {
+      out = out.replace(re, (m) => matchCase(m, to));
+    }
+    return out;
+  });
+  return restore(fixed.join(""));
 }
