@@ -10,7 +10,8 @@
 // ---------------------------------------------------------------------------
 
 import type { Run } from "../types";
-import { callGpt } from "../providers/openai";
+import { callClaude } from "../providers/anthropic";
+import { MODELS } from "../models";
 import { SCENE_RULES, PALETTE } from "../blog-image";
 
 /** gpt-image-1 is deprecated on 23 Oct 2026; do not fall back to it. */
@@ -61,8 +62,11 @@ ${nudge ? `\nThe operator asked for this change, and it takes priority: "${nudge
 Answer with the scene only, 40 words at most. No preamble, no title, no text
 elements, no logos, no people.`;
 
-  const res = await callGpt({
-    model: "gpt-4.1",
+  // Claude, not GPT. The scene brief is a writing task, and putting it on the
+  // same provider as the image call means one exhausted balance takes out both
+  // halves of the designer at once — which is exactly how this first failed.
+  const res = await callClaude({
+    model: MODELS.strategy,
     system: "You art-direct product illustration. You answer in plain concrete nouns.",
     user: ask,
     maxTokens: 200,
@@ -102,13 +106,37 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
   });
   if (!res.ok) {
     const detail = await res.text();
-    throw new Error(
-      `Image generation failed (${res.status}). ${
-        res.status === 400 && /model/i.test(detail)
-          ? `The deployment asked for "${IMAGE_MODEL}". Set OPENAI_IMAGE_MODEL if that is not available on this account. `
-          : ""
-      }OpenAI said: ${detail.slice(0, 400)}`
-    );
+
+    // Say what to do, not just what happened. The quota case in particular is
+    // worth naming clearly, because the same key runs the reviewer: an
+    // exhausted balance stops blog runs as well as images, and the operator
+    // should hear that here rather than discover it on the next Write.
+    if (res.status === 429 && /insufficient_quota|credit_balance/i.test(detail)) {
+      throw new Error(
+        "The OpenAI account has no credits left, so no image can be generated. " +
+          "Add credits at platform.openai.com → Settings → Billing. " +
+          "Worth knowing: the same key runs the reviewer agent, so blog runs will " +
+          "fail at the review stage until this is topped up."
+      );
+    }
+    if (res.status === 429) {
+      throw new Error(
+        `OpenAI is rate limiting this account. Wait a minute and try again. It said: ${detail.slice(0, 200)}`
+      );
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        "OpenAI rejected the API key for image generation. Check OPENAI_API_KEY on Railway, " +
+          "and that the key's project has image generation enabled."
+      );
+    }
+    if (res.status === 400 && /model/i.test(detail)) {
+      throw new Error(
+        `This deployment asked for the "${IMAGE_MODEL}" image model and OpenAI does not offer it on this account. ` +
+          `Set OPENAI_IMAGE_MODEL on Railway to one you do have. OpenAI said: ${detail.slice(0, 250)}`
+      );
+    }
+    throw new Error(`Image generation failed (${res.status}). OpenAI said: ${detail.slice(0, 400)}`);
   }
 
   const json = (await res.json()) as {
