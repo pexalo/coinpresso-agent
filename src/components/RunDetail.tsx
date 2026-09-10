@@ -10,6 +10,7 @@ import SourceLedger from "@/components/SourceLedger";
 import OutlinePanel from "@/components/OutlinePanel";
 import FeaturedImage from "@/components/FeaturedImage";
 import PublishManually from "@/components/PublishManually";
+import SectionImages from "@/components/SectionImages";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -480,6 +481,15 @@ export default function RunDetail({
               runId={id}
               headline={run.draft?.headline ?? run.brief.title}
               hasDraft={Boolean(run.draft)}
+            />
+          )}
+          {isBlog && run.draft && (
+            <SectionImages
+              clientRef={ref}
+              runId={id}
+              sections={(run.draft.body.match(/^## (.+)$/gm) ?? [])
+                .map((h) => h.slice(3).trim())
+                .filter((h) => h.toLowerCase() !== "faqs")}
             />
           )}
           {/* Under the image, because the guide's fifth step needs it to

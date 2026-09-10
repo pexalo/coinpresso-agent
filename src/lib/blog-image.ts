@@ -124,3 +124,40 @@ export function splitTitle(headline: string): { accent: string; rest: string } {
   const take = Math.min(Math.max(1, Math.round(parts.length * 0.4)), parts.length - 1, 6);
   return { accent: parts.slice(0, take).join(" "), rest: parts.slice(take).join(" ") };
 }
+
+
+// ---------------------------------------------------------------------------
+// In-body section images.
+//
+// Different from the hero in one important way: a person writes the brief. The
+// hero can be derived from the draft because there is only one and its job is
+// fixed. A section image exists because someone looked at a section and
+// decided a picture would help, and only they know which picture.
+// ---------------------------------------------------------------------------
+
+/** Same 16:9 as the client's own in-body images. */
+export const SECTION_CANVAS = { w: 1024, h: 576 } as const;
+
+/** Small, bottom-left, out of the way of the illustration. */
+export const SECTION_LOGO = { x: 40, y: 40, h: 40 } as const;
+
+/**
+ * Briefs this agent must refuse.
+ *
+ * A chart is the important one. Coinpresso's own in-body charts carry real
+ * figures from a named source — a market size, a CAGR, a citation share. An
+ * image model asked for a chart invents the numbers and draws them
+ * convincingly, which is the one failure mode this whole project has spent
+ * weeks avoiding in the prose. It would be strange to accept it in a picture.
+ */
+export const CHART_REQUEST =
+  /\b(chart|graph|plot|bar chart|line chart|pie chart|axis|x-axis|y-axis|data ?viz|market size|cagr|percentage breakdown|statistics|survey results)\b/i;
+
+export const SECTION_RULES = [
+  "3D rendered or isometric objects on a deep purple ground, glossy, neon rim lighting",
+  "One clear idea, readable at half width — these run inside the article, not full bleed",
+  "Short labels on objects are allowed where the brief asks for them, three words at most",
+  "NO paragraphs of text, NO invented numbers, NO axis labels or data values",
+  "NO real company logos, brand marks or recognisable wordmarks",
+  "NO people, faces or hands",
+] as const;

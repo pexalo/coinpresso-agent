@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRun } from "@/lib/store";
-import { generateScene } from "@/lib/agents/designer";
+import { generateScene, generateSectionImage } from "@/lib/agents/designer";
 import {
   listImages,
   readImage,
@@ -54,17 +54,33 @@ export async function POST(
   }
 
   let nudge: string | undefined;
+  let section: string | undefined;
+  let brief: string | undefined;
   try {
-    nudge = ((await req.json()) as { nudge?: string }).nudge?.trim() || undefined;
+    const body = (await req.json()) as {
+      nudge?: string;
+      section?: string;
+      brief?: string;
+    };
+    nudge = body.nudge?.trim() || undefined;
+    section = body.section?.trim() || undefined;
+    brief = body.brief?.trim() || undefined;
   } catch {
-    // No body is fine — that is a first generation.
+    // No body is fine — that is a first generation of the hero.
   }
 
   try {
-    const scene = await generateScene(run, nudge);
+    // A section image is briefed by a person; the hero is derived from the
+    // draft. Same store, same panel mechanics, different source of truth.
+    const scene =
+      section && brief
+        ? await generateSectionImage(run, section, brief)
+        : await generateScene(run, nudge);
     const version: ImageVersion = {
       id: `img_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       createdAt: new Date().toISOString(),
+      section,
+      brief,
       prompt: scene.prompt,
       nudge,
       costUsd: scene.costUsd,

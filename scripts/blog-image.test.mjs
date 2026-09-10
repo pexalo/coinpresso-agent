@@ -1,7 +1,7 @@
 // The template's own logic. Geometry is measured elsewhere; what is testable
 // here is the title split, which decides where the accent colour stops — the
 // one thing that silently produces an ugly image rather than an error.
-import { splitTitle, TEMPLATE, CANVAS, PALETTE, SCENE_RULES } from "../src/lib/blog-image.ts";
+import { splitTitle, TEMPLATE, CANVAS, PALETTE, SCENE_RULES, CHART_REQUEST, SECTION_RULES } from "../src/lib/blog-image.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -62,6 +62,38 @@ console.log("the prohibitions the client's brand depends on:");
   ok("no real logos is forbidden", /NO real company logos/i.test(joined));
   ok("no people is forbidden", /NO people/i.test(joined));
   ok("the left side is reserved for the title", /left 45%|LEFT/i.test(joined));
+}
+
+console.log("section images refuse to invent data:");
+{
+  // The whole pipeline rejects unverified figures in the prose. Drawing them
+  // convincingly in a picture would be the same failure with better lighting.
+  const refused = [
+    "a bar chart of market size 2024 to 2034",
+    "line graph showing citation share by engine",
+    "pie chart of the percentage breakdown",
+    "an isometric scene with an x-axis and y-axis",
+    "infographic of survey results",
+    "show the CAGR climbing",
+  ];
+  for (const b of refused) ok(`refused: "${b.slice(0, 38)}"`, CHART_REQUEST.test(b));
+
+  const allowed = [
+    "cards labelled GitBook and GitHub chained to a cracked ring, warning markers on the broken links",
+    "a vault opening with documents floating out of it",
+    "three glossy spheres orbiting a magnifying glass",
+    "a bridge of coins between two wallets",
+  ];
+  for (const b of allowed) ok(`allowed: "${b.slice(0, 38)}"`, !CHART_REQUEST.test(b));
+}
+
+console.log("section rules keep the same prohibitions as the hero:");
+{
+  const joined = SECTION_RULES.join(" | ");
+  ok("no invented numbers", /NO paragraphs of text, NO invented numbers/i.test(joined));
+  ok("no real logos", /NO real company logos/i.test(joined));
+  ok("no people", /NO people/i.test(joined));
+  ok("short labels are permitted, unlike the hero", /Short labels/i.test(joined));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

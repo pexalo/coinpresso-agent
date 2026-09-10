@@ -18,6 +18,14 @@ const DIR = dataDir("images");
 export interface ImageVersion {
   id: string;
   createdAt: string;
+  /**
+   * Which H2 this illustrates, or absent for the featured image. Section
+   * images are briefed by a person rather than derived from the draft, so
+   * they live alongside the hero rather than replacing it.
+   */
+  section?: string;
+  /** The brief the operator wrote, for a section image. */
+  brief?: string;
   /** The scene brief the designer wrote, kept so a good one can be reused. */
   prompt: string;
   /** What the operator asked for on a regenerate, if anything. */

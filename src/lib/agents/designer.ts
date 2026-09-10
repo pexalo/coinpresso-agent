@@ -12,7 +12,7 @@
 import type { Run } from "../types";
 import { callClaude } from "../providers/anthropic";
 import { MODELS } from "../models";
-import { SCENE_RULES, PALETTE } from "../blog-image";
+import { SCENE_RULES, SECTION_RULES, CHART_REQUEST, PALETTE } from "../blog-image";
 
 /** gpt-image-1 is deprecated on 23 Oct 2026; do not fall back to it. */
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2";
@@ -160,4 +160,81 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
     png,
     costUsd: COST_BY_QUALITY[IMAGE_QUALITY] ?? COST_BY_QUALITY.medium,
   };
+}
+
+
+/**
+ * A section image, from a brief a person wrote.
+ *
+ * The section heading is passed as context so the model knows what the picture
+ * sits next to, but the brief leads: if someone has taken the trouble to say
+ * what they want, the agent should draw that rather than its own idea.
+ */
+export async function generateSectionImage(
+  run: Run,
+  section: string,
+  brief: string
+): Promise<SceneResult> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY is not set on this deployment.");
+
+  const clean = brief.trim();
+  if (clean.length < 8) {
+    throw new Error("Give the designer a sentence to work from — what should the picture show?");
+  }
+
+  // Refuse charts rather than invent one. See CHART_REQUEST for why.
+  if (CHART_REQUEST.test(clean)) {
+    throw new Error(
+      "This brief asks for a chart, and the designer will not draw one. An image model " +
+        "invents the numbers and draws them convincingly, which is exactly the failure " +
+        "this pipeline rejects in the writing. Build the chart from real figures — a " +
+        "screenshot from the source, or a chart tool — and place it by hand. If you want " +
+        "an illustration of the idea behind the data rather than the data itself, say " +
+        "that instead: \"an isometric scene of a market expanding\", not \"a bar chart of market size\"."
+    );
+  }
+
+  const prompt = [
+    clean,
+    "",
+    `This illustrates the section "${section}" of a Coinpresso article about ${
+      run.draft?.headline ?? run.brief.title
+    }.`,
+    "",
+    "STYLE:",
+    ...SECTION_RULES.map((r) => `- ${r}`),
+    `- Ground in deep purple, around ${PALETTE.bgCenter} falling to ${PALETTE.bgEdge}`,
+    `- Rim lights in violet ${PALETTE.gradientViolet} and teal ${PALETTE.gradientTeal}`,
+  ].join("\n");
+
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model: IMAGE_MODEL,
+      prompt,
+      size: IMAGE_SIZE,
+      quality: IMAGE_QUALITY,
+      n: 1,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    if (res.status === 429 && /insufficient_quota|credit_balance/i.test(detail)) {
+      throw new Error(
+        "The OpenAI account has no credits left. Add credits at platform.openai.com → Settings → Billing."
+      );
+    }
+    throw new Error(`Image generation failed (${res.status}). OpenAI said: ${detail.slice(0, 300)}`);
+  }
+
+  const json = (await res.json()) as { data?: Array<{ b64_json?: string; url?: string }> };
+  const first = json.data?.[0];
+  if (!first) throw new Error("OpenAI returned no image.");
+  const png = first.b64_json
+    ? Buffer.from(first.b64_json, "base64")
+    : Buffer.from(await (await fetch(first.url!)).arrayBuffer());
+
+  return { prompt: clean, png, costUsd: COST_BY_QUALITY[IMAGE_QUALITY] ?? COST_BY_QUALITY.medium };
 }
