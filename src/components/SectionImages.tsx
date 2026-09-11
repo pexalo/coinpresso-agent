@@ -74,6 +74,32 @@ export default function SectionImages({
     }
   }, [clientRef, runId, section, brief, load]);
 
+  const [driveMsg, setDriveMsg] = useState<string | null>(null);
+  const [driveOk, setDriveOk] = useState(false);
+
+  const toDrive = useCallback(
+    async (versionId: string) => {
+      setBusy(true);
+      setDriveMsg(null);
+      try {
+        const res = await fetch(`/api/clients/${clientRef}/runs/${runId}/image/drive`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ versionId }),
+        });
+        const data = await res.json();
+        setDriveOk(res.ok);
+        setDriveMsg(res.ok ? `Saved to Drive as “${data.name}” in Graphics.` : data.error);
+      } catch {
+        setDriveOk(false);
+        setDriveMsg("Could not reach the server.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [clientRef, runId]
+  );
+
   const mine = versions.filter((v) => v.section === section);
 
   return (
@@ -172,6 +198,13 @@ export default function SectionImages({
                 >
                   Download
                 </a>
+                <button
+                  onClick={() => toDrive(active ?? mine[0].id)}
+                  disabled={busy}
+                  className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-40"
+                >
+                  Save to Drive
+                </button>
                 <span className="text-[11px] text-[var(--ink-3)]">
                   Place it under the heading when you paste the article in.
                 </span>
@@ -199,6 +232,18 @@ export default function SectionImages({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {driveMsg && (
+            <div
+              className={`rounded-lg border px-3 py-2.5 text-[12px] leading-relaxed ${
+                driveOk
+                  ? "border-[var(--success)]/30 bg-[var(--success)]/10 text-[var(--success)]"
+                  : "border-[var(--warning)]/30 bg-[var(--warning)]/10 text-[var(--warning)]"
+              }`}
+            >
+              {driveMsg}
             </div>
           )}
 

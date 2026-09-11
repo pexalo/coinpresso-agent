@@ -273,3 +273,117 @@ export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
     serviceAccount: sa.client_email,
   };
 }
+
+
+// ---------------------------------------------------------------------------
+// Images into Drive.
+//
+// Same Shared Drive as the documents, in a "Graphics" subfolder so the Docs
+// people are reviewing do not get buried under PNGs. The folder is created on
+// first use rather than configured, because one more environment variable to
+// forget is one more way for this to fail quietly.
+// ---------------------------------------------------------------------------
+
+export interface DriveUploadResult {
+  url: string;
+  name: string;
+  folder: string;
+}
+
+/** Find the Graphics folder under the blog folder, or make it. */
+async function graphicsFolder(token: string, parent: string): Promise<string> {
+  const q = encodeURIComponent(
+    `name = 'Graphics' and '${parent}' in parents and ` +
+      `mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  );
+  const found = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)` +
+      `&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  if (found.ok) {
+    const json = (await found.json()) as { files?: Array<{ id: string }> };
+    if (json.files?.length) return json.files[0].id;
+  }
+
+  const made = await fetch(
+    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id",
+    {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "Graphics",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [parent],
+      }),
+    }
+  );
+  if (!made.ok) {
+    throw new Error(
+      `Could not create the Graphics folder in Drive (${made.status}). ${await made.text()}`
+    );
+  }
+  return ((await made.json()) as { id: string }).id;
+}
+
+/**
+ * Upload a PNG. Names are the client's convention, and Drive is happy to hold
+ * two files with the same name — so the caller passes a name that already
+ * distinguishes one image from another.
+ */
+export async function uploadImageToDrive(
+  name: string,
+  png: Buffer
+): Promise<DriveUploadResult> {
+  const sa = credentials();
+  if (!sa) {
+    throw new Error(
+      "GOOGLE_SERVICE_ACCOUNT_B64 is not set on this deployment, so there is no Google identity to upload with."
+    );
+  }
+  const token = await accessToken(sa);
+  const parent = process.env.GOOGLE_DRIVE_BLOG_FOLDER_ID || BLOG_FOLDER_FALLBACK;
+  const folder = await graphicsFolder(token, parent);
+
+  // Multipart: the metadata and the bytes in one request. Drive's resumable
+  // upload is for large files; a blog image is well under the threshold.
+  const boundary = `cp${Date.now().toString(36)}`;
+  const meta = JSON.stringify({ name, parents: [folder] });
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
+        `--${boundary}\r\nContent-Type: image/png\r\n\r\n`
+    ),
+    png,
+    Buffer.from(`\r\n--${boundary}--`),
+  ]);
+
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": `multipart/related; boundary=${boundary}`,
+      },
+      body: new Uint8Array(body),
+    }
+  );
+  if (!res.ok) {
+    const detail = await res.text();
+    if (res.status === 403 && /storageQuota/i.test(detail)) {
+      throw new Error(
+        "Drive refused the upload on storage quota. The destination has to be a Shared Drive — " +
+          "a service account owns what it creates and has no storage of its own."
+      );
+    }
+    throw new Error(`Drive upload failed (${res.status}). Google said: ${detail.slice(0, 300)}`);
+  }
+
+  const file = (await res.json()) as { id: string; name: string };
+  return {
+    url: `https://drive.google.com/file/d/${file.id}/view`,
+    name: file.name,
+    folder,
+  };
+}

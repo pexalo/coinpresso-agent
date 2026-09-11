@@ -208,6 +208,27 @@ export default function FeaturedImage({
     }
   }, [active, clientRef, runId, load]);
 
+  const toDrive = useCallback(async () => {
+    if (!active) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/clients/${clientRef}/runs/${runId}/image/drive`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ versionId: active }),
+      });
+      const data = await res.json();
+      setFailed(!res.ok);
+      setMsg(res.ok ? `Saved to Drive as “${data.name}” in Graphics.` : data.error);
+    } catch {
+      setFailed(true);
+      setMsg("Could not reach the server.");
+    } finally {
+      setBusy(false);
+    }
+  }, [active, clientRef, runId]);
+
   if (!hasDraft) return null;
 
   return (
@@ -270,6 +291,18 @@ export default function FeaturedImage({
               className="text-[12px] font-semibold px-4 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 disabled:opacity-40"
             >
               Use this one
+            </button>
+            <button
+              onClick={toDrive}
+              disabled={busy || !versions.find((v) => v.id === active)?.composed}
+              title={
+                versions.find((v) => v.id === active)?.composed
+                  ? "Uploads to the Graphics folder in Drive."
+                  : "Press “Use this one” first — Drive should get the finished image, not the bare scene."
+              }
+              className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]/50 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Save to Drive
             </button>
           </div>
 
