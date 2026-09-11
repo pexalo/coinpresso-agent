@@ -68,15 +68,43 @@ export function buildDoc(
   body: string,
   faqs: Faq[] = []
 ): DocBuild {
-  const blocks: Array<{ kind: "H1" | "H2" | "P"; raw: string }> = [
+  const blocks: Array<{ kind: "H1" | "H2" | "P" | "TH"; raw: string }> = [
     { kind: "H1", raw: headline },
   ];
   for (const para of body.split(/\n{2,}/)) {
     const t = para.trim();
     if (!t) continue;
+
     const h2 = t.match(/^##\s+(.*)$/s);
-    if (h2) blocks.push({ kind: "H2", raw: h2[1].trim() });
-    else blocks.push({ kind: "P", raw: t.replace(/\n/g, " ") });
+    if (h2) {
+      blocks.push({ kind: "H2", raw: h2[1].trim() });
+      continue;
+    }
+
+    // A markdown table. The Docs API can build a real table, but only across
+    // several round trips with index arithmetic that shifts under its own
+    // edits — and this document exists to be read and commented on, not
+    // published from. So each row becomes its own line with the header in
+    // bold, which reviews perfectly well. Before this, the whole table
+    // collapsed onto one line of pipe characters.
+    const rows = t
+      .split("\n")
+      .map((r) => r.trim())
+      .filter((r) => r.startsWith("|"));
+    if (rows.length >= 2 && rows.some((r) => /^\|[\s:|-]+\|$/.test(r))) {
+      const data = rows.filter((r) => !/^\|[\s:|-]+\|$/.test(r));
+      data.forEach((row, i) => {
+        const cells = row
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((c) => c.trim())
+          .filter(Boolean);
+        blocks.push({ kind: i === 0 ? "TH" : "P", raw: cells.join("  ·  ") });
+      });
+      continue;
+    }
+
+    blocks.push({ kind: "P", raw: t.replace(/\n/g, " ") });
   }
 
   // The pipeline stores FAQs outside the body so it can render them per
@@ -100,7 +128,10 @@ export function buildDoc(
     text += parsed.text + "\n";
     bolds.push(...parsed.bolds);
     links.push(...parsed.links);
-    if (b.kind !== "P") {
+    if (b.kind === "TH") {
+      // The header row of a table: bold, but still an ordinary paragraph.
+      bolds.push({ start, end: start + parsed.text.length });
+    } else if (b.kind !== "P") {
       headings.push({
         start,
         end: text.length,

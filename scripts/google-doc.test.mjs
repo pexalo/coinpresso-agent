@@ -79,6 +79,19 @@ for (const f of ["1-schema-markup-checklist","2-crypto-comparison-pages","3-how-
   ok(`${f}: 11 headings (h1 + 9 sections + FAQs)`, kinds(b, "updateParagraphStyle").length === 11, kinds(b,"updateParagraphStyle").length);
 }
 
+console.log("markdown tables become readable rows, not a line of pipes:");
+{
+  const b = buildDoc("T", "Intro.\n\n| Check | Passing |\n| --- | --- |\n| Audit | HTML report |\n| Code | Public GitHub |\n\nAfter.");
+  ok("no pipe characters survive", !b.text.includes("|"), b.text);
+  ok("the --- rule is gone", !b.text.includes("---"));
+  ok("each row is its own line", b.text.includes("\nAudit  ·  HTML report\n"), JSON.stringify(b.text));
+  ok("three rows, three lines", (b.text.match(/ · /g) || []).length === 3);
+  const bold = kinds(b, "updateTextStyle").filter(r => r.updateTextStyle.textStyle.bold);
+  ok("the header row is bold", bold.length === 1 && at(b, bold[0].updateTextStyle.range) === "Check  ·  Passing",
+     bold[0] && at(b, bold[0].updateTextStyle.range));
+  ok("surrounding prose is untouched", b.text.includes("Intro.") && b.text.includes("After."));
+}
+
 console.log("faqs supplied separately (how the pipeline stores them):");
 {
   const b = buildDoc("T", "## Only section\n\nProse.", [
