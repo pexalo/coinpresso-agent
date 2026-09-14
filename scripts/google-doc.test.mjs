@@ -1,4 +1,4 @@
-import { buildDoc } from "../src/lib/google-doc.ts";
+import { buildDoc, parseTable, readTableShapes, fillTableRequests } from "../src/lib/google-doc.ts";
 import { readFileSync } from "node:fs";
 
 let pass = 0, fail = 0;
@@ -79,17 +79,107 @@ for (const f of ["1-schema-markup-checklist","2-crypto-comparison-pages","3-how-
   ok(`${f}: 11 headings (h1 + 9 sections + FAQs)`, kinds(b, "updateParagraphStyle").length === 11, kinds(b,"updateParagraphStyle").length);
 }
 
-console.log("markdown tables become readable rows, not a line of pipes:");
+console.log("markdown tables become real Google Docs tables:");
 {
   const b = buildDoc("T", "Intro.\n\n| Check | Passing |\n| --- | --- |\n| Audit | HTML report |\n| Code | Public GitHub |\n\nAfter.");
   ok("no pipe characters survive", !b.text.includes("|"), b.text);
   ok("the --- rule is gone", !b.text.includes("---"));
-  ok("each row is its own line", b.text.includes("\nAudit  ·  HTML report\n"), JSON.stringify(b.text));
-  ok("three rows, three lines", (b.text.match(/ · /g) || []).length === 3);
-  const bold = kinds(b, "updateTextStyle").filter(r => r.updateTextStyle.textStyle.bold);
-  ok("the header row is bold", bold.length === 1 && at(b, bold[0].updateTextStyle.range) === "Check  ·  Passing",
-     bold[0] && at(b, bold[0].updateTextStyle.range));
+  ok("no cell text is left loose in the body", !b.text.includes("Audit") && !b.text.includes("Check"), JSON.stringify(b.text));
+  ok("one table recorded", b.tables.length === 1, b.tables.length);
+  ok("three rows including the header", b.tables[0].cells.length === 3, b.tables[0].cells.length);
+  ok("two columns", b.tables[0].cells[0].length === 2);
+  ok("header row first", b.tables[0].cells[0].join("|") === "Check|Passing", b.tables[0].cells[0].join("|"));
+  ok("last row intact", b.tables[0].cells[2].join("|") === "Code|Public GitHub");
   ok("surrounding prose is untouched", b.text.includes("Intro.") && b.text.includes("After."));
+
+  const ins = kinds(b, "insertTable");
+  ok("one insertTable request", ins.length === 1, ins.length);
+  ok("insertTable has the right shape", ins[0].insertTable.rows === 3 && ins[0].insertTable.columns === 2);
+  ok("the table lands on its placeholder line", ins[0].insertTable.location.index === b.tables[0].offset + 1);
+  ok("placeholder is a blank line, not lost text", b.text[b.tables[0].offset] === "\n");
+  ok("the table goes in after every styling request",
+     b.requests.findIndex(r => "insertTable" in r) === b.requests.length - 1);
+}
+
+console.log("several tables go in back-to-front, so no offset goes stale:");
+{
+  const md = "| A | B |\n| - | - |\n| 1 | 2 |\n\nMiddle.\n\n| C | D |\n| - | - |\n| 3 | 4 |";
+  const b = buildDoc("T", md);
+  ok("two tables", b.tables.length === 2);
+  const ins = kinds(b, "insertTable").map(r => r.insertTable.location.index);
+  ok("inserted highest index first", ins[0] > ins[1], ins.join(","));
+  ok("indexes match the placeholders", ins[1] === b.tables[0].offset + 1 && ins[0] === b.tables[1].offset + 1);
+}
+
+console.log("ragged and padded rows:");
+{
+  ok("a short row is padded, not shifted left",
+     JSON.stringify(parseTable("| A | B | C |\n| - | - | - |\n| 1 |  | 3 |")) === '[["A","B","C"],["1","","3"]]',
+     JSON.stringify(parseTable("| A | B | C |\n| - | - | - |\n| 1 |  | 3 |")));
+  ok("not a table without a rule", parseTable("| A | B |\n| 1 | 2 |") === null);
+  ok("not a table at all", parseTable("Just a sentence.") === null);
+}
+
+console.log("reading the shape back from a documents.get response:");
+{
+  const doc = { body: { content: [
+    { paragraph: {} },
+    { table: { tableRows: [
+      { tableCells: [{ content: [{ startIndex: 10 }] }, { content: [{ startIndex: 20 }] }] },
+      { tableCells: [{ content: [{ startIndex: 30 }] }, { content: [{ startIndex: 40 }] }] },
+    ] } },
+  ] } };
+  const shapes = readTableShapes(doc);
+  ok("one table found", shapes.length === 1);
+  ok("cell starts row-major", JSON.stringify(shapes[0].cellStarts) === "[[10,20],[30,40]]", JSON.stringify(shapes[0].cellStarts));
+  ok("a document with no tables yields none", readTableShapes({ body: { content: [{ paragraph: {} }] } }).length === 0);
+  ok("a malformed response does not throw", readTableShapes(null).length === 0);
+}
+
+console.log("filling the cells — simulated against a document that shifts:");
+{
+  // The whole risk is that writing into one cell moves every cell after it.
+  // So apply the requests to a string exactly as Docs would, in order, and
+  // check the text lands in the right cells and the styling covers it.
+  const tables = [{ offset: 0, cells: [["Check", "Passing"], ["Audit", "**HTML** report"], ["Code", "[GitHub](https://github.com/x)"]] }];
+  const shapes = [{ cellStarts: [[10, 20], [30, 40], [50, 60]] }];
+  const reqs = fillTableRequests(tables, shapes);
+
+  let doc = "-".repeat(80);
+  const styled = [];
+  for (const r of reqs) {
+    if (r.insertText) {
+      const i = r.insertText.location.index;
+      doc = doc.slice(0, i) + r.insertText.text + doc.slice(i);
+    } else {
+      const { startIndex, endIndex } = r.updateTextStyle.range;
+      styled.push({ style: r.updateTextStyle.textStyle, text: doc.slice(startIndex, endIndex) });
+    }
+  }
+
+  const order = ["Check", "Passing", "Audit", "HTML report", "Code", "GitHub"];
+  const positions = order.map(t => doc.indexOf(t));
+  ok("every cell made it in", positions.every(p => p >= 0), JSON.stringify(positions));
+  ok("cells are in row-major order in the document",
+     positions.every((p, i) => i === 0 || p > positions[i - 1]), JSON.stringify(positions));
+  ok("markdown is gone from the cells", !doc.includes("**") && !doc.includes("]("), doc);
+
+  const bold = styled.filter(s => s.style.bold);
+  ok("header cells bold", bold.some(s => s.text === "Check") && bold.some(s => s.text === "Passing"),
+     JSON.stringify(bold.map(s => s.text)));
+  ok("inline bold inside a cell lands on the word", bold.some(s => s.text === "HTML"),
+     JSON.stringify(bold.map(s => s.text)));
+  ok("body cells are not bolded wholesale", !bold.some(s => s.text === "Audit"));
+  const links = styled.filter(s => s.style.link);
+  ok("one link, on the anchor text only", links.length === 1 && links[0].text === "GitHub",
+     JSON.stringify(links));
+  ok("link url kept", links[0] && links[0].style.link.url === "https://github.com/x");
+}
+
+console.log("fewer shapes than tables does not throw:");
+{
+  ok("mismatch is survivable",
+     fillTableRequests([{ offset: 0, cells: [["A"]] }, { offset: 5, cells: [["B"]] }], [{ cellStarts: [[10]] }]).length === 2);
 }
 
 console.log("faqs supplied separately (how the pipeline stores them):");

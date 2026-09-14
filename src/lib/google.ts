@@ -14,7 +14,7 @@ import crypto from "node:crypto";
 import type { Run } from "./types";
 import { PUBLICATIONS } from "./publications";
 import { renderPlainText } from "./render";
-import { buildDoc } from "./google-doc";
+import { buildDoc, readTableShapes, fillTableRequests } from "./google-doc";
 
 interface ServiceAccount {
   client_email: string;
@@ -266,6 +266,45 @@ export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
         ? `The Doc was created in the folder but could not be written to (403). This is almost always the Google Docs API being disabled on the project the key came from — Drive and Docs are separate switches. Google said: ${detail}`
         : `Docs write ${styled.status}: ${detail}`
     );
+  }
+
+  // Pass 2: the tables are in the Doc but empty. Ask Google where the cells
+  // landed rather than working it out — the offset a cell takes after
+  // insertTable is undocumented, and a one-character error puts every value in
+  // the wrong column, which reads as a broken table rather than a broken
+  // calculation. One GET removes the guess entirely.
+  if (built.tables.length) {
+    const shape = await fetch(
+      `https://docs.googleapis.com/v1/documents/${doc.id}`,
+      { headers: { authorization: `Bearer ${token}` } }
+    );
+    if (!shape.ok) {
+      throw new Error(
+        `The Doc was written but its tables could not be measured (Docs read ${shape.status}), so they are in it empty. ${await shape.text()}`
+      );
+    }
+    const fill = fillTableRequests(
+      built.tables,
+      readTableShapes(await shape.json())
+    );
+    if (fill.length) {
+      const filled = await fetch(
+        `https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ requests: fill }),
+        }
+      );
+      if (!filled.ok) {
+        throw new Error(
+          `The Doc's tables were created but could not be filled (Docs write ${filled.status}). ${await filled.text()}`
+        );
+      }
+    }
   }
 
   return {
