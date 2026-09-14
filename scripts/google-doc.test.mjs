@@ -9,11 +9,14 @@ const ok = (name, cond, extra = "") => {
 // What the doc will actually show at a range — the whole point of the test.
 const at = (b, r) => b.text.slice(r.startIndex - 1, r.endIndex - 1);
 const kinds = (b, k) => b.requests.filter(r => k in r);
+// Heading requests only — spacing requests are updateParagraphStyle too.
+const heads = (b) => b.requests.filter(r => r.updateParagraphStyle?.fields === "namedStyleType");
+const spacing = (b) => b.requests.filter(r => r.updateParagraphStyle?.fields?.includes("spaceBelow"));
 
 console.log("headings:");
 {
   const b = buildDoc("Title", "## First\n\nSome prose.\n\n## Second\n\nMore.");
-  const h = kinds(b, "updateParagraphStyle");
+  const h = heads(b);
   ok("h1 + two h2s", h.length === 3, h.length);
   ok("h1 covers the headline", at(b, h[0].updateParagraphStyle.range).trim() === "Title");
   ok("h2 text has no ## left", at(b, h[1].updateParagraphStyle.range).trim() === "First");
@@ -76,7 +79,34 @@ for (const f of ["1-schema-markup-checklist","2-crypto-comparison-pages","3-how-
   ok(`${f}: every range inside the text`, bad.length === 0, bad.length);
   ok(`${f}: all ${expected} links carried`, links.length === expected, links.length);
   ok(`${f}: no markdown left`, !/\*\*|`|\]\(|^## /m.test(b.text));
-  ok(`${f}: 11 headings (h1 + 9 sections + FAQs)`, kinds(b, "updateParagraphStyle").length === 11, kinds(b,"updateParagraphStyle").length);
+  ok(`${f}: 11 headings (h1 + 9 sections + FAQs)`, heads(b).length === 11, heads(b).length);
+}
+
+console.log("paragraph spacing — the wall-of-text bug:");
+{
+  const b = buildDoc("Title", "## First\n\nOne.\n\nTwo.\n\n## Second\n\nThree.");
+  const sp = spacing(b);
+  ok("spacing is applied at all", sp.length >= 1, sp.length);
+
+  const body = sp[0].updateParagraphStyle;
+  ok("body spacing spans the whole document", body.range.startIndex === 1 && body.range.endIndex === b.text.length,
+     JSON.stringify(body.range) + " of " + b.text.length);
+  ok("paragraphs get space below", body.paragraphStyle.spaceBelow.magnitude === 10);
+  ok("line spacing set", body.paragraphStyle.lineSpacing === 115);
+  ok("spacing does not touch namedStyleType", !body.fields.includes("namedStyleType"), body.fields);
+
+  // The ordering is the actual bug: namedStyleType resets the paragraph's own
+  // metrics, so spacing set before the headings is thrown away.
+  const firstHeading = b.requests.findIndex(r => r.updateParagraphStyle?.fields === "namedStyleType");
+  const lastHeading = b.requests.map(r => r.updateParagraphStyle?.fields).lastIndexOf("namedStyleType");
+  const firstSpacing = b.requests.indexOf(sp[0]);
+  ok("every heading style is applied before any spacing", lastHeading < firstSpacing,
+     `headings end ${lastHeading}, spacing starts ${firstSpacing}`);
+  ok("headings still come first overall", firstHeading === 0);
+
+  const above = sp.filter(r => r.updateParagraphStyle.paragraphStyle.spaceAbove?.magnitude === 18);
+  ok("both h2s get room above them", above.length === 2, above.length);
+  ok("the h1 does not", !above.some(r => r.updateParagraphStyle.range.startIndex === 1));
 }
 
 console.log("markdown tables become real Google Docs tables:");
@@ -188,7 +218,7 @@ console.log("faqs supplied separately (how the pipeline stores them):");
     { q: "First question?", a: "First answer." },
     { q: "Second question?", a: "Second answer." },
   ]);
-  const h = kinds(b, "updateParagraphStyle");
+  const h = heads(b);
   ok("FAQs heading added", at(b, h[2].updateParagraphStyle.range).trim() === "FAQs", at(b, h[2].updateParagraphStyle.range));
   const bold = kinds(b, "updateTextStyle").filter(r => r.updateTextStyle.textStyle.bold);
   ok("both questions bold", bold.length === 2, bold.length);

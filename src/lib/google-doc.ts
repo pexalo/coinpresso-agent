@@ -205,6 +205,48 @@ export function buildDoc(
       },
     });
   }
+
+  // Paragraph spacing, and it has to come after the headings.
+  //
+  // Setting namedStyleType resets the paragraph to that style's own metrics,
+  // so spacing applied first is silently thrown away by the heading requests
+  // above. This is why the export kept arriving as a wall of text: every
+  // paragraph was a real paragraph, Docs just drew them with nothing between,
+  // which reads as missing line breaks to anyone looking at it.
+  //
+  // Spacing rather than blank lines, deliberately. A blank paragraph between
+  // every block looks the same on screen and then behaves differently the
+  // moment anyone edits, and it makes the table placeholders ambiguous.
+  if (text.length > 1) {
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: 1, endIndex: text.length },
+        paragraphStyle: {
+          lineSpacing: 115,
+          spaceAbove: { magnitude: 0, unit: "PT" },
+          spaceBelow: { magnitude: 10, unit: "PT" },
+        },
+        fields: "lineSpacing,spaceAbove,spaceBelow",
+      },
+    });
+  }
+
+  // Headings get room above them, so a section reads as a break rather than
+  // as the next paragraph in bigger type. The first block is the H1 and needs
+  // nothing above it.
+  for (const h of headings) {
+    if (h.start === 0) continue;
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: at(h.start), endIndex: at(h.end) },
+        paragraphStyle: {
+          spaceAbove: { magnitude: 18, unit: "PT" },
+          spaceBelow: { magnitude: 6, unit: "PT" },
+        },
+        fields: "spaceAbove,spaceBelow",
+      },
+    });
+  }
   for (const b of bolds) {
     if (b.end <= b.start) continue;
     requests.push({
