@@ -144,6 +144,10 @@ export interface IdeaResult {
   searchRequests: number;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
 }
 
 export async function runIdeas(req: IdeaRequest): Promise<IdeaResult> {
@@ -275,7 +279,7 @@ Return JSON:
     // how the ledger and the real bill part company.
     throw billed(e, {
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
       searchRequests: r.searchRequests ?? 0,
     });
   }
@@ -302,7 +306,7 @@ Return JSON:
     searchUrls: r.searchUrls,
     searchRequests: r.searchRequests,
     tokensIn: r.tokensIn,
-    tokensOut: r.tokensOut,
+    tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
   };
 }
 

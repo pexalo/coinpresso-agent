@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getRun } from "@/lib/store";
+import { getRun, saveRun } from "@/lib/store";
+import { recordImageSpend } from "@/lib/costs";
 import { generateScene, generateSectionImage } from "@/lib/agents/designer";
 import {
   listImages,
@@ -86,6 +87,13 @@ export async function POST(
       costUsd: scene.costUsd,
     };
     await saveImage(ref, id, version, scene.png, "scene");
+
+    // Onto the run's ledger, or the costs page never sees it. Every image —
+    // regenerations included — is a real charge, and the brief call before
+    // the hero image is real tokens; both were being dropped on the floor.
+    recordImageSpend(run, scene.costUsd, scene.brief);
+    await saveRun(run);
+
     return NextResponse.json({ version, versions: await listImages(ref, id) });
   } catch (err) {
     // 424 rather than 5xx: the edge replaces a 5xx body with its own page and

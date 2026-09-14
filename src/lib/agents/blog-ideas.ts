@@ -224,6 +224,10 @@ export async function runBlogIdeas(req: BlogIdeaRequest): Promise<{
   missingSeedIds: string[];
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
 }> {
   const prior = await priorBlogWork(req.clientRef);
 
@@ -353,7 +357,7 @@ Return JSON:
     // The reply arrived and was billed; only the parse failed.
     throw billed(e, {
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
       searchRequests: r.searchRequests ?? 0,
     });
   }
@@ -390,7 +394,7 @@ Return JSON:
   const covered = new Set(ideas.map((i) => i.seedTopicId).filter(Boolean));
   const missingSeedIds = seeds.map((s) => s.id).filter((id) => !covered.has(id));
 
-  return { ideas, missingSeedIds, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+  return { ideas, missingSeedIds, tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens };
 }
 
 /**

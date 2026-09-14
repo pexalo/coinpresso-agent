@@ -281,6 +281,8 @@ export interface BilledUsage {
   tokensIn: number;
   tokensOut: number;
   searchRequests: number;
+  cacheWriteTokens?: number;
+  cacheReadTokens?: number;
 }
 
 /**

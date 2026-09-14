@@ -80,7 +80,7 @@ export async function POST(
       kind: "blog-plan",
       model: MODELS.strategy,
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
     });
 
     return NextResponse.json({
@@ -90,7 +90,7 @@ export async function POST(
       missingSeedIds: r.missingSeedIds,
       mock: false,
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
     });
   } catch (e) {
     // A reply that arrived and could not be parsed was still billed. Recording
@@ -103,7 +103,7 @@ export async function POST(
         kind: "blog-plan",
         model: MODELS.strategy,
         tokensIn: u.tokensIn,
-        tokensOut: u.tokensOut,
+        tokensOut: u.tokensOut, cacheWriteTokens: u.cacheWriteTokens, cacheReadTokens: u.cacheReadTokens,
         searchRequests: u.searchRequests,
       });
     }

@@ -61,7 +61,7 @@ export async function POST(
       kind: "topic-suggest",
       model: MODELS.strategy,
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
       searchRequests: r.searchRequests,
     });
     return NextResponse.json({
@@ -77,7 +77,7 @@ export async function POST(
         kind: "topic-suggest",
         model: MODELS.strategy,
         tokensIn: u.tokensIn,
-        tokensOut: u.tokensOut,
+        tokensOut: u.tokensOut, cacheWriteTokens: u.cacheWriteTokens, cacheReadTokens: u.cacheReadTokens,
         searchRequests: u.searchRequests,
       });
     }

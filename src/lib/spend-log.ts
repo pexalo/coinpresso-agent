@@ -36,6 +36,10 @@ export interface SpendEntry {
   model: string;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
   searchRequests: number;
   tokenCostUsd: number;
   searchCostUsd: number;
@@ -59,10 +63,17 @@ export async function recordSpend(
     model: string;
     tokensIn: number;
     tokensOut: number;
+    /** Input tokens written to the prompt cache — billed at a premium. */
+    cacheWriteTokens?: number;
+    /** Input tokens served from the prompt cache — billed at a discount. */
+    cacheReadTokens?: number;
     searchRequests?: number;
   }
 ): Promise<SpendEntry> {
-  const tokenCostUsd = estimateCost(e.model, e.tokensIn, e.tokensOut);
+  const tokenCostUsd = estimateCost(e.model, e.tokensIn, e.tokensOut, new Date(), {
+    write: e.cacheWriteTokens,
+    read: e.cacheReadTokens,
+  });
   const searchCostUsd = searchCost(e.searchRequests ?? 0);
   const entry: SpendEntry = {
     at: new Date().toISOString(),
@@ -70,6 +81,8 @@ export async function recordSpend(
     model: e.model,
     tokensIn: e.tokensIn,
     tokensOut: e.tokensOut,
+    cacheWriteTokens: e.cacheWriteTokens ?? 0,
+    cacheReadTokens: e.cacheReadTokens ?? 0,
     searchRequests: e.searchRequests ?? 0,
     tokenCostUsd,
     searchCostUsd,
@@ -99,6 +112,10 @@ export interface SpendSummary {
   searchRequests: number;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
   count: number;
   byKind: Array<{
     kind: SpendKind;

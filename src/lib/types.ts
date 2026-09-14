@@ -21,7 +21,9 @@ export type StageId =
   | "linkcheck"
   | "reviewer"
   | "revision"
-  | "final";
+  | "final"
+  /** The designer. Not part of the run's pipeline — appended by the image route on first generation. */
+  | "image";
 
 export type StageStatus = "pending" | "running" | "done" | "failed" | "skipped";
 
@@ -207,12 +209,18 @@ export interface StageRecord {
   error?: string;
   tokensIn?: number;
   tokensOut?: number;
+  /** Of tokensIn, how many were written to / read from the prompt cache. */
+  cacheWriteTokens?: number;
+  cacheReadTokens?: number;
   /** Billable server-side web searches. Priced separately from tokens. */
   searchRequests?: number;
   /** Tokens only. */
   costUsd?: number;
   /** Search fees only. Kept apart so the split stays visible in the breakdown. */
   searchCostUsd?: number;
+  /** Generated images on this stage, and their flat per-image fees. Kept apart like search. */
+  images?: number;
+  imageCostUsd?: number;
   attempt?: number;
 }
 
@@ -242,4 +250,7 @@ export interface Run {
   /** Of which search fees. */
   totalSearchCostUsd?: number;
   totalSearchRequests?: number;
+  /** Designer spend — every image generated for this run, regenerations included. */
+  totalImages?: number;
+  totalImageCostUsd?: number;
 }

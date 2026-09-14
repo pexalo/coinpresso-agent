@@ -874,6 +874,10 @@ async function writeBlog(input: WriterInput): Promise<{
   draft: Draft;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
 }> {
   const { brief, research, fixes, previous } = input;
   const pillar = PILLARS.find((x) => x.id === brief.pillar);
@@ -1278,6 +1282,10 @@ export async function runWriter(input: WriterInput): Promise<{
   draft: Draft;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
 }> {
   if (input.brief.track === "blog") return writeBlog(input);
 
@@ -1458,7 +1466,7 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
     parsed = parseDraftSections(r.text, { stage: "writer", stopReason: r.stopReason, maxTokens: ceiling });
     enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
   } catch (e) {
-    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: 0 });
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens, searchRequests: 0 });
   }
   const draft: Draft = {
     ...parsed,
@@ -1467,7 +1475,7 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
     wordCount: (parsed.body || "").split(/\s+/).filter(Boolean).length,
   };
 
-  return { draft, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+  return { draft, tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens };
 }
 
 // ---------------------------------------------------------------------------

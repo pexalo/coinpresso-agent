@@ -11,6 +11,7 @@
 
 import type { Run } from "../types";
 import { callClaude } from "../providers/anthropic";
+import { imagePrice } from "../model-registry";
 import { MODELS } from "../models";
 import { SCENE_RULES, SECTION_RULES, CHART_REQUEST, PALETTE } from "../blog-image";
 
@@ -21,16 +22,27 @@ const IMAGE_SIZE = "1536x1024";
 const IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY?.trim() || "medium";
 
 /** Published rates, landscape. Used for the spend log, not for billing. */
-const COST_BY_QUALITY: Record<string, number> = {
-  low: 0.011,
-  medium: 0.041,
-  high: 0.165,
-};
+/**
+ * The per-image fee, from the dated register — not a constant in this file,
+ * which is where the "low" price sat at twice its real figure for a month.
+ */
+const IMAGE_COST = imagePrice(IMAGE_MODEL, IMAGE_SIZE, IMAGE_QUALITY);
+
+/** What the scene-brief call burned. Absent on a section image, which has no brief call. */
+export interface BriefUsage {
+  model: string;
+  tokensIn: number;
+  tokensOut: number;
+  cacheWriteTokens?: number;
+  cacheReadTokens?: number;
+}
 
 export interface SceneResult {
   prompt: string;
   png: Buffer;
+  /** The flat per-image fee. */
   costUsd: number;
+  brief?: BriefUsage;
 }
 
 /**
@@ -39,7 +51,10 @@ export interface SceneResult {
  * The model is told to name things that can be modelled — a vault, a ledger, a
  * bridge — because "trust and authority" renders as nothing at all.
  */
-async function sceneBrief(run: Run, nudge?: string): Promise<string> {
+async function sceneBrief(
+  run: Run,
+  nudge?: string
+): Promise<{ scene: string; usage: BriefUsage }> {
   const headings = (run.draft?.body.match(/^## (.+)$/gm) ?? [])
     .map((h) => h.slice(3))
     .filter((h) => h.toLowerCase() !== "faqs")
@@ -71,7 +86,16 @@ elements, no logos, no people.`;
     user: ask,
     maxTokens: 200,
   });
-  return res.text.trim().replace(/^["']|["']$/g, "");
+  return {
+    scene: res.text.trim().replace(/^["']|["']$/g, ""),
+    usage: {
+      model: MODELS.strategy,
+      tokensIn: res.tokensIn,
+      tokensOut: res.tokensOut,
+      cacheWriteTokens: res.cacheWriteTokens,
+      cacheReadTokens: res.cacheReadTokens,
+    },
+  };
 }
 
 export async function generateScene(run: Run, nudge?: string): Promise<SceneResult> {
@@ -79,7 +103,7 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
   if (!key) throw new Error("OPENAI_API_KEY is not set on this deployment.");
   if (!run.draft) throw new Error("This run has no draft to illustrate yet.");
 
-  const scene = await sceneBrief(run, nudge);
+  const { scene, usage: brief } = await sceneBrief(run, nudge);
   const prompt = [
     scene,
     "",
@@ -155,11 +179,7 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
     throw new Error("OpenAI returned neither image bytes nor a URL.");
   }
 
-  return {
-    prompt: scene,
-    png,
-    costUsd: COST_BY_QUALITY[IMAGE_QUALITY] ?? COST_BY_QUALITY.medium,
-  };
+  return { prompt: scene, png, costUsd: IMAGE_COST, brief };
 }
 
 
@@ -236,5 +256,5 @@ export async function generateSectionImage(
     ? Buffer.from(first.b64_json, "base64")
     : Buffer.from(await (await fetch(first.url!)).arrayBuffer());
 
-  return { prompt: clean, png, costUsd: COST_BY_QUALITY[IMAGE_QUALITY] ?? COST_BY_QUALITY.medium };
+  return { prompt: clean, png, costUsd: IMAGE_COST };
 }

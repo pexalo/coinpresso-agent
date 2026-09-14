@@ -45,6 +45,16 @@ export interface RegisteredModel {
   /** USD per million tokens. */
   pricing: { in: number; out: number };
   /**
+   * Prompt-cache rates as MULTIPLES of the base input price.
+   *
+   * Both providers bill cached input differently from fresh input, and the
+   * costs page was pricing all of it at the full rate: every cache read charged
+   * at ten times what it cost. Anthropic writes to the cache at 1.25× and reads
+   * at 0.1×; OpenAI has no write premium and reads at 0.25× on the 4.1 family
+   * or 0.1× on the 5 family. Omitted means the provider default below.
+   */
+  cache?: { write: number; read: number };
+  /**
    * A price change the provider has already announced.
    *
    * Launch discounts are the case that forced this field: Sonnet 5 shipped at
@@ -79,7 +89,7 @@ export interface RegisteredModel {
 }
 
 /** The date every price below was checked against the provider's own page. */
-export const PRICED_ON = "2026-08-24";
+export const PRICED_ON = "2026-09-14";
 
 export const PRICING_SOURCES = [
   {
@@ -136,17 +146,12 @@ export const MODEL_REGISTRY: Record<string, RegisteredModel> = {
     family: "claude",
     tier: "mid",
     pricing: { in: 2, out: 10 },
-    priceChange: {
-      on: "2026-09-01",
-      pricing: { in: 3, out: 15 },
-      note: "The $2/$10 was a launch rate through 31 Aug. From September it matches Sonnet 4.6 — still the right model (newer at the same price), but the cost advantage was temporary.",
-    },
     contextWindow: "1M",
     status: "current",
     webSearch: true,
     supportsTemperature: false,
     notes:
-      "What strategy, writer and revision run on. Launched a third cheaper than the Sonnet 4.5 it replaced — see priceChange: that was an introductory rate, and from 1 Sep it costs the same as the 4.x Sonnets.",
+      "What strategy, writer and revision run on. This register carried an announced step to $3/$15 on 1 Sep; Anthropic's price page on 14 Sep still lists $2/$10, so the step-up did not happen and the entry was overcharging every Sonnet call by half for two weeks. Removed — re-check on the next PRICED_ON pass.",
   },
   "claude-sonnet-4-6": {
     id: "claude-sonnet-4-6",
@@ -207,6 +212,7 @@ export const MODEL_REGISTRY: Record<string, RegisteredModel> = {
     family: "gpt",
     tier: "frontier",
     pricing: { in: 1.25, out: 10 },
+    cache: { write: 1, read: 0.1 },
     status: "current",
     webSearch: false,
     notes:
@@ -219,6 +225,7 @@ export const MODEL_REGISTRY: Record<string, RegisteredModel> = {
     family: "gpt",
     tier: "mid",
     pricing: { in: 0.25, out: 2 },
+    cache: { write: 1, read: 0.1 },
     status: "current",
     webSearch: false,
     notes:
@@ -270,6 +277,34 @@ export const SEARCH_MAX_PER_CALL = 12;
 
 export function searchCost(requests: number): number {
   return requests * SEARCH_PRICE_EACH;
+}
+
+/**
+ * Image generation, billed PER IMAGE, not per token.
+ *
+ * Checked against OpenAI's price list on PRICED_ON. Landscape 1536×1024 is
+ * what the designer asks for, and — counter-intuitively — it is cheaper than
+ * square at every quality. The "low" figure was carried in code as $0.011; the
+ * list says $0.005.
+ */
+export const IMAGE_PRICES: Record<
+  string,
+  Record<"square" | "landscape", Record<"low" | "medium" | "high", number>>
+> = {
+  "gpt-image-2": {
+    square: { low: 0.006, medium: 0.053, high: 0.211 },
+    landscape: { low: 0.005, medium: 0.041, high: 0.165 },
+  },
+};
+
+/** Per-image fee, or 0 for a model/shape the register cannot price. */
+export function imagePrice(model: string, size: string, quality: string): number {
+  const shape = size === "1024x1024" ? "square" : "landscape";
+  const q = (quality === "low" || quality === "high" ? quality : "medium") as
+    | "low"
+    | "medium"
+    | "high";
+  return IMAGE_PRICES[model]?.[shape]?.[q] ?? 0;
 }
 
 export const MODEL_LIST = Object.values(MODEL_REGISTRY);
@@ -440,20 +475,37 @@ export function cheaperThan(id: string): Alternative[] {
  * cost different money, and a report that prices both at whichever figure the
  * code shipped with is wrong for one of them.
  */
-export function priceFor(
-  id: string,
-  at: Date = new Date()
-): { in: number; out: number } | undefined {
-  const m = MODEL_REGISTRY[id];
-  if (!m) return undefined;
-  if (m.priceChange && at.toISOString().slice(0, 10) >= m.priceChange.on) {
-    return m.priceChange.pricing;
-  }
-  return m.pricing;
+export interface Price {
+  in: number;
+  out: number;
+  /** USD per million cached-input tokens written. */
+  cacheWrite: number;
+  /** USD per million cached-input tokens read. */
+  cacheRead: number;
 }
 
-export function pricingTable(
-  at: Date = new Date()
-): Record<string, { in: number; out: number }> {
+/** Provider defaults for cache multipliers, when a model does not say. */
+const CACHE_DEFAULT: Record<Provider, { write: number; read: number }> = {
+  anthropic: { write: 1.25, read: 0.1 },
+  openai: { write: 1, read: 0.25 },
+};
+
+export function priceFor(id: string, at: Date = new Date()): Price | undefined {
+  const m = MODEL_REGISTRY[id];
+  if (!m) return undefined;
+  const base =
+    m.priceChange && at.toISOString().slice(0, 10) >= m.priceChange.on
+      ? m.priceChange.pricing
+      : m.pricing;
+  const mult = m.cache ?? CACHE_DEFAULT[m.provider];
+  return {
+    in: base.in,
+    out: base.out,
+    cacheWrite: base.in * mult.write,
+    cacheRead: base.in * mult.read,
+  };
+}
+
+export function pricingTable(at: Date = new Date()): Record<string, Price> {
   return Object.fromEntries(MODEL_LIST.map((m) => [m.id, priceFor(m.id, at)!]));
 }

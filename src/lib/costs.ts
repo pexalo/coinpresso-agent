@@ -18,8 +18,8 @@
 // ---------------------------------------------------------------------------
 
 import { estimateCost, MODELS, PRICING } from "./models";
-import { SEARCH_MAX_PER_CALL, SEARCH_PRICE_EACH, searchCost } from "./model-registry";
-import type { Run } from "./types";
+import { SEARCH_MAX_PER_CALL, SEARCH_PRICE_EACH, searchCost, imagePrice } from "./model-registry";
+import type { Run, StageRecord } from "./types";
 
 // Deliberately free of any node:fs import. The forecast controls on the costs
 // page are a client component, and they need this arithmetic — so the file that
@@ -38,6 +38,8 @@ export interface StageCost {
   costUsd: number;
   searchRequests: number;
   searchCostUsd: number;
+  images: number;
+  imageCostUsd: number;
 }
 
 export interface TrackCost {
@@ -50,6 +52,8 @@ export interface TrackCost {
   averageUsd: number | null;
   searchRequests: number;
   searchCostUsd: number;
+  images: number;
+  imageCostUsd: number;
   /** Revision passes across billable runs — the main driver of variance. */
   revisions: number;
 }
@@ -73,6 +77,8 @@ export interface RunCost {
   tokenCostUsd: number;
   searchRequests: number;
   searchCostUsd: number;
+  images: number;
+  imageCostUsd: number;
   totalUsd: number;
   revisions: number;
 }
@@ -83,6 +89,9 @@ export interface CostReport {
   tokenCostUsd: number;
   searchCostUsd: number;
   searchRequests: number;
+  /** Generated images and their flat per-image fees — the designer's spend. */
+  images: number;
+  imageCostUsd: number;
   totalUsd: number;
   runs: number;
   billableRuns: number;
@@ -113,6 +122,7 @@ const STAGE_LABELS: Record<string, string> = {
   reviewer: "Reviewer — cross-family review",
   revision: "Revision — writer applies findings",
   final: "Final",
+  image: "Designer — hero and section images",
 };
 
 function trackOf(run: Run): Track {
@@ -139,6 +149,8 @@ export function buildReport(runs: Run[]): CostReport {
   let tokenCostUsd = 0;
   let searchCostUsd = 0;
   let searchRequests = 0;
+  let images = 0;
+  let imageCostUsd = 0;
   const runsDetail: RunCost[] = [];
 
   for (const run of billable) {
@@ -160,13 +172,17 @@ export function buildReport(runs: Run[]): CostReport {
       const c = s.costUsd ?? 0;
       const sr = s.searchRequests ?? 0;
       const sc = s.searchCostUsd ?? 0;
-      if (!ti && !to && !c && !sr) continue;
+      const im = s.images ?? 0;
+      const ic = s.imageCostUsd ?? 0;
+      if (!ti && !to && !c && !sr && !im) continue;
 
       tokensIn += ti;
       tokensOut += to;
       tokenCostUsd += c;
       searchRequests += sr;
       searchCostUsd += sc;
+      images += im;
+      imageCostUsd += ic;
       rTokIn += ti;
       rTokOut += to;
       rTokCost += c;
@@ -184,6 +200,8 @@ export function buildReport(runs: Run[]): CostReport {
           costUsd: 0,
           searchRequests: 0,
           searchCostUsd: 0,
+          images: 0,
+          imageCostUsd: 0,
         };
       row.runs += 1;
       row.tokensIn += ti;
@@ -191,6 +209,8 @@ export function buildReport(runs: Run[]): CostReport {
       row.costUsd += c;
       row.searchRequests += sr;
       row.searchCostUsd += sc;
+      row.images += im;
+      row.imageCostUsd += ic;
       stageMap.set(key, row);
 
       if (!PRICING[s.model] && (ti || to)) {
@@ -225,6 +245,8 @@ export function buildReport(runs: Run[]): CostReport {
       tokenCostUsd: rTokCost,
       searchRequests: run.totalSearchRequests ?? 0,
       searchCostUsd: run.totalSearchCostUsd ?? 0,
+      images: run.totalImages ?? 0,
+      imageCostUsd: run.totalImageCostUsd ?? 0,
       totalUsd: run.totalCostUsd || 0,
       revisions: run.revisions || 0,
     });
@@ -254,6 +276,8 @@ export function buildReport(runs: Run[]): CostReport {
       averageUsd: real.length ? cost / real.length : null,
       searchRequests: real.reduce((a, r) => a + (r.totalSearchRequests ?? 0), 0),
       searchCostUsd: real.reduce((a, r) => a + (r.totalSearchCostUsd ?? 0), 0),
+      images: real.reduce((a, r) => a + (r.totalImages ?? 0), 0),
+      imageCostUsd: real.reduce((a, r) => a + (r.totalImageCostUsd ?? 0), 0),
       revisions: real.reduce((a, r) => a + (r.revisions || 0), 0),
     };
   });
@@ -270,6 +294,8 @@ export function buildReport(runs: Run[]): CostReport {
     tokenCostUsd,
     searchCostUsd,
     searchRequests,
+    images,
+    imageCostUsd,
     totalUsd,
     runs: runs.length,
     billableRuns: billable.length,
@@ -284,6 +310,76 @@ export function buildReport(runs: Run[]): CostReport {
     dearest: asExtreme(priced[priced.length - 1]),
     unpriced: [...unpricedMap.values()],
   };
+}
+
+// --- The designer's spend ---------------------------------------------------
+
+/**
+ * Put an image generation on the run's ledger.
+ *
+ * The designer is not a pipeline stage — it runs when someone presses the
+ * button, as many times as they press it — so it gets one "image" stage that
+ * accumulates, the way search accumulates on the research stage. The flat
+ * per-image fee is kept apart from tokens (imageCostUsd, like searchCostUsd),
+ * so the model breakdown stays a breakdown of models and the per-image figure
+ * survives into the line-items. The scene-brief call before a hero image is
+ * ordinary tokens on the strategy model and is costed as such.
+ *
+ * Pure: mutates the run and returns; the caller saves. That keeps it free of
+ * node:fs like the rest of this file, and testable.
+ */
+export function recordImageSpend(
+  run: Run,
+  imageFeeUsd: number,
+  brief?: {
+    model: string;
+    tokensIn: number;
+    tokensOut: number;
+    cacheWriteTokens?: number;
+    cacheReadTokens?: number;
+  }
+): StageRecord {
+  const now = new Date().toISOString();
+  let s = run.stages.find((x) => x.id === "image");
+  if (!s) {
+    s = {
+      id: "image",
+      label: STAGE_LABELS.image,
+      agent: "designer",
+      model: brief?.model ?? "gpt-image-2",
+      status: "done",
+      startedAt: now,
+      tokensIn: 0,
+      tokensOut: 0,
+      costUsd: 0,
+      images: 0,
+      imageCostUsd: 0,
+    };
+    run.stages.push(s);
+  }
+  s.endedAt = now;
+
+  s.images = (s.images ?? 0) + 1;
+  s.imageCostUsd = (s.imageCostUsd ?? 0) + imageFeeUsd;
+  run.totalImages = (run.totalImages ?? 0) + 1;
+  run.totalImageCostUsd = (run.totalImageCostUsd ?? 0) + imageFeeUsd;
+  run.totalCostUsd = (run.totalCostUsd || 0) + imageFeeUsd;
+
+  if (brief) {
+    const c = estimateCost(brief.model, brief.tokensIn, brief.tokensOut, new Date(), {
+      write: brief.cacheWriteTokens,
+      read: brief.cacheReadTokens,
+    });
+    s.model = brief.model;
+    s.tokensIn = (s.tokensIn ?? 0) + brief.tokensIn;
+    s.tokensOut = (s.tokensOut ?? 0) + brief.tokensOut;
+    s.cacheWriteTokens = (s.cacheWriteTokens ?? 0) + (brief.cacheWriteTokens ?? 0);
+    s.cacheReadTokens = (s.cacheReadTokens ?? 0) + (brief.cacheReadTokens ?? 0);
+    s.costUsd = (s.costUsd ?? 0) + c;
+    run.totalCostUsd += c;
+  }
+  run.updatedAt = now;
+  return s;
 }
 
 // --- Forecasting -----------------------------------------------------------
@@ -328,15 +424,40 @@ export function modelledSearchCost(): number {
   return searchCost(MODELLED_SEARCHES_PER_RUN);
 }
 
+/**
+ * Modelled designer spend for one article: one hero image plus its brief.
+ *
+ * Blog only — the wire track has no image step. One image is the floor, not
+ * the mean: a regenerate is a second charge and section images are more, and
+ * the measured average picks those up as soon as there is history. Priced at
+ * the register's default model and quality; the deployment can override both
+ * by environment, and the modelled figure will not know — one more reason
+ * "modelled" is labelled as such.
+ */
+export const MODELLED_IMAGES_PER_BLOG = 1;
+export const MODELLED_BRIEF_TOKENS = { tokensIn: 700, tokensOut: 60 };
+
+export function modelledImageCost(track: Track): number {
+  if (track !== "blog") return 0;
+  const fee = imagePrice("gpt-image-2", "1536x1024", "medium") * MODELLED_IMAGES_PER_BLOG;
+  const brief = estimateCost(
+    MODELS.strategy,
+    MODELLED_BRIEF_TOKENS.tokensIn,
+    MODELLED_BRIEF_TOKENS.tokensOut
+  );
+  return fee + brief;
+}
+
 /** Modelled cost of one article, before any measured history. Tokens only. */
 /**
  * Priced a MONTH AHEAD, not today.
  *
  * The forecast is a claim about the coming month, and the register can carry an
- * announced price change inside that window — Sonnet 5 steps from $2/$10 to
- * $3/$15 on 1 Sep. Pricing the forecast at today's rate five days before a 50%
- * step-up produces exactly the number someone budgets against and then misses.
- * Thirty days out lands on the price most of the forecast month is billed at.
+ * announced price change inside that window. Pricing the forecast at today's
+ * rate a few days before a step-up produces exactly the number someone budgets
+ * against and then misses. Thirty days out lands on the price most of the
+ * forecast month is billed at. (The one such change this carried — Sonnet 5 to
+ * $3/$15 on 1 Sep — turned out not to happen; the mechanism stays.)
  */
 export function modelledTokenCost(track: Track, revisionRate = 0.6): number {
   const monthOut = new Date(Date.now() + 30 * 24 * 3600 * 1000);
@@ -354,7 +475,11 @@ export function modelledTokenCost(track: Track, revisionRate = 0.6): number {
  * for an invoice.
  */
 export function modelledUnitCost(track: Track, revisionRate = 0.6): number {
-  return modelledTokenCost(track, revisionRate) + modelledSearchCost();
+  return (
+    modelledTokenCost(track, revisionRate) +
+    modelledSearchCost() +
+    modelledImageCost(track)
+  );
 }
 
 export interface Forecast {

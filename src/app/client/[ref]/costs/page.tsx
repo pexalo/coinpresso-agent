@@ -8,7 +8,7 @@ import {
   tokens,
   usd,
 } from "@/lib/costs";
-import { SEARCH_PRICE_PER_1000 } from "@/lib/model-registry";
+import { SEARCH_PRICE_PER_1000, IMAGE_PRICES, PRICED_ON } from "@/lib/model-registry";
 import { PRICING } from "@/lib/models";
 import CostForecast from "@/components/CostForecast";
 import { listSpend, summarizeSpend } from "@/lib/spend-log";
@@ -73,7 +73,7 @@ export default async function CostsPage({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: "Spent to date", value: usd(grandTotalUsd), tone: "var(--ink)" },
           {
@@ -85,6 +85,11 @@ export default async function CostsPage({
             label: "Of which search",
             value: `${usd(report.searchCostUsd + scans.searchCostUsd)} · ${report.searchRequests + scans.searchRequests}`,
             tone: "var(--warning)",
+          },
+          {
+            label: "Of which images",
+            value: `${usd(report.imageCostUsd)} · ${report.images}`,
+            tone: "var(--accent)",
           },
           {
             label: "Tokens in / out",
@@ -286,6 +291,7 @@ export default async function CostsPage({
                   <th className="text-right font-medium px-3 py-2.5">Out</th>
                   <th className="text-right font-medium px-3 py-2.5">Tokens</th>
                   <th className="text-right font-medium px-3 py-2.5">Search</th>
+                  <th className="text-right font-medium px-3 py-2.5">Images</th>
                   <th className="text-right font-medium px-3 py-2.5">Rev</th>
                   <th className="text-right font-medium px-5 py-2.5">Total</th>
                 </tr>
@@ -315,6 +321,9 @@ export default async function CostsPage({
                       {r.searchRequests
                         ? `${usd(r.searchCostUsd)} (${r.searchRequests})`
                         : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-2)]">
+                      {r.images ? `${usd(r.imageCostUsd)} (${r.images})` : "—"}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-3)]">
                       {r.revisions || "—"}
@@ -494,7 +503,10 @@ export default async function CostsPage({
         <div className="px-5 py-4 border-b border-[var(--line)]">
           <h2 className="font-bold text-sm">Rates in use</h2>
           <p className="text-[11px] text-[var(--ink-3)] mt-0.5">
-            USD per million tokens. Change a model in the environment and every
+            USD per million tokens, checked against the providers&apos; price
+            pages on {PRICED_ON}. Cached input is billed at its own rate on both
+            providers and is priced that way here — a cache read is a tenth of
+            base, not the full rate. Change a model in the environment and every
             figure on this page moves with it.
           </p>
         </div>
@@ -504,6 +516,8 @@ export default async function CostsPage({
               <tr className="text-[10px] uppercase tracking-wider text-[var(--ink-3)] border-b border-[var(--line)]">
                 <th className="text-left font-medium px-5 py-2.5">Model</th>
                 <th className="text-right font-medium px-3 py-2.5">Input</th>
+                <th className="text-right font-medium px-3 py-2.5">Cache write</th>
+                <th className="text-right font-medium px-3 py-2.5">Cache read</th>
                 <th className="text-right font-medium px-5 py-2.5">Output</th>
               </tr>
             </thead>
@@ -514,8 +528,25 @@ export default async function CostsPage({
                   <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-2)]">
                     ${p.in.toFixed(2)}
                   </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-3)]">
+                    ${p.cacheWrite.toFixed(2)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-3)]">
+                    ${p.cacheRead.toFixed(3)}
+                  </td>
                   <td className="px-5 py-2.5 text-right tabular-nums text-[var(--ink-2)]">
                     ${p.out.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+              {Object.entries(IMAGE_PRICES).map(([m, shapes]) => (
+                <tr key={m}>
+                  <td className="px-5 py-2.5 font-mono text-[11px]">
+                    {m}
+                    <span className="font-sans text-[10.5px] text-[var(--ink-4)]"> · per image, 1536×1024</span>
+                  </td>
+                  <td colSpan={4} className="px-5 py-2.5 text-right tabular-nums text-[var(--ink-2)]">
+                    low ${shapes.landscape.low.toFixed(3)} · medium ${shapes.landscape.medium.toFixed(3)} · high ${shapes.landscape.high.toFixed(3)}
                   </td>
                 </tr>
               ))}
@@ -529,7 +560,11 @@ export default async function CostsPage({
           , billed on top of tokens. A research call makes up to a dozen — around{" "}
           {MODELLED_SEARCHES_PER_RUN} typically — so it is roughly a quarter of a
           run and it IS counted in every figure on this page. It is measured from
-          the API&apos;s own usage block, not estimated.
+          the API&apos;s own usage block, not estimated.{" "}
+          <span className="font-semibold text-[var(--ink-2)]">Images</span> are a
+          flat fee per picture, counted on the run each time the designer is
+          asked — a regenerate is a second charge — plus the short Claude call
+          that writes the scene brief for a hero image.
         </p>
       </div>
 

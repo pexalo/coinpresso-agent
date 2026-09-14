@@ -127,6 +127,10 @@ async function finish(
   usage?: {
     tokensIn: number;
     tokensOut: number;
+    /** Input tokens written to the prompt cache — billed at a premium. */
+    cacheWriteTokens?: number;
+    /** Input tokens served from the prompt cache — billed at a discount. */
+    cacheReadTokens?: number;
     model: string;
     /** Billable web searches, when the stage used the search tool. */
     searchRequests?: number;
@@ -142,7 +146,16 @@ async function finish(
   if (usage) {
     s.tokensIn = (s.tokensIn ?? 0) + usage.tokensIn;
     s.tokensOut = (s.tokensOut ?? 0) + usage.tokensOut;
-    const cost = estimateCost(usage.model, usage.tokensIn, usage.tokensOut);
+    // Cached input is priced at its own rates — a read is a tenth of base and
+    // a write a quarter over it — rather than everything at full price, which
+    // is what this did before and why every cached call looked ten times
+    // dearer than it was.
+    const cost = estimateCost(usage.model, usage.tokensIn, usage.tokensOut, new Date(), {
+      write: usage.cacheWriteTokens,
+      read: usage.cacheReadTokens,
+    });
+    s.cacheWriteTokens = (s.cacheWriteTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
+    s.cacheReadTokens = (s.cacheReadTokens ?? 0) + (usage.cacheReadTokens ?? 0);
     s.costUsd = (s.costUsd ?? 0) + cost;
     run.totalCostUsd += cost;
 
@@ -178,7 +191,12 @@ async function fail(run: Run, id: StageId, err: unknown): Promise<void> {
     const model = id === "writer" || id === "revision" ? MODELS.writer : MODELS.strategy;
     s.tokensIn = (s.tokensIn ?? 0) + u.tokensIn;
     s.tokensOut = (s.tokensOut ?? 0) + u.tokensOut;
-    const cost = estimateCost(model, u.tokensIn, u.tokensOut);
+    const cost = estimateCost(model, u.tokensIn, u.tokensOut, new Date(), {
+      write: u.cacheWriteTokens,
+      read: u.cacheReadTokens,
+    });
+    s.cacheWriteTokens = (s.cacheWriteTokens ?? 0) + (u.cacheWriteTokens ?? 0);
+    s.cacheReadTokens = (s.cacheReadTokens ?? 0) + (u.cacheReadTokens ?? 0);
     s.costUsd = (s.costUsd ?? 0) + cost;
     run.totalCostUsd += cost;
     if (u.searchRequests > 0) {
@@ -246,7 +264,7 @@ export async function executeRun(run: Run): Promise<Run> {
 
       await finish(run, "strategy", r.research, {
         tokensIn: r.tokensIn,
-        tokensOut: r.tokensOut,
+        tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
         model: MODELS.strategy,
         searchRequests: r.searchRequests,
       });

@@ -65,6 +65,10 @@ export async function runReviewer(input: ReviewerInput): Promise<{
   review: ReviewResult;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
 }> {
   const { brief, research, draft, linkCheck } = input;
 
@@ -213,7 +217,7 @@ Return JSON:
   const review = JSON.parse(r.text) as ReviewResult;
   review.findings = review.findings || [];
 
-  return { review, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+  return { review, tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens };
 }
 
 
@@ -250,6 +254,10 @@ async function reviewBlog(input: ReviewerInput): Promise<{
   review: ReviewResult;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
 }> {
   const { brief, research, draft, linkCheck } = input;
   const type = brief.contentType
@@ -319,5 +327,5 @@ Return JSON:
 
   const review = JSON.parse(r.text) as ReviewResult;
   review.findings = review.findings || [];
-  return { review, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
+  return { review, tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens };
 }

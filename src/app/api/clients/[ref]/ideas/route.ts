@@ -60,7 +60,7 @@ export async function POST(
       kind: "ideas-scan",
       model: MODELS.strategy,
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
       searchRequests: r.searchRequests,
     });
 
@@ -70,7 +70,7 @@ export async function POST(
       searchUrls: r.searchUrls,
       mock: false,
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
     });
   } catch (e) {
     // Billed but unparseable — searches included. See the blog-ideas route.
@@ -80,7 +80,7 @@ export async function POST(
         kind: "ideas-scan",
         model: MODELS.strategy,
         tokensIn: u.tokensIn,
-        tokensOut: u.tokensOut,
+        tokensOut: u.tokensOut, cacheWriteTokens: u.cacheWriteTokens, cacheReadTokens: u.cacheReadTokens,
         searchRequests: u.searchRequests,
       });
     }

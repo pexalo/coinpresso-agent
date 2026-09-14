@@ -131,6 +131,10 @@ export async function runStrategyBlog(
   research: ResearchBrief;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
   searchUrls: string[];
   /** Billable searches, straight from the API usage block. */
   searchRequests: number;
@@ -285,7 +289,7 @@ Research this and return JSON:
   } catch (e) {
     // Searches and tokens were billed even though the parse failed. The
     // pipeline's fail() reads this off the error and records it on the run.
-    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: r.searchRequests ?? 0 });
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens, searchRequests: r.searchRequests ?? 0 });
   }
   research.sources = research.sources || [];
   research.predictions = research.predictions || [];
@@ -299,7 +303,7 @@ Research this and return JSON:
   return {
     research,
     tokensIn: r.tokensIn,
-    tokensOut: r.tokensOut,
+    tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
     searchUrls: r.searchUrls,
     searchRequests: r.searchRequests,
   };
@@ -312,6 +316,10 @@ export async function runStrategy(
   research: ResearchBrief;
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
   searchUrls: string[];
   /** Billable searches, straight from the API usage block. */
   searchRequests: number;
@@ -362,7 +370,7 @@ ${schemaBlock()}`;
   } catch (e) {
     // Searches and tokens were billed even though the parse failed. The
     // pipeline's fail() reads this off the error and records it on the run.
-    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, searchRequests: r.searchRequests ?? 0 });
+    throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens, searchRequests: r.searchRequests ?? 0 });
   }
 
   // Normalise so downstream code never has to defend against missing arrays.
@@ -377,7 +385,7 @@ ${schemaBlock()}`;
   return {
     research,
     tokensIn: r.tokensIn,
-    tokensOut: r.tokensOut,
+    tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
     searchUrls: r.searchUrls,
     searchRequests: r.searchRequests,
   };

@@ -22,6 +22,10 @@ export interface GptResult {
   text: string;
   tokensIn: number;
   tokensOut: number;
+  /** Always 0 — OpenAI charges no premium to populate its cache. */
+  cacheWriteTokens: number;
+  /** Of tokensIn, how many were served from the prompt cache. */
+  cacheReadTokens: number;
 }
 
 export async function callGpt(opts: GptCall): Promise<GptResult> {
@@ -53,12 +57,21 @@ export async function callGpt(opts: GptCall): Promise<GptResult> {
 
   const json = (await res.json()) as {
     choices: Array<{ message: { content: string | null } }>;
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      prompt_tokens_details?: { cached_tokens?: number };
+    };
   };
 
+  // OpenAI's prompt_tokens already INCLUDES the cached portion, so nothing is
+  // added here — only the split is carried, for pricing. Cached reads are a
+  // quarter of the base rate on the 4.1 family and a tenth on the 5 family.
   return {
     text: json.choices?.[0]?.message?.content ?? "",
     tokensIn: json.usage?.prompt_tokens ?? 0,
     tokensOut: json.usage?.completion_tokens ?? 0,
+    cacheWriteTokens: 0,
+    cacheReadTokens: json.usage?.prompt_tokens_details?.cached_tokens ?? 0,
   };
 }

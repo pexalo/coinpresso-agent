@@ -11,7 +11,7 @@
 // and quietly overstated one tier by 3x.
 // ---------------------------------------------------------------------------
 
-import { priceFor, pricingTable, STAGE_MODELS } from "./model-registry";
+import { priceFor, pricingTable, STAGE_MODELS, type Price } from "./model-registry";
 import { canCallModels, routingMode, routingWarning } from "./providers/routing";
 
 function assigned(stage: string): string {
@@ -33,15 +33,13 @@ export const MODELS = {
  * at three times its real price for long enough to make the cost forecast lie.
  * One table, one date on it, one place to correct.
  */
-export const PRICING: Record<string, { in: number; out: number }> =
-  pricingTable();
+export const PRICING: Record<string, Price> = pricingTable();
 
 /**
  * Priced AT CALL TIME, not at module load.
  *
- * The register carries announced price changes (Sonnet 5 steps from $2/$10 to
- * $3/$15 on 1 Sep), and a deployment that boots in August and runs into
- * September must not keep charging August prices. `PRICING` above stays for
+ * The register can carry announced price changes, and a deployment that boots
+ * before one and runs past it must not keep charging the old rate. `PRICING` above stays for
  * existence checks and display; the money goes through here.
  *
  * An UNKNOWN model returns 0 — there is no honest number to invent — but the
@@ -55,11 +53,27 @@ export function estimateCost(
   model: string,
   tin: number,
   tout: number,
-  at: Date = new Date()
+  at: Date = new Date(),
+  /**
+   * How much of `tin` went through the prompt cache. `tin` is the TOTAL input
+   * (fresh + written + read) as every stage records it; the cached portions are
+   * priced at their own rates and the remainder at the base rate. Omitted means
+   * nothing was cached, which prices the whole input at base — the old
+   * behaviour, and still correct for a call that did not cache.
+   */
+  cache?: { write?: number; read?: number }
 ): number {
   const p = priceFor(model, at);
   if (!p) return 0;
-  return (tin / 1_000_000) * p.in + (tout / 1_000_000) * p.out;
+  const write = Math.max(0, cache?.write ?? 0);
+  const read = Math.max(0, cache?.read ?? 0);
+  const fresh = Math.max(0, tin - write - read);
+  return (
+    (fresh / 1_000_000) * p.in +
+    (write / 1_000_000) * p.cacheWrite +
+    (read / 1_000_000) * p.cacheRead +
+    (tout / 1_000_000) * p.out
+  );
 }
 
 /** Env-override models the register cannot price. Surfaced by /api/health. */

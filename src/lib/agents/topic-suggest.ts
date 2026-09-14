@@ -226,6 +226,10 @@ export async function suggestTopics(req: SuggestRequest): Promise<{
   topics: SuggestedTopic[];
   tokensIn: number;
   tokensOut: number;
+  /** Input tokens written to the prompt cache — billed at a premium. */
+  cacheWriteTokens?: number;
+  /** Input tokens served from the prompt cache — billed at a discount. */
+  cacheReadTokens?: number;
   searchRequests: number;
 }> {
   const live = (await allArticles(BLOG_ARCHIVE_ID)).slice(0, 200);
@@ -262,7 +266,7 @@ export async function suggestTopics(req: SuggestRequest): Promise<{
     // The reply arrived and was billed; only the parse failed.
     throw billed(e, {
       tokensIn: r.tokensIn,
-      tokensOut: r.tokensOut,
+      tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
       searchRequests: r.searchRequests ?? 0,
     });
   }
@@ -289,7 +293,7 @@ export async function suggestTopics(req: SuggestRequest): Promise<{
   return {
     topics,
     tokensIn: r.tokensIn,
-    tokensOut: r.tokensOut,
+    tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens,
     searchRequests: r.searchRequests ?? 0,
   };
 }
