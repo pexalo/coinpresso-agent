@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /**
  * Gate state for many runs at once, and one person signing a set of them.
  *
- * The blog runs five to eight posts a day and each needs three signatures. Per
+ * The blog runs five to eight posts a day and each needs every signature. Per
  * post that is twenty-four sign-offs a day, which does not stay careful — it
  * decays into clicking through. So a reviewer reads the day and signs the set in
  * one action, while the RECORD stays per post: each piece keeps its own

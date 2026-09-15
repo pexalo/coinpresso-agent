@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Approver, GateState, Signature } from "@/lib/approval";
 
 /**
- * The three signatures a piece needs before it can leave.
+ * The signatures a piece needs before it can leave — two, since Elena left.
  *
  * Two things this panel has to communicate that a progress bar would not:
  *

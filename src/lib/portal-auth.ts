@@ -9,7 +9,7 @@
 //
 // TWO PASSCODES, TWO ROLES.
 //
-//   PORTAL_PASSCODE        → "client"  Coinpresso's team: Elena, Liam. Everything
+//   PORTAL_PASSCODE        → "client"  Coinpresso's team: Liam, Kat. Everything
 //                                      they need to plan, approve and publish.
 //   PORTAL_ADMIN_PASSCODE  → "admin"   Pexalo. Same dashboard, plus the things
 //                                      a client should not see in their own

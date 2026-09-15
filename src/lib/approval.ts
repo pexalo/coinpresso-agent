@@ -43,12 +43,14 @@ export interface Approver {
  * gate nobody can pass.
  */
 export const DEFAULT_APPROVERS: Approver[] = [
-  { id: "elena", name: "Elena", role: "Reads it as the reader would" },
   { id: "kat", name: "Kat", role: "Checks claims, figures and disclaimers" },
-  { id: "liam", name: "Liam", role: "Releases it" },
+  { id: "liam", name: "Liam", role: "Reads it as the reader would, and releases it" },
 ];
 
-export const DEFAULT_REQUIRED = 3;
+// Elena left in September 2026 and came off the roster. Her signatures on
+// earlier pieces stand: they were given while she was an approver, and a
+// record that rewrites itself when someone leaves is not a record.
+export const DEFAULT_REQUIRED = 2;
 
 export interface Signature {
   approverId: string;
