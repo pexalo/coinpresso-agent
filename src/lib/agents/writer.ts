@@ -1218,6 +1218,11 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       // "centralised" should have been "centralized".
       parsed.body = americanize(parsed.body);
 
+      // Anchors longer than the cap are cut at a natural boundary, the rest of
+      // the claim left as prose. Mechanical — see shortenAnchors for the run
+      // that proved the writer cannot do this on request.
+      parsed.body = shortenAnchors(parsed.body);
+
       // LAST ATTEMPT: fix the punctuation rather than bin the article.
       //
       // Two attempts are spent asking the writer to do it, because a sentence
@@ -1234,9 +1239,10 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       enforceProse(parsed.body);
       enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
       enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);
-      // Round 5. All four are writing tasks — where to break a paragraph, how
-      // to shorten an anchor, which two short sentences to join — so they are
-      // rejections that feed the reason back, not silent code edits.
+      // Round 5. Three of these are writing tasks — where to break a
+      // paragraph, which two short sentences to join, what to render as a
+      // table — so they are rejections that feed the reason back. Anchor
+      // length is not: it is fixed above, and checked here as an invariant.
       enforceAnchorLength(parsed.body);
       enforceLinkSpacing(parsed.body);
       enforceParagraphSize(parsed.body);
@@ -1509,6 +1515,58 @@ function paragraphsOf(body: string): string[] {
 /** Anchor text with the link syntax removed, for counting real words. */
 function unlink(text: string): string {
   return text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+}
+
+/**
+ * Words an anchor can end before and still read as a phrase. The cut lands on
+ * the LAST of these inside the limit, so "signing a deal to acquire up to 90
+ * million MORPHO tokens | over four years" rather than "...MORPHO tokens over
+ * four | years".
+ */
+const ANCHOR_BREAK_WORDS = new Set([
+  "to", "over", "for", "and", "with", "of", "in", "on", "at", "by", "from",
+  "that", "which", "as", "into", "after", "before", "under", "across",
+  "through", "during", "while", "because", "but", "or", "than", "until",
+]);
+/** An anchor shorter than this is no longer the phrase a reader would click. */
+const ANCHOR_MIN_WORDS = 3;
+
+/**
+ * Shorten every over-long anchor, keeping the rest of the claim as prose.
+ *
+ * This WAS a rejection fed back to the writer, on the theory that shortening
+ * an anchor is a writing task. Then a run burned three attempts and $0.71 on
+ * one thirteen-word link, rewriting the whole article each time and landing
+ * on a thirteen-word link each time. The writer cannot count to twelve any
+ * better than it can count dashes, and a link that is one word too long is a
+ * surplus fault, not a missing one — so it is fixed here, on every attempt,
+ * and the check below is left in as the invariant this must satisfy.
+ *
+ * The cut is at the last natural boundary inside the limit; failing that, at
+ * the limit. Fenced code is left alone.
+ */
+export function shortenAnchors(body: string): string {
+  const fix = (prose: string) =>
+    prose.replace(/\[([^\]]+)\]\(([^)]*)\)/g, (whole, text: string, url: string) => {
+      const words = text.trim().split(/\s+/);
+      if (words.length <= ANCHOR_MAX_WORDS) return whole;
+      let cut = ANCHOR_MAX_WORDS;
+      for (let i = ANCHOR_MAX_WORDS; i >= ANCHOR_MIN_WORDS; i--) {
+        if (ANCHOR_BREAK_WORDS.has(words[i].toLowerCase().replace(/[^a-z]/g, ""))) {
+          cut = i;
+          break;
+        }
+      }
+      const anchor = words.slice(0, cut).join(" ").replace(/[,;:]+$/, "");
+      const rest = words.slice(cut).join(" ");
+      return `[${anchor}](${url}) ${rest}`;
+    });
+
+  // Only prose. Splitting on fences keeps the odd segments (code) untouched.
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
 }
 
 export function enforceAnchorLength(body: string): void {

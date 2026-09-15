@@ -11,6 +11,7 @@ import OutlinePanel from "@/components/OutlinePanel";
 import FeaturedImage from "@/components/FeaturedImage";
 import PublishManually from "@/components/PublishManually";
 import SectionImages from "@/components/SectionImages";
+import EditDraft from "@/components/EditDraft";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -462,6 +463,17 @@ export default function RunDetail({
                 ? "No article was produced. The stage that failed is in the timeline on the right."
                 : "No draft yet."}
             </div>
+          )}
+          {/* Typing is the cheapest revision there is. Under the article so
+              the thing being fixed is right above the box. */}
+          {isBlog && (
+            <EditDraft
+              clientRef={ref}
+              runId={id}
+              markdown={run.rendered?.markdown ?? ""}
+              hasDraft={Boolean(run.draft)}
+              onSaved={load}
+            />
           )}
           <ReviewPanel review={run.review} linkCheck={run.linkCheck} />
         </div>

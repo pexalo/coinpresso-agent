@@ -3,6 +3,7 @@
 // the piece he called perfect must pass, and the specific things he flagged
 // must fail. If a future change breaks that relationship, these tests say so.
 import {
+  shortenAnchors,
   enforceAnchorLength, enforceLinkSpacing, enforceParagraphSize,
   enforceSentenceVariety, enforcePromisedStructures, americanize,
 } from "../src/lib/agents/writer.ts";
@@ -13,6 +14,8 @@ const ok = (name, cond, extra = "") => {
   if (cond) { pass++; console.log("  ok  ", name); }
   else { fail++; console.log("  FAIL", name, extra); }
 };
+
+const wordsInAnchor = (s) => (s.match(/\[([^\]]+)\]/)?.[1] ?? "").trim().split(/\s+/).length;
 const throws = (fn) => { try { fn(); return null; } catch (e) { return e.message; } };
 const draft = (n) => readFileSync(`drafts/${n}.md`, "utf8");
 const EXEMPLAR = "4-why-ai-doesnt-cite-crypto-brands";
@@ -110,6 +113,38 @@ for (const f of ["1-schema-markup-checklist","2-crypto-comparison-pages","3-how-
   const errs = [enforceAnchorLength, enforceLinkSpacing, enforceParagraphSize]
     .map((fn) => throws(() => fn(md))).filter(Boolean);
   ok(`${f}: anchors, spacing and paragraphs`, errs.length === 0, errs[0]);
+}
+
+
+console.log("shortenAnchors — the fix that replaced three paid retries:");
+{
+  const url = "https://example.com/deal";
+  const liam = `Coinbase announced it was [signing a deal to acquire up to 90 million MORPHO tokens over four years](${url}), which surprised nobody.`;
+  const out = shortenAnchors(liam);
+  ok("the offending anchor no longer fails the check", throws(() => enforceAnchorLength(out)) === null, out);
+  ok("cut at the last natural boundary, not mid-phrase",
+     out.includes(`[signing a deal to acquire up to 90 million MORPHO tokens](${url}) over four years, which`), out);
+  ok("nothing else in the sentence changed", out.startsWith("Coinbase announced it was [") && out.endsWith("surprised nobody."));
+
+  const short = `See [our crypto GEO guide](${url}) for more.`;
+  ok("a short anchor is untouched", shortenAnchors(short) === short);
+
+  const noBoundary = `[alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi](${url}) end.`;
+  const nb = shortenAnchors(noBoundary);
+  ok("with no boundary word it cuts at the limit", nb.startsWith(`[alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu](${url}) nu xi end.`), nb);
+
+  const comma = `[one two three four five six seven eight nine ten eleven, twelve thirteen fourteen](${url}).`;
+  ok("trailing punctuation does not end up inside the link", !/,\]\(/.test(shortenAnchors(comma)), shortenAnchors(comma));
+
+  const early = `[to be clear about this the deal was signed on Tuesday morning in Zurich](${url}) x.`;
+  ok("never cuts to fewer than three words", wordsInAnchor(shortenAnchors(early)) >= 3, shortenAnchors(early));
+
+  const code = "```\n[a b c d e f g h i j k l m n o](https://x.com)\n```\n\n" + liam;
+  const c = shortenAnchors(code);
+  ok("fenced code is left alone", c.includes("[a b c d e f g h i j k l m n o](https://x.com)"));
+  ok("…while the prose after it is still fixed", throws(() => enforceAnchorLength(c)) === null);
+
+  ok("idempotent", shortenAnchors(out) === out);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

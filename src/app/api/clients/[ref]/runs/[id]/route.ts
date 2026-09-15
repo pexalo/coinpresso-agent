@@ -83,6 +83,17 @@ export async function PATCH(
     rest = rest.slice(h1[0].length).trim();
   }
 
+  // The markdown view ends with a "**Tags:** a, b" line, and the dashboard
+  // editor hands that same view back. Without this, a save with no edits
+  // glued the tags line onto the last FAQ answer — a round trip that changes
+  // the text is not a round trip.
+  let tags = run.draft?.tags ?? [];
+  const tagLine = rest.match(/\n\s*\*\*Tags:\*\*\s*(.*)\s*$/);
+  if (tagLine) {
+    tags = tagLine[1].split(",").map((t) => t.trim()).filter(Boolean);
+    rest = rest.slice(0, tagLine.index).trim();
+  }
+
   // Split the FAQ section off the body. The pipeline stores them separately and
   // renders them itself, so leaving them inline would publish them twice.
   const faqs: Array<{ q: string; a: string }> = [];
@@ -106,7 +117,7 @@ export async function PATCH(
     dateline: run.draft?.dateline ?? null,
     body: rest,
     faqs: faqs.length ? faqs : (run.draft?.faqs ?? []),
-    tags: run.draft?.tags ?? [],
+    tags,
     wordCount,
   };
   // A pasted draft has not been reviewed by the reviewer agent, and the stale
