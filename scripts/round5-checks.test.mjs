@@ -4,7 +4,8 @@
 // must fail. If a future change breaks that relationship, these tests say so.
 import {
   shortenAnchors,
-  enforceAnchorLength, enforceLinkSpacing, enforceParagraphSize,
+  enforceAnchorLength,
+  splitFatParagraphs, enforceLinkSpacing, enforceParagraphSize,
   enforceSentenceVariety, enforcePromisedStructures, americanize,
 } from "../src/lib/agents/writer.ts";
 import { readFileSync } from "node:fs";
@@ -46,10 +47,16 @@ console.log("anchor length (\"long links taking up whole sentences\"):");
 
 console.log("link spacing (\"links stuffed into a small body of text\"):");
 {
-  const bad = "One analysis found [96% of citations came from strong signals](https://a.com/x), which sounds like validation until you read the companion finding: [ranking first only correlates 22% of the time](https://b.com/y).";
+  // ONE tight pair is now tolerated — a source cited beside an analysis of it
+  // is corroboration, and failing a run over it cost four articles. Two or
+  // more is the density the client actually complained about.
+  const onePair = "One analysis found [96% of citations came from strong signals](https://a.com/x), which sounds like validation until you read the companion finding: [ranking first only correlates 22% of the time](https://b.com/y).";
+  ok("a single tight pair is tolerated", throws(() => enforceLinkSpacing(onePair)) === null,
+     throws(() => enforceLinkSpacing(onePair)));
+  const bad = onePair + " Then [a third](https://c.com) and [a fourth](https://d.com) right after it.";
   const err = throws(() => enforceLinkSpacing(bad));
-  ok("two links 14 words apart are rejected", err !== null);
-  ok("both anchors are named", err?.includes("96%") && err?.includes("ranking first"));
+  ok("a second tight pair is rejected", err !== null);
+  ok("the anchors are named", err?.includes("96%") && err?.includes("ranking first"));
   const good = "First [one link](https://a.com) here, and then a good deal of intervening prose that carries the argument forward for a while before we reach [the second](https://b.com).";
   ok("well-spaced links pass", throws(() => enforceLinkSpacing(good)) === null);
   ok("links in separate paragraphs never collide", throws(() => enforceLinkSpacing("A [one](https://a.com).\n\n[Two](https://b.com) B.")) === null);
@@ -146,6 +153,96 @@ console.log("shortenAnchors — the fix that replaced three paid retries:");
 
   ok("idempotent", shortenAnchors(out) === out);
 }
+
+
+console.log("lists are not walls of text — the bug that killed the Google Ads run:");
+{
+  // Markdown lists use single newlines, so a four-item checklist was ONE
+  // "paragraph" to every check here. None of the five posts the 125-word cap
+  // was derived from contains a bullet, so nothing caught it until an article
+  // reached for a list and could not be published.
+  const checklist = `Google looks at four things when it decides two accounts are the same operator.
+
+- **Ownership and verification** — does the registered business, the billing entity, and any related verification documents all point at the same legal person, because advertiser verification ties an account to a named entity and that entity is what gets matched against the suspended one.
+- **Payment instruments** — the card, the bank account and the billing address, any one of which is enough on its own to join two accounts together inside the system without anybody reviewing it.
+- **Device and network** — the browser fingerprint, the logged-in Google identity, and the IP range the account is habitually operated from over a period of weeks.
+- **Landing page and domain** — the destination URL, its registrar record, and whether the site is a near copy of the one that was suspended in the first place.
+
+That is the mechanism, and none of it is discretionary.`;
+
+  ok("a four-item checklist is not one fat paragraph",
+     throws(() => enforceParagraphSize(checklist)) === null,
+     throws(() => enforceParagraphSize(checklist)));
+  ok("the whole list really is over the cap when counted as one block",
+     checklist.split(/\n{2,}/)[1].split(/\s+/).length > 125,
+     checklist.split(/\n{2,}/)[1].split(/\s+/).length);
+
+  // Numbered lists too.
+  const numbered = `1. ${"word ".repeat(70)}\n2. ${"word ".repeat(70)}`;
+  ok("numbered lists split the same way", throws(() => enforceParagraphSize(numbered)) === null);
+
+  // A single genuinely enormous bullet is still a fault — it IS a wall of text.
+  const fatBullet = `- ${"word ".repeat(140)}`;
+  ok("one enormous bullet is still rejected", throws(() => enforceParagraphSize(fatBullet)) !== null);
+
+  // Links in different bullets are not "stuffed together".
+  const twoBullets = `- The first point cites [Google's 2024 Ads Safety Report](https://a.com) as its source.
+- The second cites [Search Engine Land's analysis](https://b.com) of the very same report.`;
+  ok("two links in two bullets are not a tight pair",
+     throws(() => enforceLinkSpacing(twoBullets)) === null,
+     throws(() => enforceLinkSpacing(twoBullets)));
+
+  // Table rows are not prose either.
+  const table = `| Check | What it means |\n| --- | --- |\n| ${"word ".repeat(70)} | ${"word ".repeat(70)} |`;
+  ok("table rows are not paragraphs", throws(() => enforceParagraphSize(table)) === null);
+}
+
+console.log("one close pair is a citation beside its source, not stuffing:");
+{
+  const corroborating = `Google published the [2024 Ads Safety Report](https://a.com), and a [Search Engine Land analysis of the same report](https://b.com) put that number in context for advertisers suspended under the policy that year who wanted to know what their odds actually were.`;
+  ok("one tight pair is tolerated", throws(() => enforceLinkSpacing(corroborating)) === null,
+     throws(() => enforceLinkSpacing(corroborating)));
+
+  const stuffed = `Read [one](https://a.com) and [two](https://b.com) and [three](https://c.com) and [four](https://d.com) before you do anything else today.`;
+  const err = throws(() => enforceLinkSpacing(stuffed));
+  ok("several tight pairs still fail", err !== null);
+  ok("the count is reported", err && err.startsWith("3 pairs"), err && err.slice(0, 30));
+  ok("every offending pair is named", err && (err.match(/→/g) || []).length === 3);
+}
+
+console.log("splitFatParagraphs — mechanical, like the split Liam did by hand:");
+{
+  const long =
+    "The suspension notice arrives with a policy name attached to it and almost nothing else of any use. " +
+    "That is deliberate on Google's part, because naming the exact signal that fired would tell the next operator precisely which signal to go and avoid, and the enforcement team has said as much in public more than once over the past several years. " +
+    "So the advertiser is left to work out what actually happened from the shape of their own account history and whatever they can remember changing. " +
+    "Most of them conclude that it must have been the landing page, because the landing page is the thing they changed most recently before the ban arrived in their inbox. " +
+    "That conclusion is usually wrong, and believing it is what costs them the appeal they were entitled to win.";
+  ok("the fixture really is over the cap", long.split(/\s+/).length > 125, long.split(/\s+/).length);
+  ok("rejected before the fix", throws(() => enforceParagraphSize(long)) !== null);
+
+  const fixed = splitFatParagraphs(long);
+  ok("split into more than one paragraph", fixed.split(/\n{2,}/).length > 1, fixed.split(/\n{2,}/).length);
+  ok("passes after the fix", throws(() => enforceParagraphSize(fixed)) === null, throws(() => enforceParagraphSize(fixed)));
+  ok("no word is lost or invented",
+     fixed.replace(/\s+/g, " ").trim() === long.replace(/\s+/g, " ").trim(),
+     fixed.slice(0, 80));
+  ok("splits at a sentence end, never mid-sentence",
+     fixed.split(/\n{2,}/).slice(0, -1).every((p) => /[.!?]$/.test(p.trim())), fixed);
+  ok("neither half is a fragment",
+     fixed.split(/\n{2,}/).every((p) => p.split(/\s+/).length > 15),
+     fixed.split(/\n{2,}/).map((p) => p.split(/\s+/).length).join(","));
+
+  ok("a short paragraph is untouched", splitFatParagraphs("Two sentences. That is all.") === "Two sentences. That is all.");
+  ok("lists are left alone", splitFatParagraphs(fatBullet0()) === fatBullet0());
+  ok("one unbroken sentence is left for a person",
+     splitFatParagraphs("word ".repeat(140).trim()) === "word ".repeat(140).trim());
+  ok("fenced code is untouched",
+     splitFatParagraphs("```\n" + "word ".repeat(140) + "\n```") === "```\n" + "word ".repeat(140) + "\n```");
+  ok("idempotent", splitFatParagraphs(fixed) === fixed);
+}
+function fatBullet0() { return `- ${"word ".repeat(140).trim()}`; }
+
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

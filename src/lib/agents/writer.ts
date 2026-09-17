@@ -1232,6 +1232,10 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // that proved the writer cannot do this on request.
       parsed.body = shortenAnchors(parsed.body);
 
+      // Over-long paragraphs are split at the turn in the argument. Mechanical,
+      // so it happens on every attempt rather than costing one.
+      parsed.body = splitFatParagraphs(parsed.body);
+
       // LAST ATTEMPT: fix the punctuation rather than bin the article.
       //
       // Two attempts are spent asking the writer to do it, because a sentence
@@ -1514,6 +1518,8 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
 const ANCHOR_MAX_WORDS = 12;
 /** Two links closer than this read as stuffed rather than scattered. */
 const LINK_MIN_GAP_WORDS = 15;
+/** One close pair is a citation beside its source. Several is the fault. */
+const TIGHT_PAIRS_ALLOWED = 1;
 /** The exemplar's longest paragraph, rounded up. A backstop, not the target. */
 const PARA_MAX_WORDS = 125;
 /** A sentence under this is a short one for run-length purposes. */
@@ -1521,11 +1527,37 @@ const SHORT_SENTENCE_WORDS = 12;
 /** The comparison draft he called word salad ran five short ones together. */
 const MAX_SHORT_RUN = 4;
 
+/** A line that begins a markdown list item: "- ", "* ", "1. ", "2) ". */
+const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/;
+
+/**
+ * The blocks a reader sees, which is not the same as the blocks a blank line
+ * makes.
+ *
+ * A markdown list is written with single newlines, so a five-item list was one
+ * "paragraph" to every check here. That made a perfectly well-formatted list of
+ * five short points fail the 125-word cap as "a big section of text" — the
+ * precise opposite of what it is — and made two links in two different bullets
+ * count as links stuffed together in one paragraph.
+ *
+ * It went unnoticed because none of the five posts this rule was derived from
+ * contains a single bullet; they use tables. The first article to reach for a
+ * list could not be published, and three paid attempts told it to break up a
+ * list that was already broken up.
+ *
+ * So each list item is its own block. Table rows likewise: a table is not
+ * prose and its rows are not sentences.
+ */
 function paragraphsOf(body: string): string[] {
   return proseOf(body)
     .split(/\n{2,}/)
+    .flatMap((block) =>
+      LIST_ITEM.test(block)
+        ? block.split(/\n(?=\s*(?:[-*+]|\d+[.)])\s)/)
+        : [block]
+    )
     .map((p) => p.trim())
-    .filter((p) => p && !p.startsWith("#"));
+    .filter((p) => p && !p.startsWith("#") && !p.startsWith("|"));
 }
 
 /** Anchor text with the link syntax removed, for counting real words. */
@@ -1612,12 +1644,85 @@ export function enforceLinkSpacing(body: string): void {
       }
     }
   }
-  if (!tight.length) return;
+  // THE CLIENT'S WORD WAS "a lot".
+  //
+  // This fired on the first pair, so one primary source cited beside an
+  // analysis of it — corroboration, and good practice — killed a run that was
+  // otherwise publishable. Two links close together is a judgement; several is
+  // the pattern he complained about.
+  //
+  // Unlike the 125-word cap, this number is NOT measured: all five reviewed
+  // posts have zero tight pairs, so they say nothing about where the tolerance
+  // belongs. It is a judgement call and is written down as one, so the next
+  // person argues with the reasoning rather than guessing at it.
+  if (tight.length <= TIGHT_PAIRS_ALLOWED) return;
   throw new Error(
-    `${tight.length} pair${tight.length === 1 ? "" : "s"} of links sit less than ${LINK_MIN_GAP_WORDS} words apart. The client's note: "a lot of links stuffed into a small body of text... Links need to be naturally placed throughout". Move one of each pair to a different part of the piece, or drop it:\n${tight
+    `${tight.length} pairs of links sit less than ${LINK_MIN_GAP_WORDS} words apart. The client's note: "a lot of links stuffed into a small body of text... Links need to be naturally placed throughout". Move one of each pair to a different part of the piece, or drop it:\n${tight
       .map((t) => `      ${t}`)
       .join("\n")}`
   );
+}
+
+/**
+ * Split paragraphs that run past the cap, at the sentence boundary nearest the
+ * middle.
+ *
+ * This was a rejection, and it should not have been. The house rule here is
+ * that a check fails a run only when a person is the one who has to decide
+ * something; where the remedy is mechanical, the code does it. Liam made that
+ * call himself — the three over-long paragraphs in the approved batch were
+ * ones he split BY HAND rather than sending back — and a split at the turn in
+ * the argument is the same edit a regular expression can make.
+ *
+ * List items are left alone: a bullet cannot become two paragraphs without
+ * breaking the list, so a genuinely over-long bullet is still a rejection and
+ * a person decides what to do with it. Tables and fenced code likewise.
+ */
+export function splitFatParagraphs(body: string): string {
+  const splitOne = (para: string): string => {
+    if (wordCount(unlink(para)) <= PARA_MAX_WORDS) return para;
+
+    // Sentence starts, as offsets into the paragraph.
+    const bounds: number[] = [];
+    const re = /(?<=[.!?])\s+/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(para))) bounds.push(m.index + m[0].length);
+    if (!bounds.length) return para; // One enormous sentence: a person's call.
+
+    // The boundary closest to halfway through the words, so neither half is a
+    // fragment. Splitting at the first full stop would just move the wall.
+    const half = wordCount(unlink(para)) / 2;
+    let best = bounds[0];
+    let bestGap = Infinity;
+    for (const b of bounds) {
+      const gap = Math.abs(wordCount(unlink(para.slice(0, b))) - half);
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = b;
+      }
+    }
+    const head = para.slice(0, best).trim();
+    const tail = para.slice(best).trim();
+    if (!head || !tail) return para;
+    return `${splitOne(head)}\n\n${splitOne(tail)}`;
+  };
+
+  const fix = (prose: string) =>
+    prose
+      .split(/\n{2,}/)
+      .map((block) => {
+        const t = block.trim();
+        if (!t || t.startsWith("#") || t.startsWith("|") || LIST_ITEM.test(t)) {
+          return block;
+        }
+        return splitOne(t);
+      })
+      .join("\n\n");
+
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
 }
 
 export function enforceParagraphSize(body: string): void {
