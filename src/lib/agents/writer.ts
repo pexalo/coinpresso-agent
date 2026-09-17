@@ -1227,9 +1227,12 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // "centralised" should have been "centralized".
       parsed.body = americanize(parsed.body);
 
-      // Anchors longer than the cap are cut at a natural boundary, the rest of
-      // the claim left as prose. Mechanical — see shortenAnchors for the run
-      // that proved the writer cannot do this on request.
+      // Internal anchors are made to name their destination, then anchors
+      // longer than the cap are cut at a natural boundary. Both mechanical —
+      // see nameAnchors and shortenAnchors for the runs that proved the
+      // writer cannot do either on request. Naming first, because shortening
+      // trims from the end and the topic goes on the front.
+      parsed.body = nameAnchors(parsed.body, knownPages);
       parsed.body = shortenAnchors(parsed.body);
 
       // Over-long paragraphs are split at the turn in the argument. Mechanical,
@@ -1593,6 +1596,66 @@ const ANCHOR_MIN_WORDS = 3;
  * The cut is at the last natural boundary inside the limit; failing that, at
  * the limit. Fenced code is left alone.
  */
+/**
+ * Make every internal anchor name the page it points at.
+ *
+ * The check below wants one real word in common between the anchor and the
+ * destination's topic — "crypto PPC" needs "PPC" somewhere in the link text.
+ * One run was told that three times and wrote "agency partner" three times,
+ * at $0.75 an attempt. Same lesson as anchor length: naming the destination is
+ * a rule the model demonstrably does not follow on request, and the remedy is
+ * a word or two, so the code does it.
+ *
+ * Two ways, tried in order:
+ *
+ *   1. The topic is already in the sentence just before the link — "our crypto
+ *      PPC [agency partner]" — so the anchor grows backwards to take it in:
+ *      "our [crypto PPC agency partner]". Nothing is added; the link just
+ *      covers the words that were already there.
+ *   2. Otherwise the topic is prepended: "[crypto PPC agency partner]".
+ *
+ * Only links to pages on the approved list; an external link is never touched.
+ * Runs BEFORE shortenAnchors, which trims from the end, so the topic at the
+ * front survives.
+ */
+export function nameAnchors(body: string, known: Map<string, string>): string {
+  const fix = (prose: string) =>
+    prose.replace(
+      /((?:\S+\s+){0,4})\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      (whole, before: string, text: string, url: string) => {
+        const topic = known.get(normaliseUrl(url));
+        if (!topic) return whole;
+        const want = anchorTokens(topic);
+        if (!want.size) return whole;
+        if ([...anchorTokens(text)].some((w) => want.has(w))) return whole;
+
+        // 1. Grow backwards over the preceding words if the topic is already
+        //    sitting there. Matched on the topic's OWN words, generic ones
+        //    included, so "crypto PPC" is taken in whole rather than leaving
+        //    "crypto" stranded outside the bracket. Never across punctuation:
+        //    "crypto PPC. Our [partner]" is two sentences, not one phrase.
+        const topicWords = new Set(topic.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+        const words = before.split(/\s+/).filter(Boolean);
+        for (let i = 0; i < words.length; i++) {
+          const bare = words[i].toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (!topicWords.has(bare)) continue;
+          const keepIdx = before.indexOf(words[i]);
+          const pulled = before.slice(keepIdx).trim();
+          if (/[.!?:;,()"\u2018\u201c\u2019\u201d]/.test(pulled)) break;
+          return `${before.slice(0, keepIdx)}[${pulled} ${text}](${url})`;
+        }
+
+        // 2. Prepend the topic.
+        return `${before}[${topic} ${text}](${url})`;
+      }
+    );
+
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
+}
+
 export function shortenAnchors(body: string): string {
   const fix = (prose: string) =>
     prose.replace(/\[([^\]]+)\]\(([^)]*)\)/g, (whole, text: string, url: string) => {

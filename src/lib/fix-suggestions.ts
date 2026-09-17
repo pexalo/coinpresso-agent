@@ -62,7 +62,7 @@ const RULES: Rule[] = [
   {
     id: "anchor-names-destination",
     test: /the anchor "([^"]+)" points at the ([^—]+?) page — the anchor text has to name where it goes/,
-    cause: `The anchor "$1" does not say where it leads. A reader should know what page they are about to open from the words they click.`,
+    cause: `The anchor "$1" does not say where it leads. This is now fixed automatically — seeing it means the fix did not catch this shape, so the note below tells the writer directly.`,
     note: `When you link to the $2 page, the anchor has to name it. Use wording a reader would recognise as that page — for example "our $2 service" or "$2 for crypto" — not a phrase from the sentence that happens to sit there. Keep it to a short clickable phrase and leave the rest of the claim outside the link.`,
     scope: "run",
     why: "Already a house rule — the note adds what is specific to this post.",

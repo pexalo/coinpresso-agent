@@ -4,6 +4,8 @@
 // must fail. If a future change breaks that relationship, these tests say so.
 import {
   shortenAnchors,
+  nameAnchors,
+  enforceLinks,
   enforceAnchorLength,
   splitFatParagraphs, enforceLinkSpacing, enforceParagraphSize,
   enforceSentenceVariety, enforcePromisedStructures, americanize,
@@ -242,6 +244,71 @@ console.log("splitFatParagraphs — mechanical, like the split Liam did by hand:
   ok("idempotent", splitFatParagraphs(fixed) === fixed);
 }
 function fatBullet0() { return `- ${"word ".repeat(140).trim()}`; }
+
+
+
+console.log("nameAnchors — the fix that replaced three $0.75 attempts:");
+{
+  const known = new Map([
+    ["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"],
+    ["https://coinpresso.io/crypto-google-ads", "crypto Google Ads"],
+    ["https://coinpresso.io/crypto-pr", "crypto PR"],
+  ]);
+  const ppc = "https://coinpresso.io/crypto-ppc-marketing";
+  const passes = (b) => throws(() => enforceLinks(b, 5, known)) === null ||
+    !/anchor text has to name where it goes/.test(throws(() => enforceLinks(b, 5, known)));
+
+  // The live failure, verbatim shape.
+  const live = `Most operators bring in an [agency partner](${ppc}) at this point, and that is usually the right call.`;
+  const out = nameAnchors(live, known);
+  ok("the anchor now names the page", out.includes(`[crypto PPC agency partner](${ppc})`), out);
+  ok("…and the naming check passes", passes(out), throws(() => enforceLinks(out, 5, known)));
+  ok("nothing else in the sentence changed", out.startsWith("Most operators bring in an ") && out.endsWith("the right call."));
+
+  // The topic is already just before the link: grow backwards, add nothing.
+  const before = `Most operators bring in a crypto PPC [agency partner](${ppc}) at this point.`;
+  const grown = nameAnchors(before, known);
+  ok("grows backwards over the topic already in the sentence",
+     grown === `Most operators bring in a [crypto PPC agency partner](${ppc}) at this point.`, grown);
+  ok("no word was duplicated", !grown.includes("crypto PPC crypto PPC"));
+
+  // Does not grow backwards across punctuation.
+  const punct = `We handle crypto PPC. Our [agency partner](${ppc}) does the rest.`;
+  const p2 = nameAnchors(punct, known);
+  ok("will not pull words across a full stop", p2.includes(`Our [crypto PPC agency partner](${ppc})`), p2);
+
+  // Already fine: untouched.
+  const fine = `See [our crypto PPC service](${ppc}) for more.`;
+  ok("an anchor that already names the page is untouched", nameAnchors(fine, known) === fine);
+
+  // A single distinctive word is enough — "PPC" alone.
+  const short = `See [PPC options](${ppc}) here.`;
+  ok("one shared real word is enough", nameAnchors(short, known) === short);
+
+  // External links are never touched.
+  const ext = `Per [the report](https://example.com/report), numbers fell.`;
+  ok("external links are left alone", nameAnchors(ext, known) === ext);
+
+  // Unknown internal page: left for the invented-URL check.
+  const unknown = `See [this](https://coinpresso.io/not-a-page).`;
+  ok("an unlisted internal page is left alone", nameAnchors(unknown, known) === unknown);
+
+  // Order with shortenAnchors: topic goes on the front, so trimming from the
+  // end keeps it.
+  const long = `Read the [long anchor of many words that goes on and on for a while more](${ppc}).`;
+  const both = shortenAnchors(nameAnchors(long, known));
+  ok("survives shortening because the topic is at the front", /\[crypto PPC long anchor/.test(both), both);
+  ok("and is within the length cap afterwards", throws(() => enforceAnchorLength(both)) === null);
+
+  ok("fenced code untouched", nameAnchors("```\n[x](" + ppc + ")\n```", known) === "```\n[x](" + ppc + ")\n```");
+  ok("idempotent", nameAnchors(out, known) === out);
+
+  // Two bad anchors in one paragraph, each to a different page.
+  const two = `Use an [agency partner](${ppc}) and a [specialist](https://coinpresso.io/crypto-google-ads).`;
+  const t2 = nameAnchors(two, known);
+  ok("every bad anchor fixed, each with its own page's topic",
+     t2.includes("[crypto PPC agency partner]") && t2.includes("[crypto Google Ads specialist]"), t2);
+}
 
 
 console.log(`\n${pass} passed, ${fail} failed`);
