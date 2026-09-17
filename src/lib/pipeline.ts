@@ -351,8 +351,15 @@ export async function executeRun(run: Run): Promise<Run> {
       return run;
     }
 
+    // Style notes count as work: they are the taste checks that used to fail
+    // the run, and a revision pass is the cheap place to clear them. Bounded
+    // by MAX_REVISIONS like everything else, and if they survive that, the
+    // piece goes to review WITH the notes rather than failing without a draft.
+    const styleNotes = run.draft?.styleNotes ?? [];
     const needsWork =
-      run.review!.verdict !== "pass" || !(run.linkCheck!.passed);
+      run.review!.verdict !== "pass" ||
+      !(run.linkCheck!.passed) ||
+      styleNotes.length > 0;
 
     if (!needsWork || attempt >= MAX_REVISIONS) {
       if (needsWork) {
@@ -372,6 +379,12 @@ export async function executeRun(run: Run): Promise<Run> {
     try {
       const findings = [
         ...run.review!.findings,
+        ...styleNotes.map((n) => ({
+          severity: "minor" as const,
+          category: "style" as const,
+          detail: n,
+          fix: "Address this in place. Do not rewrite passing sections.",
+        })),
         ...run.linkCheck!.unsourced.map((u) => ({
           severity: "blocker" as const,
           category: "sourcing" as const,

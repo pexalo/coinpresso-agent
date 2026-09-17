@@ -363,5 +363,39 @@ console.log("stripAiOpeners — the throat-clear comes off, the sentence stays:"
 }
 
 
+
+console.log("taste checks cannot fail a run — a guard on the writer's own source:");
+{
+  // Read the pipeline block rather than call it: writeBlog needs a model.
+  // The guard is against someone moving a taste check back into the hard
+  // list, which is a one-line edit that costs $0.85 a bounce.
+  const src = readFileSync(new URL("../src/lib/agents/writer.ts", import.meta.url), "utf8");
+  const hardStart = src.indexOf("const faults = collectRejections([");
+  const hardEnd = src.indexOf("if (faults.length) throw", hardStart);
+  const softStart = src.indexOf("const styleNotes = collectRejections([");
+  const softEnd = src.indexOf(".map((f) =>", softStart);
+  ok("both blocks exist", hardStart > 0 && softStart > hardStart);
+  const hard = src.slice(hardStart, hardEnd);
+  const soft = src.slice(softStart, softEnd);
+
+  for (const taste of ["enforceCloser", "enforceLinkSpacing", "enforceParagraphSize", "enforceSentenceVariety"]) {
+    ok(`${taste} is a style note, not a rejection`, soft.includes(taste) && !hard.includes(taste));
+  }
+  for (const must of ["enforceIntro", "enforceNoLedgerMarkers", "enforceLinks", "enforcePromisedStructures"]) {
+    ok(`${must} still rejects`, hard.includes(must) && !soft.includes(must));
+  }
+  ok("the hard block throws; the soft block does not",
+     src.slice(hardEnd, hardEnd + 80).includes("throw new Error(joinFaults(faults))") &&
+     !src.slice(softStart, softEnd + 120).includes("throw"));
+  ok("style notes land on the draft", src.includes("styleNotes: styleNotes.length ? styleNotes : undefined"));
+
+  // The passage that cost $2.90 — five short sentences of good prose — is
+  // exactly what the soft check flags and what must no longer fail a run.
+  const liamWouldApprove = "Knowing the detection mechanics doesn't get you reinstated. Knowing your own cause does. Build a factual record, not a defense. The difference matters more than it sounds like it should. A defense argues you didn't do anything wrong.";
+  ok("the $2.90 passage still trips the counter", throws(() => enforceSentenceVariety(liamWouldApprove)) !== null);
+  ok("…which is why the counter is now a note", true);
+}
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

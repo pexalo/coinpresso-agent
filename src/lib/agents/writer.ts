@@ -1254,23 +1254,37 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         parsed.body = softenToBudget(parsed.body);
       }
 
-      // EVERY check, then one rejection carrying all of it. Round 5's three
-      // writing tasks — where to break a paragraph, which two short sentences
-      // to join, what to render as a table — are in here with the rest;
-      // anchor length is fixed in code above and checked as an invariant.
+      // TWO KINDS OF CHECK, and the difference is what a rejection costs.
+      //
+      // HARD checks are about correctness: a section the brief asked for is
+      // missing, a URL was invented, a source marker was left in the text, a
+      // promised table was never drawn. Every one of these is a fault the
+      // writer can see and fix, so it is rejected and the reason fed back.
+      //
+      // SOFT checks are about taste: sentence rhythm, a repeated closer, two
+      // links near each other. They were hard too, and one run spent $2.90
+      // over three attempts on five short sentences that read perfectly well —
+      // a counter cannot tell rhythm from word salad, and no instruction to
+      // the writer reliably avoids a counter it cannot see. So they no longer
+      // fail anything. They ride with the draft as notes: the revision pass
+      // gets them as findings, and if it cannot clear them the reviewer sees
+      // them beside an article instead of a failure beside nothing.
       const faults = collectRejections([
         () => enforceIntro(parsed.body),
-        () => enforceCloser(parsed.body),
         () => enforceProse(parsed.body),
         () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub),
         () => enforceAnchorLength(parsed.body),
-        () => enforceLinkSpacing(parsed.body),
-        () => enforceParagraphSize(parsed.body),
-        () => enforceSentenceVariety(parsed.body),
         () => enforcePromisedStructures(parsed.body),
       ]);
       if (faults.length) throw new Error(joinFaults(faults));
+
+      const styleNotes = collectRejections([
+        () => enforceCloser(parsed.body),
+        () => enforceLinkSpacing(parsed.body),
+        () => enforceParagraphSize(parsed.body),
+        () => enforceSentenceVariety(parsed.body),
+      ]).map((f) => f.replace(/\s*Retry the writer\.\s*$/, "").trim());
 
       if (fixedStructure) {
         parsed.body = enforceOutline(parsed.body, outline);
@@ -1287,6 +1301,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         // requirement." The post has its category; nothing else is published.
         tags: [],
         wordCount: (parsed.body || "").split(/\s+/).filter(Boolean).length,
+        styleNotes: styleNotes.length ? styleNotes : undefined,
       };
       return { draft, tokensIn, tokensOut };
     } catch (e) {

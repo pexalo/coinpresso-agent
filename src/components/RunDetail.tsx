@@ -502,7 +502,11 @@ export default function RunDetail({
               onSaved={load}
             />
           )}
-          <ReviewPanel review={run.review} linkCheck={run.linkCheck} />
+          <ReviewPanel
+            review={run.review}
+            linkCheck={run.linkCheck}
+            styleNotes={run.draft?.styleNotes}
+          />
         </div>
 
         <div className="space-y-5 min-w-0">

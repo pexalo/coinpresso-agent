@@ -40,11 +40,14 @@ function Bar({ label, value }: { label: string; value: number }) {
 export default function ReviewPanel({
   review,
   linkCheck,
+  styleNotes = [],
 }: {
   review?: ReviewResult;
   linkCheck?: LinkCheckResult;
+  /** What the taste checks still flag on the draft as it stands. */
+  styleNotes?: string[];
 }) {
-  if (!review && !linkCheck) return null;
+  if (!review && !linkCheck && !styleNotes.length) return null;
 
   return (
     <div className="card overflow-hidden">
@@ -69,6 +72,32 @@ export default function ReviewPanel({
           </span>
         )}
       </div>
+
+      {styleNotes.length > 0 && (
+        <div className="px-5 py-4 border-b border-[var(--line)]">
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--warning)]">
+              Style notes
+            </span>
+            <span className="text-[11px] text-[var(--ink-3)]">
+              {styleNotes.length} still open after revision — the article is
+              here; these are for a person to judge.
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {styleNotes.map((n, i) => (
+              <li key={i} className="text-[12px] leading-relaxed text-[var(--ink-2)] whitespace-pre-line">
+                {n}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-[var(--ink-4)] mt-2 leading-relaxed">
+            These are counters, not judgement — five short sentences in a row can
+            be rhythm or word salad, and only a reader can tell. Fix in the box
+            below the article, or approve as is.
+          </p>
+        </div>
+      )}
 
       {linkCheck && (
         <div className="px-5 py-4 border-b border-[var(--line)]">

@@ -158,6 +158,14 @@ export interface Draft {
   faqs: Array<{ q: string; a: string }>;
   tags: string[];
   wordCount: number;
+  /**
+   * What the taste checks flagged — sentence rhythm, a repeated closer, links
+   * sitting close together. These used to fail the run. Now they ride with the
+   * draft: the revision pass gets them as findings, and if it cannot clear
+   * them the reviewer sees them beside the article rather than seeing no
+   * article at all.
+   */
+  styleNotes?: string[];
 }
 
 export interface ReviewFinding {
