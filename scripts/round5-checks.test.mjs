@@ -7,6 +7,7 @@ import {
   nameAnchors,
   stripAiOpeners,
   enforceProse,
+  trimLinks,
   enforceLinks,
   enforceAnchorLength,
   splitFatParagraphs, enforceLinkSpacing, enforceParagraphSize,
@@ -381,9 +382,11 @@ console.log("taste checks cannot fail a run — a guard on the writer's own sour
   for (const taste of ["enforceCloser", "enforceLinkSpacing", "enforceParagraphSize", "enforceSentenceVariety"]) {
     ok(`${taste} is a style note, not a rejection`, soft.includes(taste) && !hard.includes(taste));
   }
-  for (const must of ["enforceIntro", "enforceNoLedgerMarkers", "enforceLinks", "enforcePromisedStructures"]) {
+  for (const must of ["enforceIntro", "enforceNoLedgerMarkers", "enforcePromisedStructures"]) {
     ok(`${must} still rejects`, hard.includes(must) && !soft.includes(must));
   }
+  ok("enforceLinks is hard for targets and soft for counts",
+     hard.includes('"hard")') && soft.includes('"soft")'));
   ok("the hard block throws; the soft block does not",
      src.slice(hardEnd, hardEnd + 80).includes("throw new Error(joinFaults(faults))") &&
      !src.slice(softStart, softEnd + 120).includes("throw"));
@@ -394,6 +397,60 @@ console.log("taste checks cannot fail a run — a guard on the writer's own sour
   const liamWouldApprove = "Knowing the detection mechanics doesn't get you reinstated. Knowing your own cause does. Build a factual record, not a defense. The difference matters more than it sounds like it should. A defense argues you didn't do anything wrong.";
   ok("the $2.90 passage still trips the counter", throws(() => enforceSentenceVariety(liamWouldApprove)) !== null);
   ok("…which is why the counter is now a note", true);
+}
+
+
+
+console.log("an anchor made of generic words can still name its page:");
+{
+  const known = new Map([["https://coinpresso.io/web3-marketing-agency", "Web3 marketing"]]);
+  const url = "https://coinpresso.io/web3-marketing-agency";
+  const exact = `See our [Web3 marketing](${url}) work.`;
+  const err = throws(() => enforceLinks(exact, 5, known, undefined, "hard"));
+  ok("'Web3 marketing' → the Web3 marketing page is NOT a fault", err === null, err);
+  ok("nameAnchors leaves it alone", nameAnchors(exact, known) === exact);
+  const vague = `See our [services](${url}) here.`;
+  ok("a vague anchor to that page still gets the topic prepended",
+     nameAnchors(vague, known).includes(`[Web3 marketing services](${url})`), nameAnchors(vague, known));
+}
+
+console.log("link counts are soft, invented URLs are hard:");
+{
+  const known = new Map([
+    ["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"],
+    ["https://coinpresso.io/crypto-google-ads", "crypto Google Ads"],
+  ]);
+  const two = `Use [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) and [crypto Google Ads](https://coinpresso.io/crypto-google-ads). Per [a report](https://a.com), [another](https://b.com), and [a third](https://c.com), it works.`;
+  ok("two internal links is not a HARD fault", throws(() => enforceLinks(two, 5, known, undefined, "hard")) === null,
+     throws(() => enforceLinks(two, 5, known, undefined, "hard")));
+  const softErr = throws(() => enforceLinks(two, 5, known, undefined, "soft"));
+  ok("…but it is a SOFT note", softErr !== null && /2 internal links/.test(softErr), softErr);
+  const invented = `See [crypto PPC](https://coinpresso.io/made-up-page).`;
+  ok("an invented URL is HARD", /not a page/.test(throws(() => enforceLinks(invented, 5, known, undefined, "hard")) ?? ""));
+  ok("'all' still reports everything", /2 internal/.test(throws(() => enforceLinks(two, 5, known)) ?? ""));
+}
+
+console.log("trimLinks no longer strips the links the check demands:");
+{
+  const P = "https://coinpresso.io/crypto-ppc-marketing";
+  const G = "https://coinpresso.io/crypto-google-ads";
+  const R = "https://coinpresso.io/crypto-programmatic-ads";
+  // Third internal link sits in a paragraph that already has two citations.
+  const body = `Intro with [crypto PPC](${P}) link.\n\nAnother section with [crypto Google Ads](${G}).\n\nPer [one](https://a.com) and [two](https://b.com), the [crypto programmatic](${R}) page shows it.`;
+  const out = trimLinks(body);
+  const internal = (out.match(/\]\(https:\/\/coinpresso\.io/g) || []).length;
+  ok("all three internal links survive", internal === 3, out);
+  ok("an external was shed instead", (out.match(/\]\(https:\/\/[ab]\.com/g) || []).length === 1, out);
+
+  // A list with a link per bullet is not a crowded paragraph.
+  const list = `- [crypto PPC](${P}) point.\n- [crypto Google Ads](${G}) point.\n- [crypto programmatic](${R}) point.`;
+  ok("one link per bullet, nothing shed", trimLinks(list) === list, trimLinks(list));
+
+  // Over the cap in ordinary prose is still trimmed.
+  const stuffed = `A [crypto PPC](${P}), [crypto Google Ads](${G}), [crypto programmatic](${R}), and [x](https://x.com) all here.`;
+  ok("a genuinely crowded paragraph is still trimmed", (trimLinks(stuffed).match(/\]\(/g) || []).length <= 3);
+  ok("…and it sheds the external before an internal",
+     !trimLinks(stuffed).includes("](https://x.com)") && trimLinks(stuffed).includes(`](${P})`));
 }
 
 

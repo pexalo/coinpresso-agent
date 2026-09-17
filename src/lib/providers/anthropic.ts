@@ -294,10 +294,16 @@ export interface BilledUsage {
  * gap the cost audit was written to close, reopened at exactly the moment it
  * matters most, because a stage that is failing is a stage being retried.
  */
-export function billed(e: unknown, usage: BilledUsage): Error {
+export function billed(e: unknown, usage: BilledUsage, lastDraft?: string): Error {
   const err = e instanceof Error ? e : new Error(String(e));
-  (err as Error & { usage?: BilledUsage }).usage = usage;
+  (err as Error & { usage?: BilledUsage; lastDraft?: string }).usage = usage;
+  if (lastDraft) (err as Error & { lastDraft?: string }).lastDraft = lastDraft;
   return err;
+}
+
+/** The text the writer produced on its final attempt, when it failed. */
+export function lastDraftOf(e: unknown): string | undefined {
+  return (e as { lastDraft?: string } | null)?.lastDraft;
 }
 
 /** The cost carried by an error, if it carries one. */

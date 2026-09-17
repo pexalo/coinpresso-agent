@@ -15,7 +15,7 @@
 
 import { MODELS, estimateCost, mockMode } from "./models";
 import { searchCost } from "./model-registry";
-import { usageOf } from "./providers/anthropic";
+import { usageOf, lastDraftOf } from "./providers/anthropic";
 import { runStrategy } from "./agents/strategy";
 import { runWriter } from "./agents/writer";
 import { runReviewer } from "./agents/reviewer";
@@ -186,6 +186,11 @@ async function fail(run: Run, id: StageId, err: unknown): Promise<void> {
   // money, and the gap between the app's ledger and the provider's bill grows
   // every time something goes wrong — which is exactly when someone is staring
   // at the costs page trying to work out where the balance went.
+  // What it wrote, on the stage, so the rejection can be read against the
+  // text it describes. Shown in the timeline under "what it produced".
+  const lastDraft = lastDraftOf(err);
+  if (lastDraft) s.output = { rejectedDraft: lastDraft };
+
   const u = usageOf(err);
   if (u) {
     const model = id === "writer" || id === "revision" ? MODELS.writer : MODELS.strategy;

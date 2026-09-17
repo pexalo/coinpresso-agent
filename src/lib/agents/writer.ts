@@ -475,6 +475,25 @@ const GENERIC_ANCHOR_WORDS = new Set([
   "2024", "2025", "2026", "work", "team",
 ]);
 
+/**
+ * Does the anchor name the page it points at?
+ *
+ * Normally: one distinctive word in common. But a topic can be made entirely
+ * of words the generic list strips — "Web3 marketing" is both — and then it
+ * reduced to nothing, nothing matched nothing, and an anchor reading "Web3
+ * marketing" was rejected for not naming the Web3 marketing page. When the
+ * topic has no distinctive words, its own words are what count.
+ */
+function namesTopic(anchor: string, topic: string): boolean {
+  const want = anchorTokens(topic);
+  if (want.size) return [...anchorTokens(anchor)].some((w) => want.has(w));
+  const raw = new Set(topic.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  return anchor
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .some((w) => w && raw.has(w));
+}
+
 function anchorTokens(text: string): Set<string> {
   const words = text
     .toLowerCase()
@@ -595,6 +614,9 @@ export function ensurePillarLink(body: string, hub?: string, topic?: string): st
  * the body's links and sheds the conclusion's — the "stuffed on the end"
  * pattern goes first.
  */
+/** Liam's floor: "3-5 INTERNAL links to coinpresso landing pages and blogs". */
+const MIN_INTERNAL_LINKS = 3;
+
 export function trimLinks(
   body: string,
   pillarHub?: string,
@@ -662,20 +684,53 @@ export function trimLinks(
     if (!protect.includes(i)) consider(i);
   }
 
-  // Whatever survived may still cluster. Count per paragraph and shed the
-  // extras, latest first, so the earliest link in a paragraph is the one kept.
+  // Whatever survived may still cluster. Count per block and shed the
+  // extras — but never below the internal minimum, and externals first.
+  //
+  // This used to shed the LATEST links in a crowded paragraph regardless of
+  // kind, and it ran before the link check. So the writer would add the
+  // third internal link the check demanded, it would land beside two
+  // citations, this would strip it, and the check would fail the draft for
+  // having two internal links. Told to add one, the writer added one, and it
+  // was stripped again. One run bought that loop five times at $0.85.
+  //
+  // Blocks are list-aware too: a bullet with a link on it is its own block,
+  // not a crowded paragraph with its neighbours.
   const kept = links
     .map((m, i) => ({ i, start: m.index! }))
     .filter(({ i }) => !drop.has(i));
-  const paraOf = (pos: number) => masked.lastIndexOf("\n\n", pos);
-  const byPara = new Map<number, number[]>();
+  const blockOf = (pos: number) => {
+    const blank = masked.lastIndexOf("\n\n", pos);
+    // Inside a list, the nearest preceding line start that begins an item.
+    const lineStart = masked.lastIndexOf("\n", pos - 1) + 1;
+    const line = masked.slice(lineStart, pos);
+    return /^\s*(?:[-*+]|\d+[.)])\s/.test(line) ? lineStart : blank;
+  };
+  const byBlock = new Map<number, number[]>();
   for (const { i, start } of kept) {
-    const key = paraOf(start);
-    byPara.set(key, [...(byPara.get(key) ?? []), i]);
+    const key = blockOf(start);
+    byBlock.set(key, [...(byBlock.get(key) ?? []), i]);
   }
-  for (const idxs of byPara.values()) {
-    for (const i of idxs.slice(maxPerParagraph).reverse()) {
-      if (!protect.includes(i)) drop.add(i);
+  let internalKept = kept.filter(({ i }) => isInternal(links[i][2])).length;
+  for (const idxs of byBlock.values()) {
+    let over = idxs.length - maxPerParagraph;
+    if (over <= 0) continue;
+    // Externals first, latest first.
+    for (const i of [...idxs].reverse()) {
+      if (over <= 0) break;
+      if (protect.includes(i) || isInternal(links[i][2])) continue;
+      drop.add(i);
+      over--;
+    }
+    // Then internals, latest first, only while there are more than the
+    // minimum the check will demand.
+    for (const i of [...idxs].reverse()) {
+      if (over <= 0) break;
+      if (protect.includes(i) || !isInternal(links[i][2])) continue;
+      if (internalKept <= MIN_INTERNAL_LINKS) break;
+      drop.add(i);
+      internalKept--;
+      over--;
     }
   }
 
@@ -701,11 +756,24 @@ export function trimLinks(
  * both bounds, that the page exists, that the anchor names the destination,
  * and where in the piece the links fall.
  */
+/**
+ * `scope` splits Liam's link rules by what a failure costs.
+ *
+ *   hard  a URL that does not exist, a relative path nothing can check, the
+ *         pillar missing, an anchor that does not name its page. Correctness;
+ *         the writer can see and fix each one, so it is rejected.
+ *   soft  the counts and the spread — two links where three were asked for,
+ *         a crowded paragraph, everything stuffed into the conclusion. Taste
+ *         and arithmetic; a person adds a link in ten seconds and a run that
+ *         died over it cost $0.85 a time. These become style notes.
+ *   all   everything, as before — for tests and the reviewer.
+ */
 export function enforceLinks(
   body: string,
   ledgerSize: number,
   known: Map<string, string>,
-  pillarHub?: string
+  pillarHub?: string,
+  scope: "hard" | "soft" | "all" = "all"
 ): void {
   body = proseOf(body);
   const all = [...body.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => ({
@@ -716,19 +784,20 @@ export function enforceLinks(
   const internalLinks = all.filter((l) => isInternal(l.url));
   const internal = new Set(internalLinks.map((l) => normaliseUrl(l.url)));
   const external = new Set(all.filter((l) => !isInternal(l.url)).map((l) => normaliseUrl(l.url)));
-  const problems: string[] = [];
+  const hard: string[] = [];
+  const soft: string[] = [];
 
-  if (internal.size < 3) {
-    problems.push(`${internal.size} internal link${internal.size === 1 ? "" : "s"} to coinpresso.io (needs 3-5)`);
+  if (internal.size < MIN_INTERNAL_LINKS) {
+    soft.push(`${internal.size} internal link${internal.size === 1 ? "" : "s"} to coinpresso.io (needs 3-5)`);
   } else if (internal.size > 5) {
-    problems.push(`${internal.size} internal links (the client asked for 3-5 — more reads as stuffing)`);
+    soft.push(`${internal.size} internal links (the client asked for 3-5 — more reads as stuffing)`);
   }
 
   const wantExternal = Math.min(3, ledgerSize);
   if (external.size < wantExternal) {
-    problems.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
+    soft.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
   } else if (external.size > 5) {
-    problems.push(`${external.size} external links (the client asked for 3-5)`);
+    soft.push(`${external.size} external links (the client asked for 3-5)`);
   }
 
   // A coinpresso.io path the site does not have is a 404 on the agency's own
@@ -737,12 +806,11 @@ export function enforceLinks(
   for (const l of internalLinks) {
     const topic = known.get(normaliseUrl(l.url));
     if (!topic) {
-      problems.push(`"${l.url}" is not a page on coinpresso.io — link only what you were given`);
+      hard.push(`"${l.url}" is not a page on coinpresso.io — link only what you were given`);
       continue;
     }
-    const shared = [...anchorTokens(l.anchor)].some((w) => anchorTokens(topic).has(w));
-    if (!shared) {
-      problems.push(
+    if (!namesTopic(l.anchor, topic)) {
+      hard.push(
         `the anchor "${l.anchor}" points at the ${topic} page — the anchor text has to name where it goes`
       );
     }
@@ -755,7 +823,7 @@ export function enforceLinks(
   // seven drafts. Two of the stored drafts still carry them.
   const relative = [...body.matchAll(/\[([^\]]+)\]\((\/[^)\s]*)\)/g)];
   if (relative.length) {
-    problems.push(
+    hard.push(
       `${relative.length} relative link${relative.length === 1 ? "" : "s"} (${relative
         .slice(0, 3)
         .map((m) => `"${m[2]}"`)
@@ -764,14 +832,14 @@ export function enforceLinks(
   }
 
   if (pillarHub && !internal.has(normaliseUrl(pillarHub))) {
-    problems.push(`the pillar page (${pillarHub}) is not linked — every post links its own pillar`);
+    hard.push(`the pillar page (${pillarHub}) is not linked — every post links its own pillar`);
   }
 
   const crowded = body
     .split(/\n\s*\n/)
     .filter((para) => (para.match(/\]\(https?:\/\//g) ?? []).length > 2).length;
   if (crowded) {
-    problems.push(`${crowded} paragraph${crowded === 1 ? "" : "s"} with three or more links — the citation dump the client flagged`);
+    soft.push(`${crowded} paragraph${crowded === 1 ? "" : "s"} with three or more links — the citation dump the client flagged`);
   }
 
   // Every internal link in the closing section and none before it is the
@@ -780,14 +848,16 @@ export function enforceLinks(
   if (lastH2 > 0 && internal.size >= 3) {
     const before = [...body.slice(0, lastH2).matchAll(/\[[^\]]+\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => isInternal(m[1])).length;
     if (before < 2) {
-      problems.push(
+      soft.push(
         `${before === 0 ? "every internal link sits" : "all but one internal link sit"} in the final section — the client read that as "stuffed on the end, after the fact"; at least two belong in the body`
       );
     }
   }
 
-  if (problems.length) {
-    throw new Error(`Linking: ${problems.join("; ")}. Retry the writer.`);
+  const chosen =
+    scope === "hard" ? hard : scope === "soft" ? soft : [...hard, ...soft];
+  if (chosen.length) {
+    throw new Error(`Linking: ${chosen.join("; ")}. Retry the writer.`);
   }
 }
 
@@ -1178,6 +1248,10 @@ tags, no keywords list — the post belongs to its category and that is all.`;
   let tokensOut = 0;
   let rejection = "";
   let lastError: unknown;
+  // The last attempt's text, kept so a failure can be read rather than
+  // guessed at. Five retries on one run were diagnosed from the rejection
+  // message alone because the draft it described had been thrown away.
+  let lastBody: string | undefined;
 
   for (let attempt = 1; attempt <= MAX_WRITER_ATTEMPTS; attempt++) {
     const r = await callClaude({
@@ -1199,6 +1273,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
     tokensOut += r.tokensOut;
 
     try {
+      lastBody = r.text;
       const parsed = parseDraftSections(r.text, {
         stage: "writer",
         stopReason: r.stopReason,
@@ -1273,13 +1348,14 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceIntro(parsed.body),
         () => enforceProse(parsed.body),
         () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
-        () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub),
+        () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "hard"),
         () => enforceAnchorLength(parsed.body),
         () => enforcePromisedStructures(parsed.body),
       ]);
       if (faults.length) throw new Error(joinFaults(faults));
 
       const styleNotes = collectRejections([
+        () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "soft"),
         () => enforceCloser(parsed.body),
         () => enforceLinkSpacing(parsed.body),
         () => enforceParagraphSize(parsed.body),
@@ -1322,7 +1398,8 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         lastError instanceof Error ? lastError.message : String(lastError)
       }`
     ),
-    { tokensIn, tokensOut, searchRequests: 0 }
+    { tokensIn, tokensOut, searchRequests: 0 },
+    lastBody
   );
 }
 
@@ -1691,9 +1768,7 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
       (whole, before: string, text: string, url: string) => {
         const topic = known.get(normaliseUrl(url));
         if (!topic) return whole;
-        const want = anchorTokens(topic);
-        if (!want.size) return whole;
-        if ([...anchorTokens(text)].some((w) => want.has(w))) return whole;
+        if (namesTopic(text, topic)) return whole;
 
         // 1. Grow backwards over the preceding words if the topic is already
         //    sitting there. Matched on the topic's OWN words, generic ones
