@@ -1,5 +1,6 @@
 import { suggestFix, suggestFixes, SUGGESTION_IDS } from "../src/lib/fix-suggestions.ts";
 import { guidanceBlock, collectRejections, joinFaults } from "../src/lib/agents/writer.ts";
+import { dedupe, ruleKey, SEED_FEEDBACK } from "../src/lib/feedback.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -46,20 +47,50 @@ console.log("the capture groups put the real text into the advice:");
   ok("quotes what was flagged", m.cause.includes("It's worth noting"), m.cause);
   const i = suggestFix(LIVE.internal);
   ok("names the count", i.cause.includes("2 internal link"), i.cause);
-  ok("internal note leaves blank lines to fill in", i.note.includes("- "), i.note);
+  ok("internal note asks for pages rather than leaving blanks", i.wantsPages === true);
 }
 
-console.log("scope recommendations match the shape of the fault:");
+console.log("every suggestion defaults to THIS POST — they restate checks that already run:");
 {
-  ok("a recurring style fault is standing", suggestFix(LIVE.machine).scope === "standing");
-  ok("a repeated closer is standing", suggestFix(LIVE.closer).scope === "standing");
-  ok("anchor naming is standing", suggestFix(LIVE.anchor).scope === "standing");
-  ok("which pages to link is per-post", suggestFix(LIVE.internal).scope === "run");
-  ok("an outline mismatch is per-post",
-     suggestFix("The writer produced 5 H2 sections but the client's brief specifies 6.").scope === "run");
+  for (const [k, text] of Object.entries(LIVE)) {
+    ok(`${k}: this post`, suggestFix(text).scope === "run", suggestFix(text).scope);
+  }
+  ok("no rule in the table defaults to standing",
+     SUGGESTION_IDS.every((id) => true) && !Object.values(LIVE).some((t) => suggestFixes(t).some((f) => f.scope === "standing")));
   ok("every suggestion explains its scope",
-     SUGGESTION_IDS.length > 0 && [LIVE.internal, LIVE.machine, LIVE.anchor, LIVE.closer]
-       .every((t) => suggestFix(t).why.length > 15));
+     [LIVE.internal, LIVE.machine, LIVE.anchor, LIVE.closer].every((t) => suggestFix(t).why.length > 15));
+  const i = suggestFix(LIVE.internal);
+  ok("the internal-links row asks for pages", i.wantsPages === true);
+  ok("…and its note no longer carries blank bullets", !i.note.includes("- \n"), i.note);
+  ok("other rows do not ask for pages", suggestFix(LIVE.machine).wantsPages === undefined);
+}
+
+console.log("house rules are never stored twice:");
+{
+  ok("key ignores case and whitespace", ruleKey("  Scatter   the LINKS. ") === ruleKey("scatter the links."));
+  const entries = [
+    { id: "a", rule: "Scatter the links.", source: "s", date: "d", active: true, addedAt: "1" },
+    { id: "b", rule: "scatter the  links.", source: "s", date: "d", active: true, addedAt: "2" },
+    { id: "c", rule: "Something else.", source: "s", date: "d", active: true, addedAt: "3" },
+    { id: "d", rule: "Scatter the links.", source: "s", date: "d", active: true, addedAt: "4" },
+  ];
+  const out = dedupe(entries);
+  ok("duplicates collapse to one", out.length === 2, out.length);
+  ok("the FIRST copy is the one kept", out[0].id === "a");
+  ok("distinct rules survive", out.some((e) => e.id === "c"));
+}
+
+console.log("Liam's seeded rules are intact and distinct:");
+{
+  ok("eighteen seeds", SEED_FEEDBACK.length === 18, SEED_FEEDBACK.length);
+  ok("every seed has a unique id", new Set(SEED_FEEDBACK.map((x) => x.id)).size === SEED_FEEDBACK.length);
+  ok("every seed has unique text — dedupe cannot eat one", new Set(SEED_FEEDBACK.map((x) => ruleKey(x.rule))).size === SEED_FEEDBACK.length);
+  ok("dedupe leaves the seeds exactly as they are",
+     JSON.stringify(dedupe(SEED_FEEDBACK.map((x) => ({ ...x, addedAt: "" })))) === JSON.stringify(SEED_FEEDBACK.map((x) => ({ ...x, addedAt: "" }))));
+  ok("all seeds are Liam's", SEED_FEEDBACK.every((x) => /liam/i.test(x.id) || /liam/i.test(x.source)),
+     SEED_FEEDBACK.filter((x) => !/liam/i.test(x.id) && !/liam/i.test(x.source)).map((x) => x.id).join(","));
+  ok("none of the seeds is an auto-generated suggestion",
+     !SEED_FEEDBACK.some((x) => /^Editor, from a rejection/.test(x.source)));
 }
 
 console.log("the rest of the table:");
@@ -110,7 +141,7 @@ console.log("every fault at once — the whole point of collecting them:");
      found.map((f) => f.id).sort().join(",") === "internal-links-short,intro-length,machine-written,paragraph-size",
      found.map((f) => f.id).join(","));
   ok("each carries its own note", new Set(found.map((f) => f.note)).size === 4);
-  ok("scopes differ across them", new Set(found.map((f) => f.scope)).size === 2,
+  ok("all default to this post", found.every((f) => f.scope === "run"),
      found.map((f) => `${f.id}:${f.scope}`).join(" "));
   ok("suggestFix still returns the first", suggestFix(many).id === found[0].id);
 }
@@ -147,8 +178,7 @@ console.log("both anchor faults in one Linking message:");
     "Linking: 2 internal links to coinpresso.io (needs 3-5); the anchor \"compliance dossier\" points at the crypto PR page — the anchor text has to name where it goes.";
   const found = suggestFixes(linking);
   ok("two separate faults found", found.length === 2, found.map((f) => f.id).join(","));
-  ok("one is per-post, one is standing",
-     found.some((f) => f.scope === "run") && found.some((f) => f.scope === "standing"));
+  ok("both default to this post", found.every((f) => f.scope === "run"));
 }
 
 

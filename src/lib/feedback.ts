@@ -242,7 +242,7 @@ export async function readFeedback(clientRef: string): Promise<FeedbackLog> {
   try {
     const raw = await fs.readFile(fileFor(clientRef), "utf8");
     const parsed = JSON.parse(raw) as Partial<FeedbackLog>;
-    const entries = parsed.entries ?? [];
+    const entries = dedupe(parsed.entries ?? []);
     const known = new Set([...entries.map((e) => e.id), ...(parsed.dismissed ?? [])]);
     const now = new Date().toISOString();
     for (const seed of SEED_FEEDBACK) {
@@ -261,11 +261,40 @@ async function write(clientRef: string, log: FeedbackLog): Promise<FeedbackLog> 
   return next;
 }
 
+/** Same words, same rule. Case and whitespace do not make a second one. */
+export function ruleKey(rule: string): string {
+  return rule.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Drop entries that repeat an earlier one word for word.
+ *
+ * The fix box under a rejection could save a note as a house rule, and each
+ * retry saved it again: one run put the same "scatter the links" rule into
+ * the store four times, and every one of them went into every prompt. The
+ * seeds — Liam's actual words — are never touched by this: each has a unique
+ * id and unique text, and this keeps the FIRST of any duplicate pair, which
+ * for a seed is the seed.
+ */
+export function dedupe(entries: FeedbackEntry[]): FeedbackEntry[] {
+  const seen = new Set<string>();
+  return entries.filter((e) => {
+    const k = ruleKey(e.rule);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 export async function addFeedback(
   clientRef: string,
   entry: Pick<FeedbackEntry, "source" | "rule"> & Partial<Pick<FeedbackEntry, "date" | "before" | "after">>
 ): Promise<FeedbackLog> {
   const log = await readFeedback(clientRef);
+  // Already a rule, in the same words: nothing to add. Returning the log
+  // unchanged rather than throwing, because the caller is usually saving
+  // several notes at once and one repeat should not fail the rest.
+  if (log.entries.some((e) => ruleKey(e.rule) === ruleKey(entry.rule))) return log;
   const now = new Date().toISOString();
   log.entries.push({
     id: `fb-${Date.now().toString(36)}`,

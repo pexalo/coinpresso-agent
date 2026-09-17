@@ -55,13 +55,30 @@ export async function POST(
 
   // A rejection now names every fault at once, so the box sends one note per
   // fault with its own scope. The single-note shape still works.
+  const key = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
+  const already = new Set((run.guidance ?? []).map((g) => key(g.note)));
+  const seen = new Set<string>();
   const incoming = (
     body.notes?.length
       ? body.notes
       : [{ note: body.note, scope: body.scope }]
   )
     .map((n) => ({ note: (n.note ?? "").trim(), scope: n.scope }))
-    .filter((n) => n.note);
+    .filter((n) => n.note)
+    // Every retry re-sent the same suggestions, and one run reached nine
+    // notes of which two were distinct. The writer reads all of them.
+    .filter((n) => {
+      const k = key(n.note);
+      if (already.has(k) || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+  if (!incoming.length && (body.notes?.length || body.note)) {
+    // Everything sent is already on the run. Not an error — the retry that
+    // follows is still the right thing to do — but say so.
+    return NextResponse.json({ ok: true, added: 0, standing: 0, guidance: run.guidance ?? [] });
+  }
 
   if (!incoming.length) {
     return NextResponse.json(

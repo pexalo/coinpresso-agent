@@ -14,7 +14,7 @@ import SectionImages from "@/components/SectionImages";
 import EditDraft from "@/components/EditDraft";
 import FixAndRetry from "@/components/FixAndRetry";
 import { PUBLICATIONS } from "@/lib/publications";
-import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
+import { PILLARS, CONTENT_TYPES, COINPRESSO_PAGES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
 import type { GateState } from "@/lib/approval";
 import { statusView, TONE_CLASS } from "@/lib/run-status";
@@ -437,6 +437,7 @@ export default function RunDetail({
                 stage={failed.id}
                 busy={retrying}
                 onRetry={() => retry()}
+                pages={COINPRESSO_PAGES}
               />
             )}
             {Boolean(run.guidance?.length) && (

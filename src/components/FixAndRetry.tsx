@@ -34,6 +34,24 @@ interface Row {
   why: string;
   include: boolean;
   suggested: string;
+  wantsPages?: boolean;
+  /** URLs the operator ticked, for a row that wants pages. */
+  picked: string[];
+}
+
+export interface LinkablePage {
+  url: string;
+  topic: string;
+}
+
+/** The note for a pages row: the base instruction plus the ticked pages. */
+function withPages(base: string, picked: string[], pages: LinkablePage[]): string {
+  if (!picked.length) return base;
+  const lines = picked
+    .map((u) => pages.find((p) => p.url === u))
+    .filter((p): p is LinkablePage => Boolean(p))
+    .map((p) => `  - ${p.topic} — ${p.url}`);
+  return `${base}\n${lines.join("\n")}`;
 }
 
 export default function FixAndRetry({
@@ -44,6 +62,7 @@ export default function FixAndRetry({
   busy,
   onRetry,
   retryLabel = "Save and retry",
+  pages = [],
 }: {
   clientRef: string;
   runId: string;
@@ -53,6 +72,8 @@ export default function FixAndRetry({
   busy?: boolean;
   onRetry: () => void | Promise<unknown>;
   retryLabel?: string;
+  /** The coinpresso.io pages the writer is allowed to link. */
+  pages?: LinkablePage[];
 }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>(() =>
@@ -64,6 +85,8 @@ export default function FixAndRetry({
       why: s.why,
       include: true,
       suggested: s.note,
+      wantsPages: s.wantsPages,
+      picked: [],
     }))
   );
   // Anything the table did not recognise. Empty by default and never
@@ -77,7 +100,13 @@ export default function FixAndRetry({
   const patch = (i: number, p: Partial<Row>) =>
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...p } : r)));
 
-  const chosen = rows.filter((r) => r.include && r.note.trim());
+  const finalNote = (r: Row) => (r.wantsPages ? withPages(r.note, r.picked, pages) : r.note);
+  // A pages row with nothing ticked would send the writer an instruction
+  // with no pages in it — the exact note that does not work.
+  const chosen = rows.filter(
+    (r) => r.include && r.note.trim() && (!r.wantsPages || r.picked.length > 0)
+  );
+  const needsPages = rows.some((r) => r.include && r.wantsPages && r.picked.length === 0);
   const total = chosen.length + (extra.trim() ? 1 : 0);
 
   async function saveAndRetry() {
@@ -85,7 +114,7 @@ export default function FixAndRetry({
     setErr(null);
     try {
       const notes = [
-        ...chosen.map((r) => ({ note: r.note, scope: r.scope })),
+        ...chosen.map((r) => ({ note: finalNote(r), scope: r.scope })),
         ...(extra.trim() ? [{ note: extra, scope: extraScope }] : []),
       ];
       const res = await fetch(`/api/clients/${clientRef}/runs/${runId}/guidance`, {
@@ -168,6 +197,42 @@ export default function FixAndRetry({
                 rows={r.note.split("\n").length > 4 ? 7 : 4}
                 className="w-full text-[12.5px] px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--line)] outline-none focus:border-[var(--accent)]/60 leading-relaxed resize-y"
               />
+              {r.wantsPages && pages.length > 0 && (
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--bg)] p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)] mb-2">
+                    Pages to link — tick at least {Math.max(1, 3 - r.picked.length)} more
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1">
+                    {pages.map((pg) => (
+                      <label key={pg.url} className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={r.picked.includes(pg.url)}
+                          onChange={(e) =>
+                            patch(i, {
+                              picked: e.target.checked
+                                ? [...r.picked, pg.url]
+                                : r.picked.filter((u) => u !== pg.url),
+                            })
+                          }
+                          className="mt-0.5 accent-[var(--accent)]"
+                        />
+                        <span className="text-[11.5px] leading-snug">
+                          <span className="text-[var(--ink)]">{pg.topic}</span>
+                          <span className="block text-[10.5px] text-[var(--ink-4)] truncate">
+                            {pg.url.replace("https://coinpresso.io", "")}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {r.picked.length === 0 && (
+                    <p className="text-[11px] text-[var(--warning)] mt-2">
+                      Nothing ticked — this note will not be sent until it names a page.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                 {(
                   [
@@ -239,7 +304,7 @@ export default function FixAndRetry({
       <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={saveAndRetry}
-          disabled={saving || busy || total === 0}
+          disabled={saving || busy || total === 0 || needsPages}
           className="text-[12px] font-semibold px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-40"
         >
           {saving || busy
