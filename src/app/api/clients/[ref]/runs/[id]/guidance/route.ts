@@ -40,7 +40,9 @@ export async function POST(
   if (!run) return NextResponse.json({ error: "Unknown run" }, { status: 404 });
 
   let body: {
+    /** One note, or several — the fix box sends one per fault it found. */
     note?: string;
+    notes?: Array<{ note?: string; scope?: "run" | "standing" }>;
     scope?: "run" | "standing";
     stage?: StageId;
     rejection?: string;
@@ -51,42 +53,62 @@ export async function POST(
     return NextResponse.json({ error: "Expected a JSON body" }, { status: 400 });
   }
 
-  const note = (body.note ?? "").trim();
-  if (!note) {
+  // A rejection now names every fault at once, so the box sends one note per
+  // fault with its own scope. The single-note shape still works.
+  const incoming = (
+    body.notes?.length
+      ? body.notes
+      : [{ note: body.note, scope: body.scope }]
+  )
+    .map((n) => ({ note: (n.note ?? "").trim(), scope: n.scope }))
+    .filter((n) => n.note);
+
+  if (!incoming.length) {
     return NextResponse.json(
       { error: "Write the note first — an empty one changes nothing." },
       { status: 400 }
     );
   }
-  if (note.length > MAX_NOTE) {
+  const tooLong = incoming.find((n) => n.note.length > MAX_NOTE);
+  if (tooLong) {
     return NextResponse.json(
-      { error: `That note is ${note.length} characters; the limit is ${MAX_NOTE}.` },
+      { error: `A note is ${tooLong.note.length} characters; the limit is ${MAX_NOTE}.` },
       { status: 400 }
     );
   }
 
-  const standing = body.scope === "standing";
-  const entry: GuidanceNote = {
-    at: new Date().toISOString(),
+  // One timestamp per note, spaced by a millisecond, because `at` is the
+  // handle DELETE uses and two notes saved together must not share one.
+  const base = Date.now();
+  const added: GuidanceNote[] = incoming.map((n, i) => ({
+    at: new Date(base + i).toISOString(),
     stage: body.stage,
     rejection: body.rejection?.slice(0, 500) || undefined,
-    note,
-    alsoStanding: standing || undefined,
-  };
-  run.guidance = [...(run.guidance ?? []), entry];
-  run.updatedAt = entry.at;
+    note: n.note,
+    alsoStanding: n.scope === "standing" || undefined,
+  }));
+
+  run.guidance = [...(run.guidance ?? []), ...added];
+  run.updatedAt = new Date(base + added.length).toISOString();
   await saveRun(run);
 
-  if (standing) {
+  // Standing rules are written after the run is saved: a failure here leaves
+  // the run correct and the house rule missing, which is recoverable. The
+  // other order loses the note that just got the article moving.
+  let standingCount = 0;
+  for (const n of added) {
+    if (!n.alsoStanding) continue;
     await addFeedback(ref, {
       source: `Editor, from a rejection on "${run.brief.title}"`,
-      rule: note,
+      rule: n.note,
     });
+    standingCount++;
   }
 
   return NextResponse.json({
     ok: true,
-    standing,
+    added: added.length,
+    standing: standingCount,
     guidance: run.guidance,
   });
 }

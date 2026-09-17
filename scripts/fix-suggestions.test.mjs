@@ -1,5 +1,5 @@
-import { suggestFix, SUGGESTION_IDS } from "../src/lib/fix-suggestions.ts";
-import { guidanceBlock } from "../src/lib/agents/writer.ts";
+import { suggestFix, suggestFixes, SUGGESTION_IDS } from "../src/lib/fix-suggestions.ts";
+import { guidanceBlock, collectRejections, joinFaults } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -90,9 +90,111 @@ console.log("the rest of the table:");
      SUGGESTION_IDS.filter((x) => !covered.includes(x)).join(","));
 }
 
+
+console.log("every fault at once — the whole point of collecting them:");
+{
+  // What the writer now throws when a draft breaks four rules.
+  const many = joinFaults([
+    "The introduction is 74 words; the house runs about 190 and the floor is 110. Retry the writer.",
+    "Linking: 2 internal links to coinpresso.io (needs 3-5). Retry the writer.",
+    "The draft reads as machine-written: 1 sentence opening with \"It's worth noting\" — the connective tissue the client flagged as AI-derived. Retry the writer.",
+    "3 paragraphs are over 125 words. Retry the writer.",
+  ]);
+  ok("counted in the first line", many.startsWith("4 things must change:"), many.slice(0, 40));
+  ok("numbered", /\n1\. /.test(many) && /\n4\. /.test(many));
+  ok("'Retry the writer' stripped from the items", !many.includes("Retry the writer"), many);
+
+  const found = suggestFixes(many);
+  ok("all four recognised", found.length === 4, found.map((f) => f.id).join(","));
+  ok("ids are the right four",
+     found.map((f) => f.id).sort().join(",") === "internal-links-short,intro-length,machine-written,paragraph-size",
+     found.map((f) => f.id).join(","));
+  ok("each carries its own note", new Set(found.map((f) => f.note)).size === 4);
+  ok("scopes differ across them", new Set(found.map((f) => f.scope)).size === 2,
+     found.map((f) => `${f.id}:${f.scope}`).join(" "));
+  ok("suggestFix still returns the first", suggestFix(many).id === found[0].id);
+}
+
+console.log("a single fault still reads as a sentence, not a list of one:");
+{
+  const one = joinFaults(["3 paragraphs are over 125 words. Retry the writer."]);
+  ok("no numbering", !one.includes("1. ") && !one.startsWith("1 thing"), one);
+  ok("still stripped", !one.includes("Retry the writer"), one);
+  ok("suggestFixes finds exactly one", suggestFixes(one).length === 1);
+}
+
+console.log("collectRejections runs every check, not up to the first failure:");
+{
+  const ran = [];
+  const faults = collectRejections([
+    () => { ran.push("a"); },
+    () => { ran.push("b"); throw new Error("B failed"); },
+    () => { ran.push("c"); throw new Error("C failed"); },
+    () => { ran.push("d"); },
+  ]);
+  ok("every check ran", ran.join("") === "abcd", ran.join(""));
+  ok("both failures collected", faults.length === 2 && faults[0] === "B failed" && faults[1] === "C failed",
+     JSON.stringify(faults));
+  ok("a clean draft collects nothing", collectRejections([() => {}, () => {}]).length === 0);
+  ok("order is the order the checks were listed", faults[0].startsWith("B"));
+  ok("a non-Error throw is still captured",
+     collectRejections([() => { throw "plain string"; }])[0] === "plain string");
+}
+
+console.log("both anchor faults in one Linking message:");
+{
+  const linking =
+    "Linking: 2 internal links to coinpresso.io (needs 3-5); the anchor \"compliance dossier\" points at the crypto PR page — the anchor text has to name where it goes.";
+  const found = suggestFixes(linking);
+  ok("two separate faults found", found.length === 2, found.map((f) => f.id).join(","));
+  ok("one is per-post, one is standing",
+     found.some((f) => f.scope === "run") && found.some((f) => f.scope === "standing"));
+}
+
+
+
+console.log("every rule survives being put in a numbered list:");
+{
+  // The machine-written pattern was anchored on "Retry the writer." and
+  // stopped matching the moment a draft had two faults instead of one. No
+  // rule may depend on that trailer again.
+  const samples = [
+    ["anchor-names-destination", "Linking: the anchor \"x y\" points at the crypto PPC page — the anchor text has to name where it goes. Retry the writer."],
+    ["invented-page", "Linking: \"https://coinpresso.io/nope\" is not a page on coinpresso.io. Retry the writer."],
+    ["internal-links-short", "Linking: 2 internal links to coinpresso.io (needs 3-5). Retry the writer."],
+    ["internal-links-many", "Linking: 7 internal links (the client asked for 3-5 — more reads as stuffing). Retry the writer."],
+    ["external-links", "Linking: 1 external link (needs 3-5 from the ledger). Retry the writer."],
+    ["machine-written", "The draft reads as machine-written: 1 sentence opening with \"It's worth noting\". Retry the writer."],
+    ["closer-repeat", "The piece ends \"a conversation worth having…\" — the closer four of the first seven posts used. Retry the writer."],
+    ["opener-repeat", "The piece opens \"An AI engine will not mention you…\" Retry the writer."],
+    ["intro-length", "The introduction is 74 words; the house runs about 190 and the floor is 110. Retry the writer."],
+    ["intro-shape", "Two paragraphs before the first H2 that talk to the reader and set the scene — retry the writer."],
+    ["outline-mismatch", "The writer produced 5 H2 sections but the client's brief specifies 6. Retry the writer."],
+    ["paragraph-size", "3 paragraphs are over 125 words. Retry the writer."],
+    ["link-spacing", "2 pairs of links sit less than 15 words apart. Retry the writer."],
+    ["sentence-variety", "1 stretch of more than 4 short sentences in a row. Retry the writer."],
+    ["promised-structure", "The draft refers to a table but never renders one in markdown. Retry the writer."],
+    ["ledger-markers", "The draft cites with 3 ledger markers ([S1], [S2]). Retry the writer."],
+    ["truncated", "The writer reply was cut off at the 8000 token limit before it finished. Retry the writer."],
+    ["anchor-length", "2 links have anchor text longer than 12 words. Retry the writer."],
+  ];
+  ok("a sample exists for every rule in the table",
+     SUGGESTION_IDS.every((id) => samples.some(([s]) => s === id)),
+     SUGGESTION_IDS.filter((id) => !samples.some(([s]) => s === id)).join(","));
+
+  for (const [id, text] of samples) {
+    ok(`${id}: matches alone`, suggestFixes(text).some((f) => f.id === id));
+    // Joined with two other faults, numbered, trailer stripped.
+    const joined = joinFaults(["3 paragraphs are over 125 words. Retry the writer.", text, "1 stretch of more than 4 short sentences in a row. Retry the writer."]);
+    ok(`${id}: still matches inside a list`, suggestFixes(joined).some((f) => f.id === id), joined);
+  }
+}
+
+
 console.log("no match is null, not a wrong guess:");
 {
   ok("unknown rejection", suggestFix("Something nobody has seen before happened.") === null);
+  ok("…and the list form is empty, not a guess", suggestFixes("Nothing familiar here.").length === 0);
   ok("empty string", suggestFix("") === null);
 }
 

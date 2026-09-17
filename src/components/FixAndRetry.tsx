@@ -3,28 +3,38 @@
 // ---------------------------------------------------------------------------
 // The box under a rejection.
 //
-// Before this, the only thing to do with a rejected stage was press Retry,
-// which sent the writer the same prompt and bought the same rejection. Four
-// runs in a row failed this way at about $0.50 each. The missing piece was
-// never a better model — it was a way for the person reading the rejection to
-// say what to do about it.
+// Two things were costing money here, and they compounded.
 //
-// Three parts, in this order:
+// The writer's checks used to throw one at a time, so a draft with five faults
+// reported one. It fixed that, discovered the second, fixed that, discovered
+// the third — three paid attempts for three single-fault corrections and no
+// article. The checks now run to completion and the rejection names every
+// fault, which is what this panel is built around.
 //
-//   WHAT WENT WRONG, in one plain line derived from the rejection text.
-//   A SUGGESTED NOTE, pre-filled and editable, because a blank box after a
-//     four-line rejection is its own kind of dead end.
-//   THIS POST / EVERY POST, because most of these faults recur. A note that
-//     fixes one article and lets the next twenty repeat it is a chore, not a
-//     fix — and the standing store already feeds every future run.
+// And the only thing to do with a rejection was press Retry, which sent the
+// same prompt and bought the same answer. So: one row per fault, each with its
+// own suggested instruction and its own scope, saved and retried in a single
+// action. Fix everything the draft got wrong, once, and pay for one attempt.
 //
-// Saving and retrying are one button on purpose. A note saved but not acted on
-// looks identical to a note that did not work.
+// SCOPE is per fault, not per panel. "Link these three pages" belongs to this
+// article; "never open with It's worth noting" belongs to every article, and
+// forcing one answer for both would make the operator choose which half to get
+// wrong.
 // ---------------------------------------------------------------------------
 
 import { useState } from "react";
-import { suggestFix } from "@/lib/fix-suggestions";
+import { suggestFixes } from "@/lib/fix-suggestions";
 import type { StageId } from "@/lib/types";
+
+interface Row {
+  id: string;
+  cause: string;
+  note: string;
+  scope: "run" | "standing";
+  why: string;
+  include: boolean;
+  suggested: string;
+}
 
 export default function FixAndRetry({
   clientRef,
@@ -33,42 +43,61 @@ export default function FixAndRetry({
   stage,
   busy,
   onRetry,
-  retryLabel = "Save note and retry",
+  retryLabel = "Save and retry",
 }: {
   clientRef: string;
   runId: string;
-  /** The rejection text, verbatim. */
+  /** The rejection text, verbatim — now usually a numbered list of faults. */
   rejection: string;
   stage?: StageId;
   busy?: boolean;
-  /** Runs after the note is saved. */
   onRetry: () => void | Promise<unknown>;
   retryLabel?: string;
 }) {
-  const suggestion = suggestFix(rejection);
   const [open, setOpen] = useState(false);
-  const [note, setNote] = useState(suggestion?.note ?? "");
-  const [scope, setScope] = useState<"run" | "standing">(
-    suggestion?.scope ?? "run"
+  const [rows, setRows] = useState<Row[]>(() =>
+    suggestFixes(rejection).map((s) => ({
+      id: s.id,
+      cause: s.cause,
+      note: s.note,
+      scope: s.scope,
+      why: s.why,
+      include: true,
+      suggested: s.note,
+    }))
   );
+  // Anything the table did not recognise. Empty by default and never
+  // pre-filled: a made-up suggestion for an unknown rejection is worse than
+  // no suggestion.
+  const [extra, setExtra] = useState("");
+  const [extraScope, setExtraScope] = useState<"run" | "standing">("run");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const patch = (i: number, p: Partial<Row>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...p } : r)));
+
+  const chosen = rows.filter((r) => r.include && r.note.trim());
+  const total = chosen.length + (extra.trim() ? 1 : 0);
 
   async function saveAndRetry() {
     setSaving(true);
     setErr(null);
     try {
+      const notes = [
+        ...chosen.map((r) => ({ note: r.note, scope: r.scope })),
+        ...(extra.trim() ? [{ note: extra, scope: extraScope }] : []),
+      ];
       const res = await fetch(`/api/clients/${clientRef}/runs/${runId}/guidance`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ note, scope, stage, rejection }),
+        body: JSON.stringify({ notes, stage, rejection }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) throw new Error(data.error ?? `Save failed (${res.status})`);
       await onRetry();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Save failed");
-    } finally {
       setSaving(false);
     }
   }
@@ -80,11 +109,13 @@ export default function FixAndRetry({
           onClick={() => setOpen(true)}
           className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-colors"
         >
-          Tell the writer how to fix it
+          {rows.length > 1
+            ? `Fix all ${rows.length} and retry`
+            : "Tell the writer how to fix it"}
         </button>
         <span className="text-[11.5px] text-[var(--ink-3)]">
-          {suggestion
-            ? "A suggested fix is ready — retrying without one usually fails the same way."
+          {rows.length
+            ? `${rows.length} suggested ${rows.length === 1 ? "fix is" : "fixes are"} ready — retrying without them usually fails the same way.`
             : "Retrying without a note usually fails the same way."}
         </span>
       </div>
@@ -92,78 +123,130 @@ export default function FixAndRetry({
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--surface-2)]/40 p-4 space-y-3">
-      {suggestion && (
-        <div className="text-[12px] leading-relaxed">
-          <span className="font-semibold text-[var(--ink)]">Why it failed. </span>
-          <span className="text-[var(--ink-2)]">{suggestion.cause}</span>
-        </div>
+    <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--surface-2)]/40 p-4 space-y-4">
+      {rows.length > 1 && (
+        <p className="text-[12px] text-[var(--ink-2)] leading-relaxed">
+          <span className="font-semibold text-[var(--ink)]">
+            {rows.length} things are wrong with this draft.
+          </span>{" "}
+          They are all listed because the writer checks everything on every
+          attempt — fix them together and the next attempt is the only one you
+          pay for.
+        </p>
       )}
+
+      {rows.map((r, i) => (
+        <div
+          key={r.id}
+          className={`rounded-lg border p-3 space-y-2 ${
+            r.include
+              ? "border-[var(--line)]"
+              : "border-[var(--line)]/40 opacity-50"
+          }`}
+        >
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={r.include}
+              onChange={(e) => patch(i, { include: e.target.checked })}
+              className="mt-0.5 accent-[var(--accent)]"
+            />
+            <span className="text-[12px] leading-relaxed text-[var(--ink-2)]">
+              {rows.length > 1 && (
+                <span className="font-semibold text-[var(--ink)]">{i + 1}. </span>
+              )}
+              {r.cause}
+            </span>
+          </label>
+
+          {r.include && (
+            <>
+              <textarea
+                id={`fix-${runId}-${r.id}`}
+                value={r.note}
+                onChange={(e) => patch(i, { note: e.target.value })}
+                rows={r.note.split("\n").length > 4 ? 7 : 4}
+                className="w-full text-[12.5px] px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--line)] outline-none focus:border-[var(--accent)]/60 leading-relaxed resize-y"
+              />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                {(
+                  [
+                    { v: "run", label: "This post" },
+                    { v: "standing", label: "Every post" },
+                  ] as const
+                ).map((o) => (
+                  <label key={o.v} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`scope-${runId}-${r.id}`}
+                      checked={r.scope === o.v}
+                      onChange={() => patch(i, { scope: o.v })}
+                      className="accent-[var(--accent)]"
+                    />
+                    <span className="text-[11.5px] text-[var(--ink-2)]">{o.label}</span>
+                  </label>
+                ))}
+                <span className="text-[11px] text-[var(--ink-4)]">{r.why}</span>
+                {r.note !== r.suggested && (
+                  <button
+                    onClick={() => patch(i, { note: r.suggested })}
+                    className="text-[11px] text-[var(--ink-3)] hover:text-[var(--ink)] ml-auto"
+                  >
+                    Restore suggestion
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      ))}
 
       <label className="block">
         <span className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)] mb-1">
-          What should the writer do instead
+          {rows.length ? "Anything else" : "What should the writer do instead"}
         </span>
         <textarea
-          id={`fix-${runId}`}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={7}
+          id={`fix-${runId}-extra`}
+          value={extra}
+          onChange={(e) => setExtra(e.target.value)}
+          rows={rows.length ? 3 : 7}
           placeholder="Write it as an instruction — the writer reads this verbatim on the next attempt."
           className="w-full text-[12.5px] px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--line)] outline-none focus:border-[var(--accent)]/60 leading-relaxed resize-y"
         />
-        {suggestion && note !== suggestion.note && (
-          <button
-            onClick={() => setNote(suggestion.note)}
-            className="text-[11px] text-[var(--ink-3)] hover:text-[var(--ink)] mt-1"
-          >
-            Restore the suggestion
-          </button>
+        {extra.trim() && (
+          <div className="flex items-center gap-4 mt-1.5">
+            {(
+              [
+                { v: "run", label: "This post" },
+                { v: "standing", label: "Every post" },
+              ] as const
+            ).map((o) => (
+              <label key={o.v} className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name={`scope-${runId}-extra`}
+                  checked={extraScope === o.v}
+                  onChange={() => setExtraScope(o.v)}
+                  className="accent-[var(--accent)]"
+                />
+                <span className="text-[11.5px] text-[var(--ink-2)]">{o.label}</span>
+              </label>
+            ))}
+          </div>
         )}
       </label>
 
-      <fieldset className="space-y-1.5">
-        <legend className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)] mb-1">
-          Apply this to
-        </legend>
-        {(
-          [
-            { v: "run", label: "This post only", hint: "Used on every retry of this article, then forgotten." },
-            {
-              v: "standing",
-              label: "This post and every future post",
-              hint: "Also saved as a house rule the writer and reviewer read on every run. Retire it later on the Style page.",
-            },
-          ] as const
-        ).map((o) => (
-          <label key={o.v} className="flex items-start gap-2.5 cursor-pointer">
-            <input
-              type="radio"
-              name={`scope-${runId}`}
-              checked={scope === o.v}
-              onChange={() => setScope(o.v)}
-              className="mt-0.5 accent-[var(--accent)]"
-            />
-            <span className="text-[12px] leading-relaxed">
-              <span className="font-semibold text-[var(--ink)]">{o.label}</span>
-              <span className="block text-[11px] text-[var(--ink-3)]">{o.hint}</span>
-            </span>
-          </label>
-        ))}
-        {suggestion && (
-          <p className="text-[11px] text-[var(--ink-4)] leading-relaxed pl-6">
-            Suggested: {suggestion.scope === "standing" ? "every future post" : "this post only"} — {suggestion.why}
-          </p>
-        )}
-      </fieldset>
-
-      <div className="flex flex-wrap items-center gap-3 pt-1">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={saveAndRetry}
-          disabled={saving || busy || !note.trim()}
+          disabled={saving || busy || total === 0}
           className="text-[12px] font-semibold px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-40"
         >
-          {saving || busy ? "Working…" : retryLabel}
+          {saving || busy
+            ? "Working…"
+            : total > 1
+              ? `Save ${total} notes and retry`
+              : retryLabel}
         </button>
         <button
           onClick={() => setOpen(false)}
@@ -171,6 +254,12 @@ export default function FixAndRetry({
         >
           Cancel
         </button>
+        {chosen.some((r) => r.scope === "standing") && (
+          <span className="text-[11.5px] text-[var(--ink-3)]">
+            {chosen.filter((r) => r.scope === "standing").length} will become
+            house rules, retirable on the Style page.
+          </span>
+        )}
         {err && <span className="text-[11.5px] text-[var(--danger)]">{err}</span>}
       </div>
     </div>

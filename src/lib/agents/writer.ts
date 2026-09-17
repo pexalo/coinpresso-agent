@@ -1184,7 +1184,9 @@ tags, no keywords list — the post belongs to its category and that is all.`;
       model: MODELS.writer,
       system: BLOG_SYSTEM,
       user: rejection
-        ? `${user}\n\n---\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED BEFORE ANYONE READ IT:\n${rejection}\n\nWrite the piece again in full, fixing exactly that. Everything else about the brief is unchanged.`
+        ? `${user}\n\n---\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED BEFORE ANYONE READ IT. This is
+everything wrong with it, not a sample — fix all of it in this attempt. A draft
+that clears one of these and leaves another fails again:\n${rejection}\n\nWrite the piece again in full, fixing every point above. Everything else about the brief is unchanged.`
         : user,
       maxTokens: ceiling,
       temperature: 0.65,
@@ -1241,20 +1243,24 @@ tags, no keywords list — the post belongs to its category and that is all.`;
         parsed.body = softenToBudget(parsed.body);
       }
 
-      enforceIntro(parsed.body);
-      enforceCloser(parsed.body);
-      enforceProse(parsed.body);
-      enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []);
-      enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub);
-      // Round 5. Three of these are writing tasks — where to break a
-      // paragraph, which two short sentences to join, what to render as a
-      // table — so they are rejections that feed the reason back. Anchor
-      // length is not: it is fixed above, and checked here as an invariant.
-      enforceAnchorLength(parsed.body);
-      enforceLinkSpacing(parsed.body);
-      enforceParagraphSize(parsed.body);
-      enforceSentenceVariety(parsed.body);
-      enforcePromisedStructures(parsed.body);
+      // EVERY check, then one rejection carrying all of it. Round 5's three
+      // writing tasks — where to break a paragraph, which two short sentences
+      // to join, what to render as a table — are in here with the rest;
+      // anchor length is fixed in code above and checked as an invariant.
+      const faults = collectRejections([
+        () => enforceIntro(parsed.body),
+        () => enforceCloser(parsed.body),
+        () => enforceProse(parsed.body),
+        () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
+        () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub),
+        () => enforceAnchorLength(parsed.body),
+        () => enforceLinkSpacing(parsed.body),
+        () => enforceParagraphSize(parsed.body),
+        () => enforceSentenceVariety(parsed.body),
+        () => enforcePromisedStructures(parsed.body),
+      ]);
+      if (faults.length) throw new Error(joinFaults(faults));
+
       if (fixedStructure) {
         parsed.body = enforceOutline(parsed.body, outline);
         if (brief.contentBrief?.faqs?.length) {
@@ -1283,7 +1289,10 @@ tags, no keywords list — the post belongs to its category and that is all.`;
 
   throw billed(
     new Error(
-      `The writer could not produce a publishable draft in ${MAX_WRITER_ATTEMPTS} attempts. Last rejection: ${
+      // Everything still wrong with the FINAL attempt, not a union across all
+      // of them: faults the writer fixed on the way are fixed, and listing
+      // them would send the operator after work already done.
+      `The writer could not produce a publishable draft in ${MAX_WRITER_ATTEMPTS} attempts. Still wrong after the last one: ${
         lastError instanceof Error ? lastError.message : String(lastError)
       }`
     ),
@@ -1741,6 +1750,47 @@ function matchCase(original: string, replacement: string): string {
  * is that the general rules were not enough. A note that the model treats as
  * one more suggestion among twenty is a note that changes nothing.
  */
+/**
+ * Run every check and collect what fails, instead of stopping at the first.
+ *
+ * The checks used to be ten statements in a row, each throwing. So a draft with
+ * five faults reported one, the writer fixed that one, the next attempt
+ * reported the second, and three paid attempts bought three single-fault
+ * corrections and no publishable article. The model was not failing to follow
+ * instructions; it was never given them all at once.
+ *
+ * Collecting them costs nothing — the checks are pure functions over a string
+ * already in memory — and changes the arithmetic completely: one attempt now
+ * learns everything wrong with the draft, and the operator reading the failure
+ * sees the whole list rather than whichever fault happened to be checked first.
+ */
+export function collectRejections(checks: Array<() => void>): string[] {
+  const faults: string[] = [];
+  for (const check of checks) {
+    try {
+      check();
+    } catch (e) {
+      faults.push(e instanceof Error ? e.message : String(e));
+    }
+  }
+  return faults;
+}
+
+/**
+ * The faults as one message.
+ *
+ * "Retry the writer." is stripped from each: it is advice to the operator that
+ * made sense on a single-fault message and reads as noise repeated five times
+ * down a numbered list.
+ */
+export function joinFaults(faults: string[]): string {
+  const clean = faults.map((f) => f.replace(/\s*Retry the writer\.\s*$/, "").trim());
+  if (clean.length === 1) return clean[0];
+  return `${clean.length} things must change:\n${clean
+    .map((f, i) => `${i + 1}. ${f}`)
+    .join("\n")}`;
+}
+
 export function guidanceBlock(guidance?: GuidanceNote[]): string {
   const notes = (guidance ?? []).filter((g) => g.note.trim());
   if (!notes.length) return "";

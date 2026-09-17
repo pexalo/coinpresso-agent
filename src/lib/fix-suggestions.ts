@@ -90,7 +90,11 @@ const RULES: Rule[] = [
   },
   {
     id: "machine-written",
-    test: /reads as machine-written: (.+?)\. Retry/,
+    // Not anchored on "Retry the writer." — that trailer is stripped when
+    // several faults are joined into one numbered list, and a pattern that
+    // depends on it silently stops matching the moment a draft has two
+    // problems instead of one.
+    test: /reads as machine-written: ([^\n]*?)\.?\s*(?:Retry the writer\.)?\s*$/m,
     cause: `Flagged as machine-written: $1.`,
     note: `Never open a sentence with "It's worth noting", "It's important to note", "That said", "Moreover", "Furthermore", "In today's landscape" or any similar connector. Start with the subject and say the thing. If two ideas need joining, join them with a full stop and let the next sentence carry the turn.`,
     scope: "standing",
@@ -194,23 +198,41 @@ const RULES: Rule[] = [
   },
 ];
 
-/** The suggestion for a rejection, or null when nothing matches it. */
-export function suggestFix(rejection: string): FixSuggestion | null {
-  if (!rejection) return null;
+function build(r: Rule, m: RegExpMatchArray): FixSuggestion {
+  const fill = (s: string) =>
+    s.replace(/\$(\d)/g, (_, d: string) => (m[Number(d)] ?? "").trim());
+  return {
+    id: r.id,
+    cause: fill(r.cause),
+    note: fill(r.note),
+    scope: r.scope,
+    why: r.why,
+  };
+}
+
+/**
+ * Every fault in the rejection, in the order the rules are declared.
+ *
+ * A rejection now carries the whole list — the writer runs all its checks and
+ * reports all of them — so matching only the first would throw away exactly
+ * the information that stops the operator fixing one thing at a time.
+ *
+ * One suggestion per rule even when a rule matches several times: three badly
+ * named anchors are one instruction about naming anchors, not three.
+ */
+export function suggestFixes(rejection: string): FixSuggestion[] {
+  if (!rejection) return [];
+  const out: FixSuggestion[] = [];
   for (const r of RULES) {
     const m = rejection.match(r.test);
-    if (!m) continue;
-    const fill = (s: string) =>
-      s.replace(/\$(\d)/g, (_, d: string) => (m[Number(d)] ?? "").trim());
-    return {
-      id: r.id,
-      cause: fill(r.cause),
-      note: fill(r.note),
-      scope: r.scope,
-      why: r.why,
-    };
+    if (m) out.push(build(r, m));
   }
-  return null;
+  return out;
+}
+
+/** The first fault only. Kept for callers that want a single answer. */
+export function suggestFix(rejection: string): FixSuggestion | null {
+  return suggestFixes(rejection)[0] ?? null;
 }
 
 /** Every rule id, so a test can assert the table has not lost one. */
