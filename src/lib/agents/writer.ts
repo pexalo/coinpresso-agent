@@ -1235,6 +1235,10 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       parsed.body = nameAnchors(parsed.body, knownPages);
       parsed.body = shortenAnchors(parsed.body);
 
+      // The connective openers Liam flagged as the AI tell come off. A
+      // deletion, so it is not worth a paid attempt — see stripAiOpeners.
+      parsed.body = stripAiOpeners(parsed.body);
+
       // Over-long paragraphs are split at the turn in the argument. Mechanical,
       // so it happens on every attempt rather than costing one.
       parsed.body = splitFatParagraphs(parsed.body);
@@ -1618,6 +1622,53 @@ const ANCHOR_MIN_WORDS = 3;
  * Runs BEFORE shortenAnchors, which trims from the end, so the topic at the
  * front survives.
  */
+/**
+ * Delete the sentence openers Liam named as the AI tell.
+ *
+ * "It's worth noting that the policy changed" is "The policy changed" with a
+ * throat-clear in front of it. The check below rejects the throat-clear; the
+ * writer was told three times on one run and wrote it three times. Same
+ * lesson as the anchors: the remedy is a deletion, so the code makes it.
+ *
+ * Only the opener goes, plus the "that" or comma that hung off it, and the
+ * next word is capitalised. What is left is the sentence the model meant.
+ * Fenced code is untouched.
+ */
+export function stripAiOpeners(body: string): string {
+  const re = new RegExp(
+    AI_OPENERS.source + String.raw`\s*[,:]?\s*(?:that\s+)?(?=\S)`,
+    "g"
+  );
+  const fix = (prose: string) => {
+    let out = "";
+    let last = 0;
+    let m: RegExpExecArray | null;
+    re.lastIndex = 0;
+    while ((m = re.exec(prose))) {
+      const after = prose.slice(m.index + m[0].length);
+      // Nothing usable after it, or a sentence end — leave it for the check.
+      if (!after || /^[.!?]/.test(after)) continue;
+      out += prose.slice(last, m.index) + m[1];
+      last = m.index + m[0].length;
+      // The next word starts the sentence now. The first letter within the
+      // next few characters is capitalised, so "[the policy]" and "\"the"
+      // are handled without touching anything further along.
+      const head = prose.slice(last, last + 4);
+      const li = head.search(/[a-z]/);
+      if (li >= 0) {
+        out += head.slice(0, li) + head[li].toUpperCase();
+        last += li + 1;
+      }
+    }
+    return out + prose.slice(last);
+  };
+
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
+}
+
 export function nameAnchors(body: string, known: Map<string, string>): string {
   const fix = (prose: string) =>
     prose.replace(

@@ -5,6 +5,8 @@
 import {
   shortenAnchors,
   nameAnchors,
+  stripAiOpeners,
+  enforceProse,
   enforceLinks,
   enforceAnchorLength,
   splitFatParagraphs, enforceLinkSpacing, enforceParagraphSize,
@@ -308,6 +310,56 @@ console.log("nameAnchors — the fix that replaced three $0.75 attempts:");
   const t2 = nameAnchors(two, known);
   ok("every bad anchor fixed, each with its own page's topic",
      t2.includes("[crypto PPC agency partner]") && t2.includes("[crypto Google Ads specialist]"), t2);
+}
+
+
+
+console.log("stripAiOpeners — the throat-clear comes off, the sentence stays:");
+{
+  const cases = [
+    ["It's worth noting that the policy changed in March.", "The policy changed in March."],
+    ["It's worth noting the policy changed in March.", "The policy changed in March."],
+    ["It is worth noting that the policy changed.", "The policy changed."],
+    ["Furthermore, the appeal window is short.", "The appeal window is short."],
+    ["Separately, a related analysis found the same thing.", "A related analysis found the same thing."],
+    ["Additionally, two accounts share a card.", "Two accounts share a card."],
+    ["Moreover, the domain matched.", "The domain matched."],
+    ["In conclusion, do not do this.", "Do not do this."],
+    ["It's worth noting: the policy changed.", "The policy changed."],
+  ];
+  for (const [inp, want] of cases) {
+    ok(`"${inp.slice(0, 28)}…"`, stripAiOpeners(inp) === want, JSON.stringify(stripAiOpeners(inp)));
+  }
+
+  // Mid-paragraph, after a full stop, with prose either side.
+  const mid = "The ban is automatic. It's worth noting that the appeal is not. Read the notice twice.";
+  ok("mid-paragraph opener removed, neighbours untouched",
+     stripAiOpeners(mid) === "The ban is automatic. The appeal is not. Read the notice twice.", stripAiOpeners(mid));
+
+  // After a newline.
+  ok("after a newline", stripAiOpeners("Heading\nFurthermore, x happened.") === "Heading\nX happened.");
+
+  // Starts a link.
+  ok("a link right after the opener", stripAiOpeners("It's worth noting that [the policy](https://a.com) changed.") === "[The policy](https://a.com) changed.",
+     stripAiOpeners("It's worth noting that [the policy](https://a.com) changed."));
+
+  // Not a match inside a word or mid-sentence.
+  ok("'additionally' mid-sentence is not an opener",
+     stripAiOpeners("The fee is charged additionally to the deposit.") === "The fee is charged additionally to the deposit.");
+
+  // Nothing after it: left alone for the check.
+  ok("an opener with nothing after it is left", stripAiOpeners("It's worth noting.") === "It's worth noting.");
+
+  // The check passes afterwards on the live failure shape.
+  const live = "The ban is automatic. It's worth noting that the appeal is not.";
+  const rejectedBefore = throws(() => enforceProse(live));
+  ok("the live shape is rejected untreated", rejectedBefore !== null && /machine-written/.test(rejectedBefore));
+  ok("…and passes after stripping", throws(() => enforceProse(stripAiOpeners(live))) === null,
+     throws(() => enforceProse(stripAiOpeners(live))));
+
+  ok("fenced code untouched", stripAiOpeners("```\nFurthermore, x\n```") === "```\nFurthermore, x\n```");
+  ok("idempotent", stripAiOpeners(stripAiOpeners(mid)) === stripAiOpeners(mid));
+  ok("clean prose untouched", stripAiOpeners("The policy changed. So did the fee.") === "The policy changed. So did the fee.");
 }
 
 

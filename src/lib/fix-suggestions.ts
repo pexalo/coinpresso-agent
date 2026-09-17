@@ -110,7 +110,7 @@ const RULES: Rule[] = [
     // depends on it silently stops matching the moment a draft has two
     // problems instead of one.
     test: /reads as machine-written: ([^\n]*?)\.?\s*(?:Retry the writer\.)?\s*$/m,
-    cause: `Flagged as machine-written: $1.`,
+    cause: `Flagged as machine-written: $1. Connective openers are now removed automatically — seeing this means something else in the sentence tripped it.`,
     note: `Never open a sentence with "It's worth noting", "It's important to note", "That said", "Moreover", "Furthermore", "In today's landscape" or any similar connector. Start with the subject and say the thing. If two ideas need joining, join them with a full stop and let the next sentence carry the turn.`,
     scope: "run",
     why: "Already a house rule — the note adds what is specific to this post.",
