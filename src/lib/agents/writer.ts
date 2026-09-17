@@ -34,7 +34,7 @@ import {
   PILLARS,
 } from "../blog";
 import type { CallContext } from "../providers/routing";
-import type { Brief, Draft, ResearchBrief, ReviewFinding } from "../types";
+import type { Brief, Draft, GuidanceNote, ResearchBrief, ReviewFinding } from "../types";
 
 function styleBlock(): string {
   const s = LIAM_STYLE_PROFILE;
@@ -847,6 +847,8 @@ export interface WriterInput {
   /** On a revision pass, what the reviewer asked for. */
   fixes?: ReviewFinding[];
   previous?: Draft;
+  /** Notes an operator typed after a rejection on this run. */
+  guidance?: GuidanceNote[];
 }
 
 const BLOG_SYSTEM = `You write for Coinpresso's own blog. Coinpresso is a crypto
@@ -903,6 +905,11 @@ async function writeBlog(input: WriterInput): Promise<{
   const feedback = input.ctx?.clientRef
     ? feedbackBlock(await readFeedback(input.ctx.clientRef), "writer")
     : "";
+  // Notes an operator typed on THIS run after a rejection. They sit after the
+  // standing rules and before everything else, and they are worded as
+  // overriding, because that is what they are for: a person looked at why the
+  // stage would not pass and said what to do about it.
+  const guidance = guidanceBlock(input.guidance);
   const voiceBlock = exemplars.length
     ? `\n\n${exemplarBlock(exemplars)}\n`
     : `\n\nNo published examples have been imported from coinpresso.io yet, so you
@@ -1040,7 +1047,7 @@ ${BLOG_DEFAULT_STRUCTURE}
 FORMAT: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words.` : "Guide, 1200-1800 words."}`;
 
   const user = `${BLOG_STYLE}
-${feedback ? `\n${feedback}\n` : ""}${voiceBlock}${clientBrief}
+${feedback ? `\n${feedback}\n` : ""}${guidance ? `\n${guidance}\n` : ""}${voiceBlock}${clientBrief}
 ---
 
 ${structureBlock}
@@ -1724,6 +1731,30 @@ function matchCase(original: string, replacement: string): string {
     return replacement[0].toUpperCase() + replacement.slice(1);
   }
   return replacement;
+}
+
+/**
+ * The operator's notes for this run, as instructions.
+ *
+ * Deliberately last-word: these are written by a person looking at a stage
+ * that has already failed two or three times, and the only reason to type one
+ * is that the general rules were not enough. A note that the model treats as
+ * one more suggestion among twenty is a note that changes nothing.
+ */
+export function guidanceBlock(guidance?: GuidanceNote[]): string {
+  const notes = (guidance ?? []).filter((g) => g.note.trim());
+  if (!notes.length) return "";
+  const lines = notes.map(
+    (g, i) =>
+      `${i + 1}. ${g.note.trim()}${
+        g.rejection ? `\n   (written after: ${g.rejection.slice(0, 160)})` : ""
+      }`
+  );
+  return `INSTRUCTIONS FROM THE EDITOR FOR THIS POST — these were written after
+this stage was rejected, by someone who read the rejection. They override the
+general guidance above where the two disagree. Follow them exactly.
+
+${lines.join("\n")}`;
 }
 
 export function americanize(body: string): string {

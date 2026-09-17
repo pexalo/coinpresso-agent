@@ -224,6 +224,17 @@ export interface StageRecord {
   attempt?: number;
 }
 
+export interface GuidanceNote {
+  at: string;
+  /** Which stage was rejected when this was written. */
+  stage?: StageId;
+  /** The rejection it answers, so the note reads in context later. */
+  rejection?: string;
+  note: string;
+  /** True when the same note was also saved as a standing rule for all posts. */
+  alsoStanding?: boolean;
+}
+
 export interface Run {
   id: string;
   /** Which Pexalo client this belongs to. Every query is scoped by it. */
@@ -253,4 +264,12 @@ export interface Run {
   /** Designer spend — every image generated for this run, regenerations included. */
   totalImages?: number;
   totalImageCostUsd?: number;
+  /**
+   * Notes an operator typed to get a stuck stage past a rejection.
+   *
+   * Fed to the writer and the reviewer on every subsequent attempt. Kept as a
+   * list rather than one string because a run can get stuck twice for two
+   * different reasons, and the second note must not erase the first.
+   */
+  guidance?: GuidanceNote[];
 }

@@ -17,6 +17,7 @@ import { LIAM_STYLE_PROFILE } from "../style-profile";
 import { recent } from "../archive";
 import { BLOG_PLAYBOOK, BLOG_STYLE, CONTENT_TYPES } from "../blog";
 import { feedbackBlock, readFeedback } from "../feedback";
+import { guidanceBlock } from "./writer";
 import type { CallContext } from "../providers/routing";
 import type {
   Brief,
@@ -24,6 +25,7 @@ import type {
   LinkCheckResult,
   ResearchBrief,
   ReviewResult,
+  GuidanceNote,
 } from "../types";
 
 const SYSTEM = `You are the editorial reviewer for Coinpresso's Moonberg crypto PR
@@ -59,6 +61,8 @@ export interface ReviewerInput {
   research: ResearchBrief;
   draft: Draft;
   linkCheck: LinkCheckResult;
+  /** Notes an operator typed after a rejection on this run. */
+  guidance?: GuidanceNote[];
 }
 
 export async function runReviewer(input: ReviewerInput): Promise<{
@@ -263,6 +267,9 @@ async function reviewBlog(input: ReviewerInput): Promise<{
   const type = brief.contentType
     ? CONTENT_TYPES[brief.contentType as keyof typeof CONTENT_TYPES]
     : undefined;
+  // The editor's notes for this run. The reviewer needs them so it does not
+  // flag as a fault the very thing a person told the writer to do.
+  const guidance = guidanceBlock(input.guidance);
   const feedback = input.ctx?.clientRef
     ? feedbackBlock(await readFeedback(input.ctx.clientRef), "reviewer")
     : "";
@@ -272,7 +279,7 @@ async function reviewBlog(input: ReviewerInput): Promise<{
 ---
 
 ${BLOG_PLAYBOOK}
-${feedback ? `\n---\n\n${feedback}\n` : ""}
+${feedback ? `\n---\n\n${feedback}\n` : ""}${guidance ? `\n---\n\n${guidance}\n` : ""}
 ---
 
 FORMAT ASKED FOR: ${type ? `${type.name} — ${type.shape} Target ${type.words[0]}-${type.words[1]} words (draft is ${draft.wordCount}).` : "Guide."}

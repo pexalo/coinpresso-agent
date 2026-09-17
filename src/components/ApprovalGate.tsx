@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Approver, GateState, Signature } from "@/lib/approval";
+import FixAndRetry from "@/components/FixAndRetry";
 
 /**
  * The signatures a piece needs before it can leave — two, since Elena left.
@@ -121,6 +122,27 @@ export default function ApprovalGate({
       >
         {gate.reason}
       </p>
+
+      {/* An approver sending a piece back is a rejection like any other, and
+          the same box belongs here: the reason they gave is the rejection, and
+          the note goes to the writer on the rewrite. Scope matters more here
+          than anywhere — an approver's objection is usually about the house,
+          not about one article. */}
+      {gate.blocking && (
+        <FixAndRetry
+          clientRef={clientRef}
+          runId={runId}
+          rejection={gate.blocking.reason}
+          stage="writer"
+          retryLabel="Save note and rewrite"
+          onRetry={async () => {
+            await fetch(`/api/clients/${clientRef}/runs/${runId}/retry?from=writer`, {
+              method: "POST",
+            });
+            location.reload();
+          }}
+        />
+      )}
 
       <div className="space-y-1.5">
         {approvers.map((a) => {

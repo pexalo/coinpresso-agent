@@ -12,6 +12,7 @@ import FeaturedImage from "@/components/FeaturedImage";
 import PublishManually from "@/components/PublishManually";
 import SectionImages from "@/components/SectionImages";
 import EditDraft from "@/components/EditDraft";
+import FixAndRetry from "@/components/FixAndRetry";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -405,6 +406,10 @@ export default function RunDetail({
         // empty-article placeholder, so a run that HAD an article showed the
         // article and no way to finish it.
         const v = statusView("failed", Boolean(run.draft));
+        // The stage that actually rejected, and what it said. The banner used
+        // to describe the failure in the abstract and leave the operator to
+        // find the reason in the timeline; the note box needs the text itself.
+        const failed = run.stages.find((x) => x.status === "failed");
         return (
           <div className={`rounded-lg border px-4 py-3.5 ${TONE_CLASS[v.tone]}`}>
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -424,6 +429,27 @@ export default function RunDetail({
                 )}
               </div>
             </div>
+            {failed?.error && (
+              <FixAndRetry
+                clientRef={ref}
+                runId={id}
+                rejection={failed.error}
+                stage={failed.id}
+                busy={retrying}
+                onRetry={() => retry()}
+              />
+            )}
+            {Boolean(run.guidance?.length) && (
+              <div className="mt-3 text-[11.5px] text-[var(--ink-3)] leading-relaxed">
+                {run.guidance!.length} editor note
+                {run.guidance!.length === 1 ? "" : "s"} on this run
+                {run.guidance!.some((g) => g.alsoStanding)
+                  ? ", one of which is now a house rule."
+                  : "."}{" "}
+                The writer reads {run.guidance!.length === 1 ? "it" : "them"} on
+                every attempt.
+              </div>
+            )}
           </div>
         );
       })()}

@@ -291,6 +291,7 @@ export async function executeRun(run: Run): Promise<Run> {
         brief: run.brief,
         research: run.research!,
         ctx: ident(run),
+        guidance: run.guidance,
       });
       run.draft = w.draft;
       await finish(run, "writer", w.draft, {
@@ -334,6 +335,7 @@ export async function executeRun(run: Run): Promise<Run> {
           research: run.research!,
           draft: run.draft!,
           linkCheck: run.linkCheck!,
+          guidance: run.guidance,
         });
         run.review = rv.review;
         await finish(run, "reviewer", rv.review, {
@@ -395,6 +397,7 @@ export async function executeRun(run: Run): Promise<Run> {
           research: run.research!,
           fixes: findings,
           previous: run.draft!,
+          guidance: run.guidance,
         });
         run.draft = w.draft;
         await finish(run, "revision", w.draft, {
