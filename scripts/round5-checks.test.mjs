@@ -8,6 +8,7 @@ import {
   stripAiOpeners,
   enforceProse,
   trimLinks,
+  enforceFaqLinks,
   enforceLinks,
   enforceAnchorLength,
   splitFatParagraphs, enforceLinkSpacing, enforceParagraphSize,
@@ -451,6 +452,31 @@ console.log("trimLinks no longer strips the links the check demands:");
   ok("a genuinely crowded paragraph is still trimmed", (trimLinks(stuffed).match(/\]\(/g) || []).length <= 3);
   ok("…and it sheds the external before an internal",
      !trimLinks(stuffed).includes("](https://x.com)") && trimLinks(stuffed).includes(`](${P})`));
+}
+
+
+
+console.log("FAQ answers carry internal links (Liam, 18 Sep):");
+{
+  const known = new Map([["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"]]);
+  const P = "https://coinpresso.io/crypto-ppc-marketing";
+  const none = [{ q: "Q1?", a: "An answer with no link." }, { q: "Q2?", a: "Another." }];
+  const soft = throws(() => enforceFaqLinks(none, known, "soft"));
+  ok("no links across the block is a SOFT note", soft !== null && /no internal links/.test(soft), soft);
+  ok("…and not a hard fault", throws(() => enforceFaqLinks(none, known, "hard")) === null);
+  ok("the note quotes Liam", /Liam|client's note/.test(soft));
+
+  const one = [{ q: "Q1?", a: `Use [crypto PPC](${P}) for that.` }, { q: "Q2?", a: "Another." }];
+  ok("one link across the block satisfies it", throws(() => enforceFaqLinks(one, known)) === null);
+
+  const invented = [{ q: "Q1?", a: "See [crypto PPC](https://coinpresso.io/nope)." }];
+  ok("an invented URL in an FAQ is HARD", /not a page/.test(throws(() => enforceFaqLinks(invented, known, "hard")) ?? ""));
+
+  const vague = [{ q: "Q1?", a: `See [our team](${P}).` }];
+  ok("an FAQ anchor that does not name its page is HARD", /has to name/.test(throws(() => enforceFaqLinks(vague, known, "hard")) ?? ""));
+  ok("no FAQs at all is fine", throws(() => enforceFaqLinks([], known)) === null);
+  ok("external links in FAQs do not count and do not fail",
+     /no internal links/.test(throws(() => enforceFaqLinks([{ q: "Q?", a: "Per [x](https://x.com)." }], known, "soft")) ?? ""));
 }
 
 

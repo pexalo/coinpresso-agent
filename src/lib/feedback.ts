@@ -49,6 +49,14 @@ export interface FeedbackLog {
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
   {
+    id: "liam-faq-links",
+    source: "Liam, September batch (FAQ review)",
+    date: "2026-09-18",
+    rule:
+      "Liam: \"we should also get some internal links in the FAQ as well — looks like none is on the FAQ.\" Where a Coinpresso service page or post genuinely answers the question, link it inside the answer with anchor text naming that page. One or two across the FAQ block, in addition to the 3-5 in the body — not one in every answer.",
+    active: true,
+  },
+  {
     id: "liam-what-good-looks-like",
     source: "Liam, September batch (the piece he approved)",
     date: "2026-09-09",

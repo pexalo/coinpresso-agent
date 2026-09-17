@@ -757,6 +757,44 @@ export function trimLinks(
  * and where in the piece the links fall.
  */
 /**
+ * Liam, September 2026: "we should also get some internal links in the FAQ as
+ * well — looks like none is on the FAQ." He was right; the FAQ answers were
+ * never asked to link and never checked. This asks for at least one across the
+ * block. Soft, like the body counts: a person adds a link in ten seconds, and
+ * the invented-URL fault is caught separately as a hard one.
+ */
+export function enforceFaqLinks(
+  faqs: Array<{ q: string; a: string }>,
+  known: Map<string, string>,
+  scope: "hard" | "soft" | "all" = "all"
+): void {
+  if (!faqs.length) return;
+  const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
+  const hard: string[] = [];
+  const soft: string[] = [];
+  let internal = 0;
+  for (const f of faqs) {
+    for (const m of f.a.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)) {
+      if (!isInternal(m[2])) continue;
+      internal++;
+      const topic = known.get(normaliseUrl(m[2]));
+      if (!topic) {
+        hard.push(`"${m[2]}" in an FAQ answer is not a page on coinpresso.io — link only what you were given`);
+      } else if (!namesTopic(m[1], topic)) {
+        hard.push(`the FAQ anchor "${m[1]}" points at the ${topic} page — the anchor text has to name where it goes`);
+      }
+    }
+  }
+  if (internal === 0) {
+    soft.push(
+      `no internal links in the ${faqs.length} FAQ answers. The client's note: "we should also get some internal links in the FAQ as well". Where a Coinpresso page answers the question, link it inside the answer — one or two across the block.`
+    );
+  }
+  const chosen = scope === "hard" ? hard : scope === "soft" ? soft : [...hard, ...soft];
+  if (chosen.length) throw new Error(`FAQ linking: ${chosen.join("; ")}. Retry the writer.`);
+}
+
+/**
  * `scope` splits Liam's link rules by what a failure costs.
  *
  *   hard  a URL that does not exist, a relative path nothing can check, the
@@ -1153,7 +1191,13 @@ invent any other coinpresso.io path; at least two of them sit in the body
 before the final section.
 
 AT LEAST ONE must be a post from the RECENT POSTS list below, not only service
-pages — the client asked for landing pages AND blogs. And if you name a
+pages — the client asked for landing pages AND blogs.
+
+THE FAQ ANSWERS LINK TOO. The client's note: the FAQs were carrying no internal
+links at all. Where a service page or a Coinpresso post genuinely answers the
+question, link it inside the answer with anchor text naming that page — one or
+two across the FAQ block, not one in every answer. These are in addition to the
+3-5 in the body. And if you name a
 Coinpresso post anywhere in the prose, link it there: a post referred to as
 "our earlier guide" or "a recent guide on X" with no link on it is a miss, and
 it sends the reader hunting for something you could have handed them.
@@ -1314,6 +1358,13 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // deletion, so it is not worth a paid attempt — see stripAiOpeners.
       parsed.body = stripAiOpeners(parsed.body);
 
+      // The FAQ answers are prose too, and they carry links now. Same
+      // mechanical fixes, so an FAQ anchor is named and cut like any other.
+      parsed.faqs = (parsed.faqs ?? []).map((f) => ({
+        ...f,
+        a: stripAiOpeners(shortenAnchors(nameAnchors(americanize(f.a), knownPages))),
+      }));
+
       // Over-long paragraphs are split at the turn in the argument. Mechanical,
       // so it happens on every attempt rather than costing one.
       parsed.body = splitFatParagraphs(parsed.body);
@@ -1349,6 +1400,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceProse(parsed.body),
         () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "hard"),
+        () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "hard"),
         () => enforceAnchorLength(parsed.body),
         () => enforcePromisedStructures(parsed.body),
       ]);
@@ -1356,6 +1408,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
 
       const styleNotes = collectRejections([
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "soft"),
+        () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "soft"),
         () => enforceCloser(parsed.body),
         () => enforceLinkSpacing(parsed.body),
         () => enforceParagraphSize(parsed.body),
