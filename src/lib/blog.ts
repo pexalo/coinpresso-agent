@@ -289,7 +289,7 @@ export const CONTENT_TYPES: Record<ContentTypeId, ContentType> = {
     id: "guide",
     name: "Guide",
     shape:
-      "Follows the post's outline — the client's, or one research wrote in the client's format. Declarative headings, scene-setting opener, Conclusion and FAQ.",
+      "Follows the post's outline — the client's, or one research wrote in the client's format. Declarative headings, scene-setting opener, a Conclusion, then the FAQs.",
     words: [1200, 1800],
     job: "Owns an informational keyword and gets quoted by AI models.",
   },
@@ -438,7 +438,7 @@ Measured from 74 of Coinpresso's own briefs:
 - 7 or 9 H2 sections, never another number
 - Section 1 sets the scene — a statement about the reader's current reality
 - Every heading is a statement or noun phrase; none is a question
-- The last section is titled "Conclusion and FAQ", with exactly 5 FAQs`;
+- The last section is titled "Conclusion"; the FAQs come after it under their own "FAQs" heading, exactly 5 of them`;
 
 /**
  * Ways in and ways out, assigned rather than chosen.

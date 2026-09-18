@@ -13,7 +13,7 @@
 import crypto from "node:crypto";
 import type { Run } from "./types";
 import { PUBLICATIONS } from "./publications";
-import { renderPlainText } from "./render";
+import { renderPlainText, bodyOf } from "./render";
 import { buildDoc, readTableShapes, fillTableRequests } from "./google-doc";
 
 interface ServiceAccount {
@@ -240,7 +240,7 @@ export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
   }
   const doc = (await created.json()) as { id: string };
 
-  const built = buildDoc(title, run.draft.body, run.draft.faqs ?? []);
+  const built = buildDoc(title, bodyOf(run.draft), run.draft.faqs ?? []);
   const styled = await fetch(
     `https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`,
     {

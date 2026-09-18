@@ -1445,6 +1445,9 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
           parsed.faqs = enforceFaqs(parsed.faqs, brief.contentBrief.faqs);
         }
       }
+      // After the outline is enforced, because a brief can carry the joined
+      // heading itself and it must still come out as two.
+      parsed.body = normaliseConclusionHeading(parsed.body, (parsed.faqs ?? []).length > 0);
 
       const draft: Draft = {
         ...parsed,
@@ -1813,6 +1816,23 @@ const ANCHOR_MIN_WORDS = 3;
  * after an abbreviation, doubled commas collapse, and a space before a comma
  * or full stop goes. Fenced code untouched.
  */
+/**
+ * "Conclusion and FAQ" becomes "Conclusion" when the FAQs render separately.
+ *
+ * Coinpresso's own briefs title the last outline section "Conclusion and
+ * FAQ" — one section holding both. The pipeline stores the FAQs apart from
+ * the body and every renderer adds its own "FAQs" heading, so a post came out
+ * with a "Conclusion and FAQ" section holding only the conclusion, followed by
+ * a second heading, "FAQs". Bernard: "why is there a conclusion and faq and
+ * then another faq?" The five posts Liam approved all end "Conclusion" then
+ * "FAQs", so that is what this produces. The brief's wording is kept where
+ * there are no FAQs to render, because then it is not wrong.
+ */
+export function normaliseConclusionHeading(body: string, hasFaqs: boolean): string {
+  if (!hasFaqs) return body;
+  return body.replace(/^(##\s+)Conclusion\s+(?:and|&|\+)\s+FAQs?[ \t]*$/im, "$1Conclusion");
+}
+
 export function tidyPunctuation(body: string): string {
   const fix = (prose: string) =>
     prose

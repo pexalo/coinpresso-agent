@@ -1,7 +1,8 @@
 // Rendering for the manual-publish path: what Liam copies is what appears in
 // WordPress. Tables and lists are the ones that matter, because the client
 // asked for them and before this they arrived as pipe characters.
-import { renderHtml, renderMarkdown, renderPlainText } from "../src/lib/render.ts";
+import { renderHtml, renderMarkdown, renderPlainText, bodyOf } from "../src/lib/render.ts";
+import { normaliseConclusionHeading } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
 const ok = (n, c, e = "") => { if (c) { pass++; console.log("  ok  ", n); } else { fail++; console.log("  FAIL", n, e); } };
@@ -67,6 +68,27 @@ console.log("the other two shapes still work:");
   ok("markdown keeps the table as markdown", renderMarkdown(run("| a | b |\n| --- | --- |")).includes("| a | b |"));
   ok("plain text strips heading marks", !renderPlainText(run("## Head\n\nBody")).includes("## "));
 }
+
+
+console.log("one Conclusion, then the FAQs — never 'Conclusion and FAQ' followed by 'FAQs':");
+{
+  const faqs = [{ q: "Q?", a: "A." }];
+  const mk = (body) => run(body, faqs);
+  const joined = "Intro.\n\n## Know what you are buying\n\nX.\n\n## Conclusion and FAQ\n\nThe end.";
+  ok("writer normalises the joined heading", normaliseConclusionHeading(joined, true).includes("## Conclusion\n") && !normaliseConclusionHeading(joined, true).includes("and FAQ"));
+  ok("…also 'Conclusion & FAQs'", normaliseConclusionHeading("## Conclusion & FAQs\n\nx", true) === "## Conclusion\n\nx");
+  ok("…but leaves it when there are no FAQs to render", normaliseConclusionHeading(joined, false) === joined);
+  ok("a plain 'Conclusion' is untouched", normaliseConclusionHeading("## Conclusion\n\nx", true) === "## Conclusion\n\nx");
+  ok("'Conclusion' inside a longer heading is untouched", normaliseConclusionHeading("## Conclusion for founders\n\nx", true) === "## Conclusion for founders\n\nx");
+
+  const html = renderHtml(mk(joined));
+  ok("HTML from an old draft: exactly one FAQs heading", (html.match(/<h2>FAQs<\/h2>/g) || []).length === 1, html);
+  ok("HTML from an old draft: the conclusion heading is just Conclusion", html.includes("<h2>Conclusion</h2>") && !html.includes("Conclusion and FAQ"));
+  const md = renderMarkdown(mk(joined));
+  ok("Markdown likewise", md.includes("## Conclusion\n") && (md.match(/## FAQs/g) || []).length === 1 && !md.includes("and FAQ"));
+  ok("bodyOf leaves a draft with no FAQs alone", bodyOf({ body: joined, faqs: [] }) === joined);
+}
+
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

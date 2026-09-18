@@ -28,7 +28,7 @@ export function renderPlainText(run: Run): string {
   const parts = [
     d.headline,
     "",
-    delink(d.body).replace(/^#{1,6}\s+/gm, ""),
+    delink(bodyOf(d)).replace(/^#{1,6}\s+/gm, ""),
     "",
     faqBlock(run),
   ];
@@ -36,10 +36,17 @@ export function renderPlainText(run: Run): string {
   return parts.join("\n");
 }
 
+/** See normaliseConclusionHeading in the writer — this catches drafts written before it. */
+export function bodyOf(d: { body: string; faqs: unknown[] }): string {
+  return d.faqs.length
+    ? d.body.replace(/^(##\s+)Conclusion\s+(?:and|&|\+)\s+FAQs?[ \t]*$/im, "$1Conclusion")
+    : d.body;
+}
+
 export function renderMarkdown(run: Run): string {
   const d = run.draft;
   if (!d) return "";
-  const parts = [`# ${d.headline}`, "", d.body, ""];
+  const parts = [`# ${d.headline}`, "", bodyOf(d), ""];
   if (d.faqs.length) {
     parts.push("## FAQs", "");
     d.faqs.forEach((f) => parts.push(`**${f.q}**`, "", f.a, ""));
@@ -74,7 +81,7 @@ export function renderHtml(run: Run, opts: HtmlOptions = {}): string {
   if (!d) return "";
   const pub = PUBLICATIONS[run.brief.publication];
 
-  const blocks = d.body.split(/\n{2,}/).map((raw) => {
+  const blocks = bodyOf(d).split(/\n{2,}/).map((raw) => {
     const block = raw.trim();
     if (!block) return "";
     const h = block.match(/^(#{2,4})\s+(.*)$/);
