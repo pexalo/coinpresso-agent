@@ -123,7 +123,12 @@ export interface Faq {
 
 type Block =
   | { kind: "H1" | "H2" | "P"; raw: string }
+  /** One list item. `ordered` picks the bullet preset; items are grouped by adjacency. */
+  | { kind: "LI"; raw: string; ordered: boolean }
   | { kind: "TABLE"; cells: string[][] };
+
+/** A line that begins a markdown list item: "- ", "* ", "1. ", "2) ". */
+const LIST_ITEM = /^\s*(?:([-*+])|(\d+)[.)])\s+/;
 
 export function buildDoc(
   headline: string,
@@ -148,6 +153,25 @@ export function buildDoc(
       continue;
     }
 
+    // A markdown list. This used to fall through to the paragraph case, which
+    // joins lines with spaces — so a five-item checklist arrived in the Doc as
+    // one run-on paragraph with "- " scattered through it. Liam: "seem to
+    // have a formatting issue here, should this be a table or bullets?" Each
+    // item is its own paragraph and the Docs bullet preset is applied after.
+    if (LIST_ITEM.test(t)) {
+      for (const line of t.split("\n")) {
+        const m = line.match(LIST_ITEM);
+        if (m) {
+          blocks.push({ kind: "LI", raw: line.slice(m[0].length).trim(), ordered: Boolean(m[2]) });
+        } else if (blocks.length && blocks[blocks.length - 1].kind === "LI") {
+          // A wrapped continuation of the item above.
+          const last = blocks[blocks.length - 1] as { raw: string };
+          last.raw += " " + line.trim();
+        }
+      }
+      continue;
+    }
+
     blocks.push({ kind: "P", raw: t.replace(/\n/g, " ") });
   }
 
@@ -166,6 +190,8 @@ export function buildDoc(
   const bolds: Span[] = [];
   const links: Array<Span & { url: string }> = [];
   const tables: DocTable[] = [];
+  /** Runs of adjacent list items, as text spans, for the bullet requests. */
+  const lists: Array<Span & { ordered: boolean }> = [];
 
   for (const b of blocks) {
     const start = text.length;
@@ -184,6 +210,15 @@ export function buildDoc(
     text += parsed.text + "\n";
     bolds.push(...parsed.bolds);
     links.push(...parsed.links);
+    if (b.kind === "LI") {
+      const open = lists[lists.length - 1];
+      if (open && open.end === start && open.ordered === b.ordered) {
+        open.end = text.length;
+      } else {
+        lists.push({ start, end: text.length, ordered: b.ordered });
+      }
+      continue;
+    }
     if (b.kind !== "P") {
       headings.push({
         start,
@@ -264,6 +299,27 @@ export function buildDoc(
         range: { startIndex: at(l.start), endIndex: at(l.end) },
         textStyle: { link: { url: l.url } },
         fields: "link",
+      },
+    });
+  }
+
+  // Bullets. A paragraph property, so no index shifts — but it must come
+  // after the spacing pass above, which would otherwise set list items to the
+  // body's paragraph spacing and leave the list looking like prose with dots.
+  for (const l of lists) {
+    requests.push({
+      createParagraphBullets: {
+        range: { startIndex: at(l.start), endIndex: at(l.end) },
+        bulletPreset: l.ordered
+          ? "NUMBERED_DECIMAL_ALPHA_ROMAN"
+          : "BULLET_DISC_CIRCLE_SQUARE",
+      },
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: at(l.start), endIndex: at(l.end) },
+        paragraphStyle: { spaceBelow: { magnitude: 4, unit: "PT" } },
+        fields: "spaceBelow",
       },
     });
   }

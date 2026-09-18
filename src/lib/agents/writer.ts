@@ -13,6 +13,7 @@ import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
 import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brief";
 import { allArticles, exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import { feedbackBlock, readFeedback } from "../feedback";
+import { linkablePages, linkTargetsBlock } from "../link-map";
 import {
   CLOSE_MOVES,
   COINPRESSO_PAGES,
@@ -485,6 +486,12 @@ const GENERIC_ANCHOR_WORDS = new Set([
  * topic has no distinctive words, its own words are what count.
  */
 function namesTopic(anchor: string, topic: string): boolean {
+  // The client's link map supplies alternates joined with " | "; any of them
+  // counts, so "PPC agency" names the crypto PPC page if the map says so.
+  return topic.split(" | ").some((t) => namesOne(anchor, t.trim()));
+}
+
+function namesOne(anchor: string, topic: string): boolean {
   const want = anchorTokens(topic);
   if (want.size) return [...anchorTokens(anchor)].some((w) => want.has(w));
   const raw = new Set(topic.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
@@ -781,13 +788,22 @@ export function enforceFaqLinks(
       if (!topic) {
         hard.push(`"${m[2]}" in an FAQ answer is not a page on coinpresso.io — link only what you were given`);
       } else if (!namesTopic(m[1], topic)) {
-        hard.push(`the FAQ anchor "${m[1]}" points at the ${topic} page — the anchor text has to name where it goes`);
+        hard.push(`the FAQ anchor "${m[1]}" points at the ${topic.split(" | ")[0]} page — the anchor text has to name where it goes`);
       }
     }
   }
+  const external = faqs.reduce(
+    (n, f) => n + [...f.a.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => !isInternal(m[1])).length,
+    0
+  );
   if (internal === 0) {
     soft.push(
-      `no internal links in the ${faqs.length} FAQ answers. The client's note: "we should also get some internal links in the FAQ as well". Where a Coinpresso page answers the question, link it inside the answer — one or two across the block.`
+      `no internal links in the ${faqs.length} FAQ answers. The client's note: "still think we are missing linking (both internal and external) in the FAQs". Where a Coinpresso page answers the question, link it inside the answer — one or two across the block.`
+    );
+  }
+  if (external === 0 && faqs.some((f) => /\d/.test(f.a))) {
+    soft.push(
+      `the FAQ answers state figures but cite nothing. Where an answer repeats a fact from the ledger, link the source there — the client asked for external links in the FAQs too.`
     );
   }
   const chosen = scope === "hard" ? hard : scope === "soft" ? soft : [...hard, ...soft];
@@ -849,7 +865,7 @@ export function enforceLinks(
     }
     if (!namesTopic(l.anchor, topic)) {
       hard.push(
-        `the anchor "${l.anchor}" points at the ${topic} page — the anchor text has to name where it goes`
+        `the anchor "${l.anchor}" points at the ${topic.split(" | ")[0]} page — the anchor text has to name where it goes`
       );
     }
   }
@@ -1042,8 +1058,12 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   // Every coinpresso.io page the writer is allowed to link, and what each one
   // is about — the same list it is shown, so the check and the instruction
   // cannot drift apart. A post's title is its topic for anchor matching.
+  // The compiled page list overlaid by the client's own link map, so the
+  // writer knows every page and the anchors the client wants — not the same
+  // three forever. See link-map.ts.
+  const sitePages = await linkablePages(input.ctx?.clientRef);
   const knownPages = new Map<string, string>();
-  for (const pg of COINPRESSO_PAGES) {
+  for (const pg of sitePages) {
     knownPages.set(pg.url.replace(/\/+$/, "").toLowerCase(), pg.topic);
   }
   for (const a of recent) {
@@ -1193,15 +1213,18 @@ before the final section.
 AT LEAST ONE must be a post from the RECENT POSTS list below, not only service
 pages — the client asked for landing pages AND blogs.
 
-THE FAQ ANSWERS LINK TOO. The client's note: the FAQs were carrying no internal
-links at all. Where a service page or a Coinpresso post genuinely answers the
-question, link it inside the answer with anchor text naming that page — one or
-two across the FAQ block, not one in every answer. These are in addition to the
-3-5 in the body. And if you name a
+THE FAQ ANSWERS LINK TOO — internal AND external. The client's note: "still
+think we are missing linking (both internal and external) in the FAQs.
+Utilizing more natural places to insert links will stop the agent from
+stuffing." Where a service page or a Coinpresso post genuinely answers the
+question, link it inside the answer with anchor text naming that page; where
+an answer states a fact from the ledger, cite the source there. One or two
+internal across the FAQ block, not one in every answer. These are in addition
+to the 3-5 in the body, and they count toward nothing else. And if you name a
 Coinpresso post anywhere in the prose, link it there: a post referred to as
 "our earlier guide" or "a recent guide on X" with no link on it is a miss, and
 it sends the reader hunting for something you could have handed them.
-${internalLinkTargets(pillar?.hub)}
+${linkTargetsBlock(sitePages, pillar?.hub)}
 ${
   recentPosts
     ? `
@@ -1357,12 +1380,13 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // The connective openers Liam flagged as the AI tell come off. A
       // deletion, so it is not worth a paid attempt — see stripAiOpeners.
       parsed.body = stripAiOpeners(parsed.body);
+      parsed.body = tidyPunctuation(parsed.body);
 
       // The FAQ answers are prose too, and they carry links now. Same
       // mechanical fixes, so an FAQ anchor is named and cut like any other.
       parsed.faqs = (parsed.faqs ?? []).map((f) => ({
         ...f,
-        a: stripAiOpeners(shortenAnchors(nameAnchors(americanize(f.a), knownPages))),
+        a: tidyPunctuation(stripAiOpeners(shortenAnchors(nameAnchors(americanize(f.a), knownPages)))),
       }));
 
       // Over-long paragraphs are split at the turn in the argument. Mechanical,
@@ -1779,6 +1803,28 @@ const ANCHOR_MIN_WORDS = 3;
  * next word is capitalised. What is left is the sentence the model meant.
  * Fenced code is untouched.
  */
+/**
+ * Punctuation that two edits left behind.
+ *
+ * "treated as a growth lever rather than a compliance surface., the same
+ * discipline" reached a client-facing Doc. Somewhere between the model's
+ * revision and the dash softener a full stop and a comma ended up side by
+ * side, and nothing looked at the seam. This does: ".," becomes "," except
+ * after an abbreviation, doubled commas collapse, and a space before a comma
+ * or full stop goes. Fenced code untouched.
+ */
+export function tidyPunctuation(body: string): string {
+  const fix = (prose: string) =>
+    prose
+      .replace(/\b(?!(?:etc|e\.g|i\.e|vs|inc|ltd|co|no|st|dr|mr|mrs|ms|jr|sr)\b)([a-z]{2,})\.,(\s)/gi, "$1,$2")
+      .replace(/,\s*,+/g, ",")
+      .replace(/ +([,.;:])(\s)/g, "$1$2");
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
+}
+
 export function stripAiOpeners(body: string): string {
   const re = new RegExp(
     AI_OPENERS.source + String.raw`\s*[,:]?\s*(?:that\s+)?(?=\S)`,
@@ -1828,7 +1874,7 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
         //    included, so "crypto PPC" is taken in whole rather than leaving
         //    "crypto" stranded outside the bracket. Never across punctuation:
         //    "crypto PPC. Our [partner]" is two sentences, not one phrase.
-        const topicWords = new Set(topic.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+        const topicWords = new Set(topic.split(" | ")[0].toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
         const words = before.split(/\s+/).filter(Boolean);
         for (let i = 0; i < words.length; i++) {
           const bare = words[i].toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -1839,8 +1885,8 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
           return `${before.slice(0, keepIdx)}[${pulled} ${text}](${url})`;
         }
 
-        // 2. Prepend the topic.
-        return `${before}[${topic} ${text}](${url})`;
+        // 2. Prepend the topic — the first phrase, when the map gives several.
+        return `${before}[${topic.split(" | ")[0].trim()} ${text}](${url})`;
       }
     );
 

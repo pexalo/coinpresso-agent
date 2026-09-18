@@ -622,7 +622,7 @@ export const SPENT_OPENERS: RegExp[] = [
 ];
 
 export const SPENT_CLOSERS: RegExp[] = [
-  /\bsecond (opinion|pair of eyes)\b/i,
+  /\bsecond (opinion|pair of eyes|set of eyes|look)\b/i,
   /\ba conversation worth having\b/i,
   /\bbefore you spend (another|on)\b/i,
 ];

@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { ClientSettings } from "@/lib/settings";
+import LinkMapPanel from "@/components/LinkMapPanel";
 import SnapshotRestore from "@/components/SnapshotRestore";
 
 /** What the API actually returns: secrets replaced by a mask plus a has-it flag. */
@@ -500,6 +501,13 @@ export default function SettingsPage() {
           title="Weekly digest"
           detail="Volume, spend and what was published, Monday morning."
         />
+      </Section>
+
+      <Section
+        title="Internal links"
+        blurb="Every coinpresso.io page the writer may link, with the anchor phrases the client wants used. Liam asked for this so the agent stops leaning on the same three pages. Paste the meta mapping sheet; the writer reads it on the next run."
+      >
+        <LinkMapPanel clientRef={ref} />
       </Section>
 
       <Section

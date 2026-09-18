@@ -212,6 +212,38 @@ console.log("fewer shapes than tables does not throw:");
      fillTableRequests([{ offset: 0, cells: [["A"]] }, { offset: 5, cells: [["B"]] }], [{ cellStarts: [[10]] }]).length === 2);
 }
 
+
+console.log("markdown lists become real Docs bullets (Liam: 'should this be a table or bullets?'):");
+{
+  const md = "Intro.\n\n- **Ownership structure.** Are all accounts disclosed?\n- **Business verification.** Does the name match?\n- **Product scope.** Only what it is certified for?\n\nAfter.";
+  const b = buildDoc("T", md);
+  ok("each item is its own line", b.text.includes("Are all accounts disclosed?\nBusiness verification."), JSON.stringify(b.text));
+  ok("the '- ' markers are gone", !b.text.includes("- **") && !b.text.includes("\n- "));
+  ok("items are not joined into one paragraph", !b.text.includes("disclosed? Business"));
+  const bullets = b.requests.filter((r) => r.createParagraphBullets);
+  ok("one bullet request for the run of three", bullets.length === 1, bullets.length);
+  const range = bullets[0].createParagraphBullets.range;
+  const covered = b.text.slice(range.startIndex - 1, range.endIndex - 1);
+  ok("the bullet range covers exactly the three items",
+     covered.startsWith("Ownership structure.") && covered.trimEnd().endsWith("certified for?") && !covered.includes("Intro") && !covered.includes("After"),
+     JSON.stringify(covered));
+  ok("disc preset for '-'", bullets[0].createParagraphBullets.bulletPreset === "BULLET_DISC_CIRCLE_SQUARE");
+  const bold = kinds(b, "updateTextStyle").filter((r) => r.updateTextStyle.textStyle.bold);
+  ok("bold labels inside items still bold", bold.some((r) => at(b, r.updateTextStyle.range) === "Ownership structure."));
+  ok("bullets come after the spacing pass",
+     b.requests.findIndex((r) => r.createParagraphBullets) > b.requests.findIndex((r) => r.updateParagraphStyle?.fields?.includes("spaceBelow")));
+  ok("…and before the tables", buildDoc("T", md + "\n\n| A | B |\n| - | - |\n| 1 | 2 |").requests.findIndex((r) => r.insertTable) >
+     buildDoc("T", md + "\n\n| A | B |\n| - | - |\n| 1 | 2 |").requests.findIndex((r) => r.createParagraphBullets));
+
+  const num = buildDoc("T", "1. First\n2. Second");
+  ok("numbered lists get the numbered preset",
+     num.requests.find((r) => r.createParagraphBullets)?.createParagraphBullets.bulletPreset === "NUMBERED_DECIMAL_ALPHA_ROMAN");
+  const two = buildDoc("T", "- a\n- b\n\nProse.\n\n- c\n- d");
+  ok("two separate lists get two requests", two.requests.filter((r) => r.createParagraphBullets).length === 2);
+  const wrapped = buildDoc("T", "- first item\n  continues here\n- second");
+  ok("a wrapped continuation joins its item", wrapped.text.includes("first item continues here\nsecond"), JSON.stringify(wrapped.text));
+}
+
 console.log("faqs supplied separately (how the pipeline stores them):");
 {
   const b = buildDoc("T", "## Only section\n\nProse.", [
