@@ -770,6 +770,50 @@ export function trimLinks(
  * block. Soft, like the body counts: a person adds a link in ten seconds, and
  * the invented-URL fault is caught separately as a hard one.
  */
+/**
+ * A link bolted onto the end of a section to make the count.
+ *
+ * Liam, on the Circumventing Systems piece: the paragraph ended "…a
+ * compliance surface, the same discipline we'd expect a project to bring to
+ * crypto SEO or PR" — a clause about nothing, attached to a paragraph about
+ * Google Ads, so the post could reach three internal links. His words:
+ * "irrelevant and stuffing to get links on the end just to fit rules."
+ *
+ * The shape is recognisable: a section's LAST sentence carries an internal
+ * link, introduced after a comma or dash, to a page whose topic words appear
+ * nowhere else in that section. Soft, because a person can tell in a second
+ * whether the link belongs and a counter can only guess — but it names the
+ * clause, so the writer or the editor can cut it.
+ */
+export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
+  const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
+  const sections = proseOf(body).split(/^##\s+/m).slice(1);
+  const flagged: string[] = [];
+  for (const section of sections) {
+    const paras = section.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    const last = paras[paras.length - 1] ?? "";
+    // Table rows and list items are not sentences.
+    if (!last || last.startsWith("|") || LIST_ITEM.test(last)) continue;
+    const sentences = last.split(/(?<=[.!?])\s+/);
+    const tail = sentences[sentences.length - 1] ?? "";
+    const m = tail.match(/[,—–-]\s+([^,]*?\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)[^.]*\.?)\s*$/);
+    if (!m || !isInternal(m[3])) continue;
+    const topic = known.get(normaliseUrl(m[3]));
+    if (!topic) continue;
+    // Does the section talk about that page's subject anywhere BEFORE the link?
+    const before = section.slice(0, section.lastIndexOf(m[0]));
+    const words = new Set(anchorTokens(topic.split(" | ")[0]));
+    const mentioned = [...anchorTokens(before)].some((w) => words.has(w));
+    if (!mentioned) flagged.push(m[1].trim());
+  }
+  if (!flagged.length) return;
+  throw new Error(
+    `${flagged.length} link${flagged.length === 1 ? "" : "s"} bolted onto the end of a section to make the count. The client's note: "irrelevant and stuffing to get links on the end just to fit rules". Cut the clause and leave the count short, or move the link to a sentence that is actually about that page:\n${flagged
+      .map((f) => `      "…, ${f}"`)
+      .join("\n")}`
+  );
+}
+
 export function enforceFaqLinks(
   faqs: Array<{ q: string; a: string }>,
   known: Map<string, string>,
@@ -1433,6 +1477,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       const styleNotes = collectRejections([
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "soft"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "soft"),
+        () => enforceNoBoltOnLinks(parsed.body, knownPages),
         () => enforceCloser(parsed.body),
         () => enforceLinkSpacing(parsed.body),
         () => enforceParagraphSize(parsed.body),

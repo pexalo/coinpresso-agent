@@ -190,6 +190,70 @@ export interface BlogExportResult {
  * still being argued over, so it must be safe to press twice, and it must not
  * touch the calendar or the run's approval state.
  */
+
+/** Create the Doc through Drive, in the client's folder. */
+async function createDoc(
+  token: string,
+  folder: string,
+  title: string,
+  serviceEmail: string
+): Promise<{ id: string }> {
+  // documents.create always makes the file in the caller's own My Drive, and a
+  // service account's My Drive has no storage of its own — which surfaces as a
+  // bare "The caller does not have permission" rather than anything about
+  // quota. Creating through Drive with an explicit parent puts the Doc straight
+  // into Coinpresso's folder, where the folder's owner provides the space.
+  const created = await fetch(
+    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id",
+    {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        name: title,
+        mimeType: "application/vnd.google-apps.document",
+        parents: [folder],
+      }),
+    }
+  );
+  if (!created.ok) {
+    const detail = await created.text();
+    throw new Error(
+      created.status === 403 || created.status === 404
+        ? `Drive refused to create the Doc in folder ${folder} (${created.status}). Share that folder with ${serviceEmail} as an Editor, and check the Google Drive API is enabled on the same project the key came from. Google said: ${detail}`
+        : `Drive create ${created.status}: ${detail}`
+    );
+  }
+  return (await created.json()) as { id: string };
+}
+
+/**
+ * Empty an existing Doc's body so it can be rewritten in place.
+ *
+ * Returns false when the Doc cannot be reached — deleted from the bin, or
+ * permissions changed — so the caller creates a fresh one rather than failing
+ * the export. Comment threads survive: Docs keeps them on the file and marks
+ * the ones whose anchor text is gone.
+ */
+async function clearDocBody(token: string, docId: string): Promise<boolean> {
+  const got = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!got.ok) return false;
+  const doc = (await got.json()) as { body?: { content?: Array<{ endIndex?: number }> } };
+  const end = doc.body?.content?.reduce((m, el) => Math.max(m, el.endIndex ?? 0), 0) ?? 0;
+  // The body always ends with a newline that cannot be deleted; the range
+  // stops one short of it. An empty Doc has end === 2 and nothing to clear.
+  if (end <= 2) return true;
+  const cleared = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      requests: [{ deleteContentRange: { range: { startIndex: 1, endIndex: end - 1 } } }],
+    }),
+  });
+  return cleared.ok;
+}
+
 export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
   const sa = credentials();
   if (!sa) {
@@ -207,38 +271,31 @@ export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
   const folder = process.env.GOOGLE_DRIVE_BLOG_FOLDER_ID || BLOG_FOLDER_FALLBACK;
   const title = run.draft.headline || run.brief.title;
 
-  // Create through Drive, not Docs.
+  // UPDATE THE DOC THE REVIEWER IS ALREADY IN, when there is one.
   //
-  // documents.create always makes the file in the caller's own My Drive, and a
-  // service account's My Drive has no storage of its own — which surfaces as a
-  // bare "The caller does not have permission" rather than anything about
-  // quota. Creating through Drive with an explicit parent puts the Doc straight
-  // into Coinpresso's folder, where the folder's owner provides the space, and
-  // skips the separate move step entirely.
-  const created = await fetch(
-    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id",
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        name: title,
-        mimeType: "application/vnd.google-apps.document",
-        parents: [folder],
-      }),
-    }
-  );
-  if (!created.ok) {
-    const detail = await created.text();
-    throw new Error(
-      created.status === 403 || created.status === 404
-        ? `Drive refused to create the Doc in folder ${folder} (${created.status}). Share that folder with ${sa.client_email} as an Editor, and check the Google Drive API is enabled on the same project the key came from. Google said: ${detail}`
-        : `Drive create ${created.status}: ${detail}`
-    );
+  // Every export used to create a new Doc, and the old one — with Liam's
+  // inline comments on it — went to the bin. His text-level feedback on the
+  // first version of the Circumventing Systems piece was never seen by
+  // anyone on this side: "pretty much all my text feedback not implemented".
+  // The Doc was replaced underneath him, and a comment on a binned file is a
+  // comment nobody reads.
+  //
+  // So if the run already has a Doc, its body is cleared and rewritten in
+  // place. Docs keeps every comment thread on the file; ones anchored to text
+  // that changed show as "original content deleted" with the thread intact,
+  // which is exactly what a reviewer needs to check their notes were applied.
+  const existingId = run.docUrl?.match(/\/document\/d\/([^/]+)/)?.[1];
+  const reuse = existingId ? await clearDocBody(token, existingId) : false;
+  const doc = reuse
+    ? { id: existingId! }
+    : await createDoc(token, folder, title, sa.client_email);
+  if (reuse) {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?supportsAllDrives=true`, {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ name: title }),
+    }).catch(() => {});
   }
-  const doc = (await created.json()) as { id: string };
 
   const built = buildDoc(title, bodyOf(run.draft), run.draft.faqs ?? []);
   const styled = await fetch(

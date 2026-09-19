@@ -49,6 +49,18 @@ export interface FeedbackLog {
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
   {
+    id: "liam-no-bolt-on-links",
+    source: "Liam, Circumventing Systems review (Telegram, 18 Sep)",
+    date: "2026-09-18",
+    rule:
+      "Liam: \"irrelevant and stuffing to get links on the end just to fit rules.\" Never bolt a clause onto the end of a sentence or section whose only job is to carry an internal link. If a page is not genuinely what the sentence is about, do not link it there — leave the count short and let the FAQs or a later section carry it where it belongs. A link the reader would not click is worse than no link.",
+    before:
+      "…the account was being treated as a growth lever rather than a compliance surface, the same discipline we'd expect a project to bring to crypto SEO or PR.",
+    after:
+      "…the account was being treated as a growth lever rather than a compliance surface.",
+    active: true,
+  },
+  {
     id: "liam-faq-links",
     source: "Liam, September batch (FAQ review)",
     date: "2026-09-18",

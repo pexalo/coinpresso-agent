@@ -1,5 +1,5 @@
 import { parseLinkMap, linkTargetsBlock } from "../src/lib/link-map.ts";
-import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser } from "../src/lib/agents/writer.ts";
+import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -77,6 +77,39 @@ console.log("'second set of eyes' is the spent closer:");
   ok("'second look' too", throws(() => enforceCloser("## X\n\nBody.\n\nHappy to take a second look.")) !== null);
   ok("a dare still passes", throws(() => enforceCloser("## X\n\nBody.\n\nOpen your source tonight and count the names.")) === null);
 }
+
+
+console.log("a link bolted onto the end of a section (Liam, Telegram 18 Sep):");
+{
+  const known = new Map([
+    ["https://coinpresso.io/crypto-seo", "crypto SEO"],
+    ["https://coinpresso.io/crypto-google-ads", "crypto Google Ads"],
+  ]);
+  // The exact sentence from the Doc.
+  const liam = `## Crypto-specific risk inventory
+
+Accounts get flagged more often than most verticals.
+
+What we can say with confidence is that the account was being treated as a growth lever rather than a compliance surface, the same discipline we'd expect a project to bring to [crypto SEO](https://coinpresso.io/crypto-seo) or PR.`;
+  const err = throws(() => enforceNoBoltOnLinks(liam, known));
+  ok("the SEO clause is flagged", err !== null && /bolted/.test(err), err);
+  ok("…and quoted so it can be cut", err && err.includes("crypto SEO"));
+
+  const belongs = `## Crypto-specific risk inventory
+
+Google Ads accounts in crypto get flagged more than most, and the certification rules sit on top of the behaviours the policy already watches.
+
+Before writing an appeal, run the account against the five risk areas [crypto Google Ads](https://coinpresso.io/crypto-google-ads) work always trips over.`;
+  ok("a closing link to a page the section is about is fine", throws(() => enforceNoBoltOnLinks(belongs, known)) === null,
+     throws(() => enforceNoBoltOnLinks(belongs, known)));
+  ok("a link mid-section is never a bolt-on",
+     throws(() => enforceNoBoltOnLinks("## X\n\nSee [crypto SEO](https://coinpresso.io/crypto-seo) here.\n\nMore prose after it.", known)) === null);
+  ok("an external link at the end is not a bolt-on",
+     throws(() => enforceNoBoltOnLinks("## X\n\nGoogle removed ads in 2025, per [the report](https://blog.google/x).", known)) === null);
+  ok("a table at the end is skipped",
+     throws(() => enforceNoBoltOnLinks("## X\n\nProse.\n\n| a | b |\n| - | - |\n| 1 | [crypto SEO](https://coinpresso.io/crypto-seo) |", known)) === null);
+}
+
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
