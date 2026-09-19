@@ -12,7 +12,8 @@
 // ---------------------------------------------------------------------------
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CANVAS, TEMPLATE, PALETTE, FONTS, splitTitle } from "@/lib/blog-image";
+import { CANVAS, TEMPLATE,
+  titleTop, PALETTE, FONTS, splitTitle } from "@/lib/blog-image";
 
 interface Version {
   id: string;
@@ -139,8 +140,9 @@ export default function FeaturedImage({
     // can land mid-line exactly as it does in their own images.
     const accentChars = accent.length;
     let consumed = 0;
-    const top =
-      TEMPLATE.title.centerY - ((all.length - 1) * TEMPLATE.title.lineHeight) / 2;
+    // Centred on centerY, then pushed clear of the logo if a long title would
+    // climb into it — see titleTop.
+    const top = titleTop(all.length);
 
     all.forEach((line, i) => {
       const y = top + i * TEMPLATE.title.lineHeight;

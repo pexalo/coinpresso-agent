@@ -1,7 +1,7 @@
 // The template's own logic. Geometry is measured elsewhere; what is testable
 // here is the title split, which decides where the accent colour stops — the
 // one thing that silently produces an ugly image rather than an error.
-import { splitTitle, TEMPLATE, CANVAS, PALETTE, SCENE_RULES, CHART_REQUEST, SECTION_RULES } from "../src/lib/blog-image.ts";
+import { splitTitle, TEMPLATE, titleTop, titleBottom, CANVAS, PALETTE, SCENE_RULES, CHART_REQUEST, SECTION_RULES } from "../src/lib/blog-image.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -95,6 +95,40 @@ console.log("section rules keep the same prohibitions as the hero:");
   ok("no people", /NO people/i.test(joined));
   ok("short labels are permitted, unlike the hero", /Short labels/i.test(joined));
 }
+
+
+console.log("the title never climbs into the logo (Liam, 19 Sep: copy and logo overlapping):");
+{
+  const logoBottom = TEMPLATE.logo.y + TEMPLATE.logo.h;
+  const capTop = (lines) => titleTop(lines) - TEMPLATE.title.size * 0.8;
+
+  // The bug, stated as arithmetic: centred alone, six lines reached 196.
+  const centred = (n) => TEMPLATE.title.centerY - ((n - 1) * TEMPLATE.title.lineHeight) / 2;
+  ok("six lines centred WOULD have overlapped", centred(6) - TEMPLATE.title.size * 0.8 < logoBottom,
+     centred(6) - TEMPLATE.title.size * 0.8);
+
+  for (let n = 1; n <= TEMPLATE.title.maxLines; n++) {
+    ok(`${n} line${n === 1 ? "" : "s"}: clear of the logo`, capTop(n) >= logoBottom, `capTop ${capTop(n)} vs logo ${logoBottom}`);
+  }
+  ok("the gap is the one in the template", Math.round(capTop(6) - logoBottom) === TEMPLATE.logoGap, capTop(6) - logoBottom);
+
+  // Short titles must not move — the template was measured off real posts.
+  ok("two lines sit exactly where they were measured", titleTop(2) === centred(2), titleTop(2));
+  ok("three lines unmoved", titleTop(3) === centred(3));
+  ok("four lines unmoved", titleTop(4) === centred(4));
+  ok("six lines are pushed down, not shrunk", titleTop(6) > centred(6));
+
+  // And the block still fits the canvas.
+  for (let n = 1; n <= TEMPLATE.title.maxLines; n++) {
+    ok(`${n} lines still fit above the bottom edge`, titleBottom(n) < CANVAS.h - 20, titleBottom(n));
+  }
+  // Fewer lines sit LOWER, because the block is centred: a one-line title is
+  // on centerY, a two-line block starts half a line above it. Only the clamp
+  // reverses that, and only where it bites.
+  ok("longer blocks never start below shorter ones", titleTop(6) <= titleTop(4) && titleTop(4) <= titleTop(1));
+  ok("the clamp ties 5 and 6 at the floor", titleTop(5) === titleTop(6));
+}
+
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -20,6 +20,8 @@ export const CANVAS = { w: 1024, h: 576 } as const;
 /** Measured off eight editorial posts; identical in all of them. */
 export const TEMPLATE = {
   logo: { x: 157, y: 130, h: 76 },
+  /** Clear air under the logo before the first line of title can start. */
+  logoGap: 18,
   title: {
     x: 163,
     /** The block is centred on this line, so 2- and 5-line titles both sit right. */
@@ -97,6 +99,35 @@ export const SCENE_RULES = [
 ] as const;
 
 /** Split a headline into the accent-coloured opening and the white remainder. */
+/**
+ * The baseline of the first title line, for a block of `lines`.
+ *
+ * Centring alone is not enough. Liam, on the Circumventing Systems image:
+ * "a padding issue on the image here (the copy and coinpresso logo are
+ * overlapping)". He is right, and the arithmetic says so. A six-line title
+ * centred on 356 puts its first baseline at 228.5, so the caps of that line
+ * reach about 196 — and the logo's lower edge is at 206. Every title long
+ * enough to wrap six times ran into the mark.
+ *
+ * The exemplars were all short enough that it never showed. So the block is
+ * centred as before and then pushed down if it would climb into the logo,
+ * which leaves two- and four-line titles exactly where they were measured and
+ * moves only the ones that would collide.
+ */
+export function titleTop(lines: number): number {
+  const t = TEMPLATE.title;
+  const centred = t.centerY - ((lines - 1) * t.lineHeight) / 2;
+  // Cap height above the baseline, for the display face at this size.
+  const ascent = t.size * 0.8;
+  const floor = TEMPLATE.logo.y + TEMPLATE.logo.h + TEMPLATE.logoGap + ascent;
+  return Math.max(centred, floor);
+}
+
+/** The last baseline, so a caller can see whether the block still fits. */
+export function titleBottom(lines: number): number {
+  return titleTop(lines) + (lines - 1) * TEMPLATE.title.lineHeight;
+}
+
 export function splitTitle(headline: string): { accent: string; rest: string } {
   const clean = headline.replace(/\s+/g, " ").trim();
   // Their own pattern: the generic lead-in carries the accent, the specific
