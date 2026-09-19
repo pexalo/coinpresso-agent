@@ -190,6 +190,11 @@ export interface SitePage {
 }
 
 export const COINPRESSO_PAGES: SitePage[] = [
+  // Liam's mapped anchors, 19 Sep 2026. Several phrases per page, joined with
+  // " | " — the writer is shown them all, the naming check accepts any of
+  // them, and the anchor fixer prepends the first. One phrase per page is why
+  // every post reached for the same three links.
+  { url: "https://coinpresso.io/", topic: "crypto marketing | crypto marketing agency | crypto advertising agency" },
   { url: "https://coinpresso.io/crypto-seo", topic: "crypto SEO" },
   { url: "https://coinpresso.io/crypto-seo/for-web3", topic: "Web3 SEO" },
   // Added 9 Sep: the client added this link by hand to the piece he approved,
@@ -198,7 +203,7 @@ export const COINPRESSO_PAGES: SitePage[] = [
   // link to a page that is not here is rejected by enforceLinks.
   {
     url: "https://coinpresso.io/web3-marketing-agency",
-    topic: "Web3 marketing",
+    topic: "Web3 marketing | Web3 marketing agency",
   },
   // Found in the same audit: five more live service pages the writer could
   // never link because they were absent here. Verified against the live site
@@ -227,20 +232,20 @@ export const COINPRESSO_PAGES: SitePage[] = [
   { url: "https://coinpresso.io/llm-optimization-for-crypto-web3-websites", topic: "LLM optimisation for crypto websites" },
   { url: "https://coinpresso.io/crypto-link-building-services", topic: "crypto link building" },
   { url: "https://coinpresso.io/parasite-seo-services", topic: "parasite SEO" },
-  { url: "https://coinpresso.io/crypto-pr", topic: "crypto PR" },
+  { url: "https://coinpresso.io/crypto-pr", topic: "crypto PR | crypto press release distribution | crypto press releases | crypto PR agency" },
   { url: "https://coinpresso.io/crypto-pr/web3-pr", topic: "Web3 PR" },
   { url: "https://coinpresso.io/crypto-earned-media", topic: "crypto earned media" },
-  { url: "https://coinpresso.io/crypto-presale-marketing-services", topic: "crypto presale marketing" },
+  { url: "https://coinpresso.io/crypto-presale-marketing-services", topic: "crypto presale marketing | presale marketing agency" },
   { url: "https://coinpresso.io/ico-marketing", topic: "ICO marketing" },
   { url: "https://coinpresso.io/ido-marketing", topic: "IDO marketing" },
   { url: "https://coinpresso.io/crypto-clipping-strategy-for-viral-growth", topic: "crypto clipping" },
-  { url: "https://coinpresso.io/crypto-ppc-marketing", topic: "crypto PPC" },
+  { url: "https://coinpresso.io/crypto-ppc-marketing", topic: "crypto PPC | crypto PPC agency | crypto PPC marketing agency | crypto PPC marketing services" },
   { url: "https://coinpresso.io/crypto-google-ads", topic: "crypto Google Ads" },
   { url: "https://coinpresso.io/crypto-programmatic-ads", topic: "crypto programmatic advertising" },
-  { url: "https://coinpresso.io/crypto-content", topic: "crypto content production" },
+  { url: "https://coinpresso.io/crypto-content", topic: "crypto content | crypto copywriting | crypto content writers" },
   { url: "https://coinpresso.io/web3-ghostwriting", topic: "Web3 ghostwriting" },
   { url: "https://coinpresso.io/crypto-community-management", topic: "crypto community management" },
-  { url: "https://coinpresso.io/smm-for-crypto", topic: "crypto social media marketing" },
+  { url: "https://coinpresso.io/smm-for-crypto", topic: "crypto social media management | crypto SMM | SMM for crypto" },
   { url: "https://coinpresso.io/twitter-crypto-marketing", topic: "crypto X/Twitter marketing" },
   { url: "https://coinpresso.io/crypto-influencer-marketing", topic: "crypto influencer marketing" },
   { url: "https://coinpresso.io/crypto-email-marketing", topic: "crypto email marketing" },

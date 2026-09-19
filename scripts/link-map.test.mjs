@@ -1,4 +1,5 @@
-import { parseLinkMap, linkTargetsBlock } from "../src/lib/link-map.ts";
+import { parseLinkMap, linkTargetsBlock, relevantPosts } from "../src/lib/link-map.ts";
+import { COINPRESSO_PAGES } from "../src/lib/blog.ts";
 import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
@@ -108,6 +109,55 @@ Before writing an appeal, run the account against the five risk areas [crypto Go
      throws(() => enforceNoBoltOnLinks("## X\n\nGoogle removed ads in 2025, per [the report](https://blog.google/x).", known)) === null);
   ok("a table at the end is skipped",
      throws(() => enforceNoBoltOnLinks("## X\n\nProse.\n\n| a | b |\n| - | - |\n| 1 | [crypto SEO](https://coinpresso.io/crypto-seo) |", known)) === null);
+}
+
+
+
+console.log("Liam's mapped anchors are the compiled default (19 Sep):");
+{
+  const topicOf = (u) => COINPRESSO_PAGES.find((p) => p.url === u)?.topic;
+  const cases = [
+    ["https://coinpresso.io/", ["crypto marketing", "crypto marketing agency", "crypto advertising agency"]],
+    ["https://coinpresso.io/web3-marketing-agency", ["Web3 marketing", "Web3 marketing agency"]],
+    ["https://coinpresso.io/crypto-content", ["crypto content", "crypto copywriting", "crypto content writers"]],
+    ["https://coinpresso.io/crypto-pr", ["crypto PR", "crypto press release distribution", "crypto press releases", "crypto PR agency"]],
+    ["https://coinpresso.io/crypto-presale-marketing-services", ["crypto presale marketing", "presale marketing agency"]],
+    ["https://coinpresso.io/crypto-ppc-marketing", ["crypto PPC", "crypto PPC agency", "crypto PPC marketing agency", "crypto PPC marketing services"]],
+    ["https://coinpresso.io/smm-for-crypto", ["crypto social media management", "crypto SMM", "SMM for crypto"]],
+  ];
+  for (const [url, anchors] of cases) {
+    const topic = topicOf(url);
+    ok(`${url.replace("https://coinpresso.io", "") || "/"} is on the list`, Boolean(topic), url);
+    ok(`  …carries all ${anchors.length} of his anchors`, anchors.every((a) => (topic ?? "").split(" | ").includes(a)), topic);
+  }
+  ok("the home page was added", topicOf("https://coinpresso.io/") !== undefined);
+  ok("every page still has a non-empty topic", COINPRESSO_PAGES.every((p) => p.topic.trim().length > 0));
+  ok("no duplicate URLs", new Set(COINPRESSO_PAGES.map((p) => p.url)).size === COINPRESSO_PAGES.length);
+}
+
+console.log("relevant posts, not just the most recent fifteen:");
+{
+  const posts = [
+    { url: "https://coinpresso.io/blog/old-ppc-attribution", title: "Crypto PPC Attribution Explained", publishedAt: "2024-02-01" },
+    { url: "https://coinpresso.io/blog/recent-nft", title: "NFT Launch Playbook", publishedAt: "2026-09-10" },
+    { url: "https://coinpresso.io/blog/recent-defi", title: "DeFi Community Building", publishedAt: "2026-09-09" },
+    { url: "https://coinpresso.io/blog/google-ads-policy", title: "Google Ads Policy for Exchanges", publishedAt: "2025-01-01" },
+    { url: "https://coinpresso.io/blog/recent-email", title: "Email Flows for Token Launches", publishedAt: "2026-09-08" },
+  ];
+  const picked = relevantPosts(posts, "Google Ads suspensions and PPC attribution", 4, 1);
+  ok("an old post on the topic beats recent ones off-topic",
+     picked.slice(0, 2).some((p) => p.title.includes("PPC Attribution")) && picked.slice(0, 2).some((p) => p.title.includes("Google Ads Policy")),
+     picked.map((p) => p.title).join(" | "));
+  ok("recent work still gets a slot", picked.some((p) => p.publishedAt.startsWith("2026-09")));
+  ok("nothing is duplicated", new Set(picked.map((p) => p.url)).size === picked.length);
+  ok("the limit is honoured", picked.length === 4);
+  ok("posts with no URL are dropped",
+     relevantPosts([{ title: "No URL", publishedAt: "2026-01-01" }], "anything", 5).length === 0);
+  ok("'crypto' and 'guide' do not count as overlap",
+     relevantPosts([{ url: "https://coinpresso.io/blog/x", title: "The Complete Crypto Guide", publishedAt: "2020-01-01" },
+                    { url: "https://coinpresso.io/blog/y", title: "NFT Royalties", publishedAt: "2026-01-01" }],
+                   "The Complete Crypto Guide to NFT Royalties", 1, 0)[0].title === "NFT Royalties");
+  ok("an empty archive is empty", relevantPosts([], "anything", 5).length === 0);
 }
 
 

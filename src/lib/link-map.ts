@@ -169,3 +169,81 @@ export function linkTargetsBlock(pages: SitePage[], pillarHub?: string): string 
     })
     .join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// Which of the client's own posts to offer as link targets.
+// ---------------------------------------------------------------------------
+
+const STOP = new Set([
+  "the", "a", "an", "and", "or", "for", "of", "to", "in", "on", "with", "how",
+  "what", "why", "when", "your", "you", "is", "are", "it", "that", "this",
+  "guide", "complete", "ultimate", "best", "top", "2024", "2025", "2026",
+  "crypto", "cryptocurrency", "web3", "coinpresso", "blog",
+]);
+
+function terms(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 2 && !STOP.has(w))
+  );
+}
+
+export interface LinkablePost {
+  url?: string;
+  title: string;
+  publishedAt: string;
+}
+
+/**
+ * Posts worth offering this article, by relevance first and recency second.
+ *
+ * Liam: "There are 100s of pages on Coinpresso.io and we don't need to always
+ * look to fit the same 3-4 links into different articles, we should link to
+ * relevant pages in line with the article topic."
+ *
+ * The writer was shown the fifteen MOST RECENT posts and nothing else, so
+ * every article in a week drew from the same fifteen regardless of subject,
+ * and a two-year-old post on exactly this topic was invisible. Now the whole
+ * archive is ranked on how many real words its title shares with this
+ * article's title and keywords — "crypto" and "guide" excluded, since every
+ * post has them — with recency as the tie-break and a few recent posts kept
+ * on the end so new work still gets linked.
+ */
+export function relevantPosts<T extends LinkablePost>(
+  posts: T[],
+  about: string,
+  limit = 15,
+  keepRecent = 4
+): T[] {
+  const want = terms(about);
+  const live = posts.filter((p) => p.url && p.publishedAt);
+  const byDate = [...live].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+
+  const scored = byDate
+    .map((p) => {
+      const overlap = [...terms(p.title)].filter((w) => want.has(w)).length;
+      return { p, overlap };
+    })
+    .filter((x) => x.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap || b.p.publishedAt.localeCompare(a.p.publishedAt));
+
+  const out: T[] = [];
+  const seen = new Set<string>();
+  const take = (p: T) => {
+    const k = norm(p.url ?? "");
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(p);
+  };
+  for (const { p } of scored) {
+    if (out.length >= limit - keepRecent) break;
+    take(p);
+  }
+  for (const p of byDate) {
+    if (out.length >= limit) break;
+    take(p);
+  }
+  return out;
+}

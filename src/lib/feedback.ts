@@ -49,6 +49,22 @@ export interface FeedbackLog {
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
   {
+    id: "liam-link-the-relevant-page",
+    source: "Liam, internal-linking pointers (19 Sep)",
+    date: "2026-09-19",
+    rule:
+      "Liam: \"there are 100s of pages on Coinpresso.io and we don't need to always look to fit the same 3-4 links into different articles, we should link to relevant pages in line with the article topic.\" Pick the page the sentence is genuinely about — a service page or an older post — rather than reaching for crypto SEO, GEO or PR because they are familiar. A post from two years ago on exactly this subject is a better link than a recent one on a different subject. And the anchor is placed \"naturally, within the composition of the blog where it actually fits — not stuffed onto the end of sentences out of context 'after the fact'.\"",
+    active: true,
+  },
+  {
+    id: "liam-mapped-anchors",
+    source: "Liam, internal-linking pointers (19 Sep)",
+    date: "2026-09-19",
+    rule:
+      "The anchor phrases Coinpresso wants used, page by page. Home: crypto marketing, crypto marketing agency, crypto advertising agency. Web3 marketing agency: Web3 marketing, Web3 marketing agency. Crypto content: crypto content, crypto copywriting, crypto content writers. Crypto PR: crypto PR, crypto press release distribution, crypto press releases, crypto PR agency. Crypto presale marketing: crypto presale marketing, presale marketing agency. Crypto PPC: crypto PPC, crypto PPC agency, crypto PPC marketing agency, crypto PPC marketing services. Social media: crypto social media management, crypto SMM, SMM for crypto. Use the phrase that reads naturally in the sentence — they are alternatives, not a list to work through.",
+    active: true,
+  },
+  {
     id: "liam-no-bolt-on-links",
     source: "Liam, Circumventing Systems review (Telegram, 18 Sep)",
     date: "2026-09-18",

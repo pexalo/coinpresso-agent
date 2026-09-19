@@ -13,7 +13,7 @@ import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
 import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brief";
 import { allArticles, exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
 import { feedbackBlock, readFeedback } from "../feedback";
-import { linkablePages, linkTargetsBlock } from "../link-map";
+import { linkablePages, linkTargetsBlock, relevantPosts } from "../link-map";
 import {
   CLOSE_MOVES,
   COINPRESSO_PAGES,
@@ -1091,10 +1091,15 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   // E-E-A-T piece: the draft linked "crypto SEO guide" to a years-old post
   // when the crypto GEO guide from a few weeks earlier was the relevant one.
   // The writer can only prefer the newer post if it can see the dates.
-  const recent = (await allArticles(BLOG_ARCHIVE_ID))
-    .filter((a) => a.kind !== "competitor" && a.url && a.publishedAt)
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .slice(0, 15);
+  //
+  // And ranked by RELEVANCE, not recency alone — see relevantPosts. Liam:
+  // "there are 100s of pages on Coinpresso.io and we don't need to always
+  // look to fit the same 3-4 links into different articles."
+  const recent = relevantPosts(
+    (await allArticles(BLOG_ARCHIVE_ID)).filter((a) => a.kind !== "competitor"),
+    [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? [])].join(" "),
+    15
+  );
   const recentPosts = recent
     .map((a) => `- ${a.publishedAt.slice(0, 10)} · ${a.title} — ${a.url}`)
     .join("\n");
