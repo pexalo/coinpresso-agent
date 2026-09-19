@@ -21,7 +21,6 @@ import {
   SPENT_CLOSERS,
   SPENT_OPENERS,
   closeMoveFor,
-  internalLinkTargets,
   introMoveFor,
   moveById,
   BLOG_ARCHIVE_ID,

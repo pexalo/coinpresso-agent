@@ -14,7 +14,8 @@ import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
 import type { CallContext } from "../providers/routing";
-import { CONTENT_TYPES, PILLARS, internalLinkTargets } from "../blog";
+import { CONTENT_TYPES, PILLARS } from "../blog";
+import { linkablePages, linkTargetsBlock } from "../link-map";
 
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
 crypto PR programme. You do not write articles. You produce the research brief a
@@ -162,7 +163,13 @@ export async function runStrategyBlog(
     );
   }
 
-  const user = `Today's date is ${today}.
+    // The same page list the writer gets: the compiled defaults with Liam's
+  // mapped anchors, overlaid by the client's link map. Research proposes the
+  // outline and the links to reach for, so it seeing a different, narrower
+  // list than the writer is how a proposed link becomes an invented one.
+  const sitePages = await linkablePages(ctx?.clientRef);
+
+const user = `Today's date is ${today}.
 
 TITLE (fixed): ${brief.title}
 TARGET KEYWORDS: ${brief.keywords.join(", ")}
@@ -171,7 +178,7 @@ ${type ? `FORMAT: ${type.name} — ${type.shape} Target ${type.words[0]}-${type.
 
 COINPRESSO PAGES THAT EXIST — internal links come from this list and nowhere
 else; do not invent a coinpresso.io path:
-${internalLinkTargets(pillar?.hub)}
+${linkTargetsBlock(sitePages, pillar?.hub)}
 ${brief.notes ? `\nOPERATOR NOTES: ${brief.notes}` : ""}${
     brief.contentBrief
       ? `
