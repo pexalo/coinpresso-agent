@@ -684,6 +684,52 @@ export const COMPETITOR_DOMAINS: string[] = [
   "coincile.io",
 ];
 
+/**
+ * Is this ledger still worth writing from?
+ *
+ * The competitor rule can gut a ledger rather than trim it. The attribution
+ * piece researched seven sources and five were vendors — Formo, Mintfunnel,
+ * Northbeam, Coincile, Stub Group — because the vendors are who writes about
+ * Web3 attribution. Strip them at use time and the writer is asked to support
+ * a data-heavy article from two citations, which it cannot honestly do.
+ *
+ * At that point more writer attempts are the wrong spend. Research costs
+ * about $0.35 and fixes the cause; three writer attempts on a hollow ledger
+ * cost $1.70 and produce a thin article at the end of it. So a run whose
+ * ledger falls below the floor — or loses most of what it had — re-researches
+ * once, with the competitor rule in force from the start.
+ */
+export const MIN_CITABLE_SOURCES = 3;
+
+export function ledgerIsViable(sources: Array<{ url: string }>): {
+  viable: boolean;
+  citable: number;
+  blocked: number;
+  reason?: string;
+} {
+  const blocked = sources.filter((x) => isCompetitorUrl(x.url)).length;
+  const citable = sources.length - blocked;
+  if (citable < MIN_CITABLE_SOURCES) {
+    return {
+      viable: false,
+      citable,
+      blocked,
+      reason: `only ${citable} citable source${citable === 1 ? "" : "s"} left after ${blocked} competitor${blocked === 1 ? "" : "s"} were removed — the floor is ${MIN_CITABLE_SOURCES}`,
+    };
+  }
+  // More than half the ledger gone means the research was built around the
+  // vendors, and what is left is unlikely to cover the piece's claims.
+  if (blocked > sources.length / 2) {
+    return {
+      viable: false,
+      citable,
+      blocked,
+      reason: `${blocked} of ${sources.length} sources were competitors — the research was built around them`,
+    };
+  }
+  return { viable: true, citable, blocked };
+}
+
 /** True when the URL points at a competitor. Subdomains count. */
 export function isCompetitorUrl(url: string): boolean {
   try {

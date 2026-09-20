@@ -280,4 +280,10 @@ export interface Run {
    * different reasons, and the second note must not erase the first.
    */
   guidance?: GuidanceNote[];
+  /**
+   * Research was rebuilt because the competitor rule left the ledger
+   * unusable. Once per run — a topic where no non-vendor source exists must
+   * fail visibly rather than re-research forever.
+   */
+  researchRedone?: boolean;
 }

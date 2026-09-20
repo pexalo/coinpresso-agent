@@ -18,6 +18,7 @@ import { searchCost } from "./model-registry";
 import { usageOf, lastDraftOf } from "./providers/anthropic";
 import { runStrategy } from "./agents/strategy";
 import { runWriter } from "./agents/writer";
+import { ledgerIsViable } from "./blog";
 import { runReviewer } from "./agents/reviewer";
 import { runLinkCheck } from "./agents/linkcheck";
 import { mockReviewer, mockStrategy, mockWriter } from "./agents/mock";
@@ -229,6 +230,32 @@ export async function executeRun(run: Run): Promise<Run> {
   // does not invalidate research that succeeded. A fresh run has every stage
   // pending, so these guards change nothing on the normal path.
   const alreadyDone = (id: StageId) => stage(run, id).status === "done";
+
+  // RESEARCH AGAIN WHEN THE LEDGER IS NO LONGER WORTH WRITING FROM.
+  //
+  // The competitor rule can gut a ledger rather than trim it: the attribution
+  // piece had five vendors out of seven sources, because vendors are who
+  // writes about Web3 attribution. Kept research is normally the right
+  // economy — it is more than half a run's cost, and a writer failure does
+  // not invalidate it — but research that has lost most of itself is a cause,
+  // not an inconvenience, and three more writer attempts on it cost more than
+  // redoing it properly.
+  //
+  // Once per run, tracked on the stage, so a topic where research genuinely
+  // cannot find non-vendor sources fails visibly instead of looping.
+  if (alreadyDone("strategy") && run.research && !run.researchRedone) {
+    const check = ledgerIsViable(run.research.sources ?? []);
+    if (!check.viable) {
+      run.researchRedone = true;
+      const st = stage(run, "strategy");
+      st.status = "pending";
+      st.output = undefined;
+      st.error = undefined;
+      st.inputSummary = `Re-researching: ${check.reason}`;
+      run.research = undefined;
+      await saveRun(run);
+    }
+  }
 
   // -- Strategy ------------------------------------------------------------
   if (!(alreadyDone("strategy") && run.research)) {

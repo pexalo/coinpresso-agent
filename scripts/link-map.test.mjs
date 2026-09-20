@@ -1,5 +1,5 @@
 import { parseLinkMap, linkTargetsBlock, relevantPosts } from "../src/lib/link-map.ts";
-import { COINPRESSO_PAGES, isCompetitorUrl, COMPETITOR_DOMAINS } from "../src/lib/blog.ts";
+import { COINPRESSO_PAGES, isCompetitorUrl, COMPETITOR_DOMAINS, ledgerIsViable, MIN_CITABLE_SOURCES } from "../src/lib/blog.ts";
 import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks, dedupeLinksAcrossFaqs, repairInternalLinks } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
@@ -294,6 +294,35 @@ console.log("an invented coinpresso.io slug is repaired or unlinked, never left 
   const oneWord = `See [the guide](https://coinpresso.io/blog/google-something-entirely-different-here).`;
   const r = repairInternalLinks(oneWord, known);
   ok("a single shared word is not enough to link", !r.includes("circumventing"), r);
+}
+
+
+
+console.log("a gutted ledger triggers fresh research instead of more writer attempts:");
+{
+  const vendor = (n) => Array.from({ length: n }, (_, i) => ({ url: `https://formo.so/blog/${i}` }));
+  const real = (n) => Array.from({ length: n }, (_, i) => ({ url: `https://blog.google/${i}` }));
+
+  // The attribution run: five vendors, two usable.
+  const attribution = ledgerIsViable([...vendor(5), ...real(2)]);
+  ok("five of seven vendors is not viable", !attribution.viable, JSON.stringify(attribution));
+  ok("it counts what survived", attribution.citable === 2 && attribution.blocked === 5);
+  ok("and says why in plain words", /only 2 citable sources/.test(attribution.reason ?? ""), attribution.reason);
+
+  // A clean ledger writes as normal — no re-research, no extra spend.
+  ok("a clean ledger is viable", ledgerIsViable(real(6)).viable);
+  ok("one vendor out of eight is still viable", ledgerIsViable([...vendor(1), ...real(7)]).viable);
+
+  // Just above the floor survives; just below does not.
+  ok(`${MIN_CITABLE_SOURCES} citable is the floor and passes`, ledgerIsViable(real(MIN_CITABLE_SOURCES)).viable);
+  ok("one below the floor fails", !ledgerIsViable(real(MIN_CITABLE_SOURCES - 1)).viable);
+
+  // Majority-vendor fails even when the survivors clear the floor.
+  const majority = ledgerIsViable([...vendor(6), ...real(4)]);
+  ok("six of ten vendors fails despite four survivors", !majority.viable, JSON.stringify(majority));
+  ok("…and says the research was built around them", /built around them/.test(majority.reason ?? ""));
+  ok("an even split is not a majority", ledgerIsViable([...vendor(4), ...real(4)]).viable);
+  ok("an empty ledger is not viable", !ledgerIsViable([]).viable);
 }
 
 
