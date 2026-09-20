@@ -1202,7 +1202,20 @@ otherwise would, and do not invent house conventions it does not state.\n`;
     if (a.url) knownPages.set(a.url.replace(/\/+$/, "").toLowerCase(), a.title);
   }
 
-  const sourceLedger = research.sources
+  // THE LEDGER IS FILTERED HERE, not only where it was researched.
+  //
+  // The competitor rule went in at the research stage, so a ledger built
+  // before that — or reused by "Rewrite from research", which keeps the
+  // research and re-runs only the writer — still carried vendor sources. The
+  // writer was handed Formo in its source list, told to cite from the list,
+  // and then rejected three times for citing it. It could not win, and it
+  // burned $1.70 finding that out.
+  //
+  // So the filter runs wherever the ledger is USED. An old run is cured by a
+  // retry rather than by re-buying research.
+  const blockedSources = research.sources.filter((x) => isCompetitorUrl(x.url));
+  const citable = research.sources.filter((x) => !isCompetitorUrl(x.url));
+  const sourceLedger = citable
     .map(
       (x) =>
         `[${x.id}] ${x.publisher} — "${x.title}"\n     URL: ${x.url}\n     Supports: ${x.claim}${
@@ -1210,6 +1223,14 @@ otherwise would, and do not invent house conventions it does not state.\n`;
         }`
     )
     .join("\n");
+
+  // Named, so the writer cuts the claims that rested on them rather than
+  // hunting for a source it can no longer see.
+  const blockedBlock = blockedSources.length
+    ? `\n\nSOURCES REMOVED — competitors. ${blockedSources
+        .map((x) => `${x.publisher} (${x.url})`)
+        .join("; ")}. These are rival agencies or vendors and the client's rule is absolute: never link, cite or name one. Anything they were the only support for does not go in the piece. Do not reach for them from memory either.`
+    : "";
 
   const revisionBlock =
     fixes && previous
@@ -1401,7 +1422,7 @@ SOURCE LEDGER — the ONLY URLs you may cite. The [s1] labels below are how the
 ledger is indexed FOR YOU; they are not a citation format. Never write "[s1]"
 in the article. A cited claim carries a markdown link on the words making the
 claim — [what the source found](URL) — because a reader cannot click "[s1]".
-${sourceLedger || "(empty — write without external citations and say so where a figure would have gone)"}
+${sourceLedger || "(empty — write without external citations and say so where a figure would have gone)"}${blockedBlock}
 ${revisionBlock}
 
 ---
@@ -1517,6 +1538,9 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // see nameAnchors and shortenAnchors for the runs that proved the
       // writer cannot do either on request. Naming first, because shortening
       // trims from the end and the topic goes on the front.
+      // An invented coinpresso.io slug is corrected to the real page or
+      // unlinked, before the anchor work — see repairInternalLinks.
+      parsed.body = repairInternalLinks(parsed.body, knownPages);
       parsed.body = nameAnchors(parsed.body, knownPages);
       parsed.body = shortenAnchors(parsed.body);
 
@@ -1531,7 +1555,11 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         parsed.body,
         (parsed.faqs ?? []).map((f) => ({
           ...f,
-          a: tidyPunctuation(stripAiOpeners(shortenAnchors(nameAnchors(americanize(f.a), knownPages)))),
+          a: tidyPunctuation(
+            stripAiOpeners(
+              shortenAnchors(nameAnchors(repairInternalLinks(americanize(f.a), knownPages), knownPages))
+            )
+          ),
         }))
       );
 
@@ -2020,6 +2048,77 @@ export function stripAiOpeners(body: string): string {
     }
     return out + prose.slice(last);
   };
+
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
+}
+
+/**
+ * An invented coinpresso.io URL is repaired or unlinked, never left to fail.
+ *
+ * The writer is told to link relevant Coinpresso posts, and when it wants one
+ * it does not have the slug for, it writes a plausible slug:
+ * "/blog/circumventing-systems-review" for a post actually published at
+ * "/blog/google-ads-circumventing-systems-suspensions-...". The check rejects
+ * it correctly, the writer guesses again, and three attempts go the same way.
+ *
+ * Guessing a slug is not a writing task. Either a real page matches what it
+ * meant — in which case the URL is corrected and the anchor kept — or nothing
+ * does, and the link comes off while the words stay. An unlinked sentence is
+ * never worse than a 404 on the client's own domain, and the link-count check
+ * will ask for a real page instead, which is the outcome Liam wants.
+ *
+ * Matching is on slug words, both ways: every word of the invented slug has
+ * to appear in the real one, or enough of the real one's distinctive words in
+ * the invention. Deliberately strict — a wrong link is worse than none.
+ */
+export function repairInternalLinks(
+  body: string,
+  known: Map<string, string>
+): string {
+  const slugWords = (u: string) =>
+    new Set(
+      u
+        .replace(/^https?:\/\/[^/]+/, "")
+        .split(/[^a-z0-9]+/i)
+        .map((w) => w.toLowerCase())
+        .filter((w) => w.length > 2 && !GENERIC_ANCHOR_WORDS.has(w))
+    );
+
+  const candidates = [...known.keys()].map((k) => ({ url: k, words: slugWords(k) }));
+
+  const fix = (prose: string) =>
+    prose.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (whole, text: string, url: string) => {
+      if (!/^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(url)) return whole;
+      if (known.has(normaliseUrl(url))) return whole;
+
+      const want = slugWords(url);
+      if (want.size) {
+        let best: { url: string; score: number } | null = null;
+        for (const c of candidates) {
+          if (!c.words.size) continue;
+          const shared = [...want].filter((w) => c.words.has(w)).length;
+          // MOST OF THE INVENTION'S OWN WORDS must be in the real slug, or
+          // most of the real slug's words in the invention. The first is the
+          // case that matters: the model writes a SHORTER guess than the real
+          // title — "circumventing-systems-review" for a post published at
+          // "google-ads-circumventing-systems-suspensions-…" — so demanding
+          // that the real page be mostly covered never matches the failure
+          // this exists to fix. Two shared words minimum, so a lone "google"
+          // cannot pull a link onto the wrong page.
+          const covers =
+            shared / want.size >= 0.6 || shared / c.words.size >= 0.6;
+          if (covers && shared >= 2 && (!best || shared > best.score)) {
+            best = { url: c.url, score: shared };
+          }
+        }
+        if (best) return `[${text}](${best.url})`;
+      }
+      // Nothing matched: keep the sentence, drop the link.
+      return text;
+    });
 
   return body
     .split(/(```[\s\S]*?```)/)

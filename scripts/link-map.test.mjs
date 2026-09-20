@@ -1,6 +1,6 @@
 import { parseLinkMap, linkTargetsBlock, relevantPosts } from "../src/lib/link-map.ts";
 import { COINPRESSO_PAGES, isCompetitorUrl, COMPETITOR_DOMAINS } from "../src/lib/blog.ts";
-import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks, dedupeLinksAcrossFaqs } from "../src/lib/agents/writer.ts";
+import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks, dedupeLinksAcrossFaqs, repairInternalLinks } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -252,6 +252,48 @@ console.log("the utility pages Liam named are linkable:");
   for (const u of ["https://coinpresso.io/contact", "https://coinpresso.io/about", "https://coinpresso.io/blog/category/case-studies", "https://coinpresso.io/blog"]) {
     ok(u.replace("https://coinpresso.io", ""), COINPRESSO_PAGES.some((p) => p.url === u));
   }
+}
+
+
+
+console.log("an invented coinpresso.io slug is repaired or unlinked, never left to fail:");
+{
+  const known = new Map([
+    ["https://coinpresso.io/blog/google-ads-circumventing-systems-suspensions-why-crypto-accounts-get-hit", "Google Ads Circumventing Systems Suspensions"],
+    ["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"],
+  ]);
+
+  // The exact failure: a plausible slug for a post that exists elsewhere.
+  const invented = `See our [earlier piece on suspensions](https://coinpresso.io/blog/circumventing-systems-review).`;
+  const out = repairInternalLinks(invented, known);
+  ok("corrected to the real post",
+     out.includes("](https://coinpresso.io/blog/google-ads-circumventing-systems-suspensions-why-crypto-accounts-get-hit)"), out);
+  ok("the anchor text is untouched", out.includes("[earlier piece on suspensions]"));
+
+  // Nothing close: the link comes off, the words stay.
+  const nonsense = `Read our [guide to llamas](https://coinpresso.io/blog/llama-husbandry-2026) for more.`;
+  ok("unmatched invention is unlinked, sentence intact",
+     repairInternalLinks(nonsense, known) === "Read our guide to llamas for more.", repairInternalLinks(nonsense, known));
+
+  // A real page is never touched.
+  const real = `Talk to a [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) team.`;
+  ok("a real page is left alone", repairInternalLinks(real, known) === real);
+  const ext = `Per [Google](https://blog.google/x).`;
+  ok("external links are left alone", repairInternalLinks(ext, known) === ext);
+  ok("fenced code untouched", repairInternalLinks("```\n[x](https://coinpresso.io/nope)\n```", known) === "```\n[x](https://coinpresso.io/nope)\n```");
+  ok("idempotent", repairInternalLinks(out, known) === out);
+
+  // And the hard check now passes on the repaired text.
+  ok("the repaired body clears the invented-URL check",
+     !/not a page/.test(throws(() => enforceLinks(out, 5, known, undefined, "hard")) ?? ""),
+     throws(() => enforceLinks(out, 5, known, undefined, "hard")));
+  ok("…and so does the unlinked one",
+     !/not a page/.test(throws(() => enforceLinks(repairInternalLinks(nonsense, known), 5, known, undefined, "hard")) ?? ""));
+
+  // A near-miss must not be linked to the wrong page.
+  const oneWord = `See [the guide](https://coinpresso.io/blog/google-something-entirely-different-here).`;
+  const r = repairInternalLinks(oneWord, known);
+  ok("a single shared word is not enough to link", !r.includes("circumventing"), r);
 }
 
 
