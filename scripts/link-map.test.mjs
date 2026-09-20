@@ -1,6 +1,6 @@
 import { parseLinkMap, linkTargetsBlock, relevantPosts } from "../src/lib/link-map.ts";
-import { COINPRESSO_PAGES } from "../src/lib/blog.ts";
-import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks } from "../src/lib/agents/writer.ts";
+import { COINPRESSO_PAGES, isCompetitorUrl, COMPETITOR_DOMAINS } from "../src/lib/blog.ts";
+import { nameAnchors, enforceLinks, tidyPunctuation, enforceFaqLinks, enforceCloser, enforceNoBoltOnLinks, dedupeLinksAcrossFaqs } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -65,9 +65,11 @@ console.log("tidyPunctuation — the seam nobody looked at:");
 console.log("FAQ links, internal AND external (Liam, 18 Sep):");
 {
   const known = new Map([["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"]]);
+  // Superseded 19 Sep: Liam's later word is "keep users within our website
+  // hierarchy", so an uncited figure in an FAQ is no longer pushed outward.
   const figures = [{ q: "Q?", a: "Google removed 8.3 billion ads in 2025." }];
   const soft = throws(() => enforceFaqLinks(figures, known, "soft"));
-  ok("figures with no citation is a note", /cite nothing/.test(soft ?? ""), soft);
+  ok("an uncited figure is not pushed to an external link", !/cite nothing/.test(soft ?? ""));
   const cited = [{ q: "Q?", a: "Google removed [8.3 billion ads](https://blog.google/x) in 2025. See [crypto PPC](https://coinpresso.io/crypto-ppc-marketing)." }];
   ok("cited and linked passes", throws(() => enforceFaqLinks(cited, known)) === null);
 }
@@ -158,6 +160,98 @@ console.log("relevant posts, not just the most recent fifteen:");
                     { url: "https://coinpresso.io/blog/y", title: "NFT Royalties", publishedAt: "2026-01-01" }],
                    "The Complete Crypto Guide to NFT Royalties", 1, 0)[0].title === "NFT Royalties");
   ok("an empty archive is empty", relevantPosts([], "anything", 5).length === 0);
+}
+
+
+
+console.log("competitor agencies are never linked (Liam, 19 Sep: 'under any circumstances'):");
+{
+  ok("the one he flagged", isCompetitorUrl("https://stubgroup.com/blog/crypto-google-ads-disapproval/"));
+  ok("subdomains count", isCompetitorUrl("https://docs.formo.so/guides/onchain-attribution"));
+  ok("www is stripped", isCompetitorUrl("https://www.coinbound.io/x"));
+  ok("Google is not a competitor", !isCompetitorUrl("https://blog.google/products/ads-commerce/2025-ads-safety-report/"));
+  ok("a regulator is not", !isCompetitorUrl("https://www.fintrac-canafe.gc.ca/x"));
+  ok("trade press is not", !isCompetitorUrl("https://www.searchenginejournal.com/x"));
+  ok("coinpresso is not", !isCompetitorUrl("https://coinpresso.io/blog/x"));
+  ok("garbage is not", !isCompetitorUrl("not a url"));
+  ok("every vendor the attribution draft cited is on the list",
+     ["formo.so", "northbeam.io", "mintfunnel.com", "tryflint.com", "coincile.io", "stubgroup.com", "coinbound.io"].every((d) => COMPETITOR_DOMAINS.includes(d)));
+
+  const known = new Map([["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"]]);
+  const body = `Per [StubGroup's guide](https://stubgroup.com/blog/x), keep the page legible.`;
+  const err = throws(() => enforceLinks(body, 5, known, undefined, "hard"));
+  ok("a competitor link in the body is HARD", err !== null && /competitor/.test(err), err);
+  const faq = [{ q: "Q?", a: "See [Formo's docs](https://docs.formo.so/x)." }];
+  ok("…and in an FAQ", /competitor/.test(throws(() => enforceFaqLinks(faq, known, "hard")) ?? ""));
+}
+
+console.log("external links are a ceiling, not a floor (keep readers in-house):");
+{
+  const known = new Map([
+    ["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"],
+    ["https://coinpresso.io/crypto-google-ads", "crypto Google Ads"],
+    ["https://coinpresso.io/contact", "contact Coinpresso"],
+  ]);
+  const P = "https://coinpresso.io/crypto-ppc-marketing", G = "https://coinpresso.io/crypto-google-ads", C = "https://coinpresso.io/contact";
+  const noExternal = `## A\n\nUse [crypto PPC](${P}) well.\n\n## B\n\nAnd [crypto Google Ads](${G}) too.\n\n## Conclusion\n\n[Contact Coinpresso](${C}).`;
+  ok("zero external links is no longer a fault", !/external/.test(throws(() => enforceLinks(noExternal, 10, known)) ?? ""),
+     throws(() => enforceLinks(noExternal, 10, known)));
+  const many = noExternal + " Per [a](https://blog.google/1), [b](https://blog.google/2), [c](https://blog.google/3), [d](https://blog.google/4).";
+  ok("four external links is a soft note", /external links/.test(throws(() => enforceLinks(many, 10, known, undefined, "soft")) ?? ""));
+}
+
+console.log("the conclusion does not introduce a page the body never discussed:");
+{
+  const known = new Map([
+    ["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"],
+    ["https://coinpresso.io/crypto-pr/web3-pr", "Web3 PR"],
+    ["https://coinpresso.io/contact", "contact Coinpresso"],
+  ]);
+  const P = "https://coinpresso.io/crypto-ppc-marketing", W = "https://coinpresso.io/crypto-pr/web3-pr", C = "https://coinpresso.io/contact";
+  const liam = `## Why attribution is hard\n\nWallet connects are not conversions, and [crypto PPC](${P}) reporting collapses them.\n\n## Conclusion\n\nOur work on [Web3 PR](${W}) covers the policy side. [Contact Coinpresso](${C}).`;
+  const err = throws(() => enforceLinks(liam, 5, known, undefined, "soft"));
+  ok("Web3 PR in the conclusion of a PPC piece is flagged", /never discusses/.test(err ?? "") && /Web3 PR/.test(err ?? ""), err);
+  ok("the contact page in the conclusion is fine", !/contact/.test(err ?? ""));
+  const fine = `## Why PR matters\n\nGood [Web3 PR](${W}) sets the record.\n\n## Conclusion\n\nSee the [Web3 PR](${W}) page.`;
+  ok("a page the body discussed may be linked in the close", !/never discusses/.test(throws(() => enforceLinks(fine, 5, known, undefined, "soft")) ?? ""));
+}
+
+console.log("a page is linked once per post (Liam: 'duplicated use of crypto PPC'):");
+{
+  const P = "https://coinpresso.io/crypto-ppc-marketing";
+  const body = `Body links [crypto PPC](${P}) here.`;
+  const faqs = [
+    { q: "Q1?", a: `Ask a [crypto PPC](${P}) partner.` },
+    { q: "Q2?", a: `See [crypto Google Ads](https://coinpresso.io/crypto-google-ads).` },
+    { q: "Q3?", a: `Also [crypto Google Ads](https://coinpresso.io/crypto-google-ads) again.` },
+  ];
+  const out = dedupeLinksAcrossFaqs(body, faqs);
+  ok("the FAQ copy of a body link is unlinked, words kept", out[0].a === "Ask a crypto PPC partner.", out[0].a);
+  ok("a page new to the FAQs keeps its first link", out[1].a.includes(`](https://coinpresso.io/crypto-google-ads)`));
+  ok("…and loses its second", !out[2].a.includes("]("), out[2].a);
+  ok("external links are untouched", dedupeLinksAcrossFaqs("x", [{ q: "Q", a: "[a](https://blog.google/x)" }])[0].a === "[a](https://blog.google/x)");
+  ok("idempotent", JSON.stringify(dedupeLinksAcrossFaqs(body, out)) === JSON.stringify(out));
+}
+
+console.log("FAQ links point inward:");
+{
+  const known = new Map([["https://coinpresso.io/crypto-ppc-marketing", "crypto PPC"]]);
+  const vendors = [
+    { q: "Q1?", a: "Per [Google](https://blog.google/a)." },
+    { q: "Q2?", a: "Per [the EDPB](https://edpb.europa.eu/b)." },
+    { q: "Q3?", a: "Per [SEJ](https://searchenginejournal.com/c)." },
+  ];
+  const err = throws(() => enforceFaqLinks(vendors, known, "soft"));
+  ok("three external, zero internal is flagged twice over", /no internal links/.test(err ?? "") && /off-site/.test(err ?? ""), err);
+  const balanced = [{ q: "Q?", a: "See [crypto PPC](https://coinpresso.io/crypto-ppc-marketing), per [Google](https://blog.google/a)." }];
+  ok("one in, one out is fine", throws(() => enforceFaqLinks(balanced, known, "soft")) === null);
+}
+
+console.log("the utility pages Liam named are linkable:");
+{
+  for (const u of ["https://coinpresso.io/contact", "https://coinpresso.io/about", "https://coinpresso.io/blog/category/case-studies", "https://coinpresso.io/blog"]) {
+    ok(u.replace("https://coinpresso.io", ""), COINPRESSO_PAGES.some((p) => p.url === u));
+  }
 }
 
 

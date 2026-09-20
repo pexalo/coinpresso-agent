@@ -68,6 +68,22 @@ const RULES: Rule[] = [
     why: "Already a house rule — the note adds what is specific to this post.",
   },
   {
+    id: "competitor-link",
+    test: /"([^"]+)" (?:in an FAQ answer )?is a competitor agency or vendor/,
+    cause: `The draft links $1, a competing agency or vendor. The client's rule: never, under any circumstances.`,
+    note: `Remove the link to $1 and do not name them. If the claim it supported has no primary source — the platform, the regulator, the data publisher — cut the claim rather than keep a rival's citation.`,
+    scope: "run",
+    why: "Already a house rule — the note adds what is specific to this post.",
+  },
+  {
+    id: "conclusion-introduces-page",
+    test: /the conclusion links "([^"]+)" \(([^)]+)\) but the body never discusses that subject/,
+    cause: `The conclusion links "$1" to the $2 page, but nothing earlier in the piece is about $2. The client's note: "these aren't relevant links to support the piece."`,
+    note: `Take the $2 link out of the conclusion. If the page is genuinely relevant, link it where its subject actually comes up in the body; if it is not, leave it out and let the count be short.`,
+    scope: "run",
+    why: "About this post — which page fits is specific to the topic.",
+  },
+  {
     id: "invented-page",
     test: /"([^"]+)" is not a page on coinpresso\.io/,
     cause: `The writer linked to $1, which does not exist. It can only link pages it was given.`,
@@ -97,9 +113,11 @@ const RULES: Rule[] = [
   },
   {
     id: "external-links",
-    test: /(\d+) external links? \((?:needs|the client asked for)/,
-    cause: `$1 external link(s) — the post is not citing enough of the research it was given.`,
-    note: `Cite more of the sources in the ledger. Every figure, date, policy change or claim about what a platform does should link to the source it came from. Do not cite anything that is not in the ledger.`,
+    // Inverted 19 Sep: external is a ceiling now. Liam: "keep users within
+    // our website hierarchy as much as possible."
+    test: /(\d+) external links — the client wants readers kept on coinpresso\.io/,
+    cause: `$1 external links — the client wants readers kept on coinpresso.io, and only a claim that needs its primary source should leave the site.`,
+    note: `Cut the external links down to the ones a specific figure or policy statement genuinely needs — the platform, the regulator, the data publisher. Everything else stays as prose or links to a Coinpresso page instead. Never a marketing, PR, SEO or analytics vendor.`,
     scope: "run",
     why: "Already a house rule — the note adds what is specific to this post.",
   },

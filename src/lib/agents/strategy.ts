@@ -14,7 +14,7 @@ import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
 import type { CallContext } from "../providers/routing";
-import { CONTENT_TYPES, PILLARS } from "../blog";
+import { CONTENT_TYPES, PILLARS, isCompetitorUrl } from "../blog";
 import { linkablePages, linkTargetsBlock } from "../link-map";
 
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
@@ -107,6 +107,14 @@ RULES
 4. Find the statistics, primary sources and named examples the post can cite.
    A post on this domain that asserts figures without attribution is worse than
    one that omits them.
+   PRIMARY SOURCES ONLY. Cite the platform (Google, Meta, X), the regulator,
+   the standards body, the exchange or protocol, the data publisher, or the
+   trade press. NEVER cite another marketing, PR, SEO, PPC, analytics or
+   attribution agency or vendor — their blogs, docs, guides or studies. The
+   client's words: "We should not be linking competitor agency blogs under any
+   circumstances. Gives them a free backlink. Gives them clout for the intent
+   we are looking to capture." If the only source for a claim is a rival's
+   blog, the claim goes unmade.
 5. Identify the real buyer question underneath the keyword — what a founder is
    actually worried about, not the search string.
 6. Note honestly where Coinpresso would need its own campaign data to make the
@@ -298,7 +306,20 @@ Research this and return JSON:
     // pipeline's fail() reads this off the error and records it on the run.
     throw billed(e, { tokensIn: r.tokensIn, tokensOut: r.tokensOut, cacheWriteTokens: r.cacheWriteTokens, cacheReadTokens: r.cacheReadTokens, searchRequests: r.searchRequests ?? 0 });
   }
-  research.sources = research.sources || [];
+  // Competitor sources come out of the ledger here, before the writer sees
+  // them, so a rival's blog cannot be cited even if the model ignored the
+  // instruction above. The dropped ones are kept on the research record so
+  // the operator can see what was excluded and why.
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url));
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url));
+  if (dropped.length) {
+    research.riskNotes = [
+      ...(research.riskNotes || []),
+      `${dropped.length} source${dropped.length === 1 ? "" : "s"} dropped as competitor agencies or vendors (never cited, per the client): ${dropped
+        .map((d) => d.publisher || new URL(d.url).hostname)
+        .join(", ")}.`,
+    ];
+  }
   research.predictions = research.predictions || [];
   research.riskNotes = research.riskNotes || [];
   research.suggestedHeadings = research.suggestedHeadings || [];
@@ -381,7 +402,20 @@ ${schemaBlock()}`;
   }
 
   // Normalise so downstream code never has to defend against missing arrays.
-  research.sources = research.sources || [];
+  // Competitor sources come out of the ledger here, before the writer sees
+  // them, so a rival's blog cannot be cited even if the model ignored the
+  // instruction above. The dropped ones are kept on the research record so
+  // the operator can see what was excluded and why.
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url));
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url));
+  if (dropped.length) {
+    research.riskNotes = [
+      ...(research.riskNotes || []),
+      `${dropped.length} source${dropped.length === 1 ? "" : "s"} dropped as competitor agencies or vendors (never cited, per the client): ${dropped
+        .map((d) => d.publisher || new URL(d.url).hostname)
+        .join(", ")}.`,
+    ];
+  }
   research.predictions = research.predictions || [];
   research.riskNotes = research.riskNotes || [];
   research.suggestedHeadings = research.suggestedHeadings || [];

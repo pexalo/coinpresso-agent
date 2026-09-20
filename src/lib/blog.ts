@@ -255,7 +255,13 @@ export const COINPRESSO_PAGES: SitePage[] = [
   { url: "https://coinpresso.io/crypto-ai-token-marketing", topic: "AI token marketing" },
   { url: "https://coinpresso.io/crypto-airdrop-marketing", topic: "crypto airdrop marketing" },
   { url: "https://coinpresso.io/pump-fun-launch-marketing", topic: "pump.fun launch marketing" },
-  { url: "https://coinpresso.io/blog", topic: "the Coinpresso blog" },
+  { url: "https://coinpresso.io/blog", topic: "the Coinpresso blog | our blog | more guides" },
+  // Liam, 19 Sep: "we can be using contact us page, case studies page, about
+  // page, main blog page" — to keep readers inside the site rather than
+  // sending them to a vendor. Verified live on 20 Sep.
+  { url: "https://coinpresso.io/contact", topic: "contact Coinpresso | get in touch | talk to us" },
+  { url: "https://coinpresso.io/blog/category/case-studies", topic: "case studies | our case studies | client results" },
+  { url: "https://coinpresso.io/about", topic: "about Coinpresso | who we are | our team" },
 ];
 
 /** The prompt block listing where a post may link internally. */
@@ -625,6 +631,68 @@ export const SPENT_OPENERS: RegExp[] = [
   /\byou (don't|do not) exist\b/i,
   /\bgot a (hedge|shrug)\b/i,
 ];
+
+/**
+ * Domains the post must never link, cite or name as a source.
+ *
+ * Liam, 19 Sep, on a citation to a rival PPC agency's blog: "We should not be
+ * linking competitor agency blogs under any circumstances. Gives them a free
+ * backlink. Gives them clout for the intent we are looking to capture."
+ *
+ * A competitor is another agency or vendor selling crypto marketing, PR, SEO,
+ * PPC, analytics or attribution to the same buyers. Platforms (Google, Meta,
+ * X), regulators, standards bodies, exchanges, protocols, and the trade press
+ * are not competitors and remain citable. This list is the floor; the
+ * research stage also asks the model to classify each source, and a source it
+ * marks as an agency is dropped before the writer sees it.
+ *
+ * Kept in code because a rival's domain is a fact, not a preference. Add one
+ * here the first time it appears in a draft.
+ */
+export const COMPETITOR_DOMAINS: string[] = [
+  // Crypto marketing / PR / SEO agencies
+  "stubgroup.com",
+  "coinbound.io",
+  "wolf.financial",
+  "wolffinancial.com",
+  "ninjapromo.io",
+  "blockwiz.com",
+  "lunarstrategy.com",
+  "crowdcreate.us",
+  "crypto-pr.co",
+  "cryptovirally.com",
+  "icoda.io",
+  "marketacross.com",
+  "melrose-pr.com",
+  "chainstory.co",
+  "the-crypto-pr.com",
+  "guerrillabuzz.com",
+  "singlegrain.com",
+  "omnius.so",
+  "blockchainpr.io",
+  "bitcoinmarketing.agency",
+  "cryptomarketing.agency",
+  // Web3 attribution / analytics vendors selling into the same buyer
+  "formo.so",
+  "mintfunnel.com",
+  "spindl.xyz",
+  "cookie3.com",
+  "addressable.io",
+  "safary.club",
+  "northbeam.io",
+  "tryflint.com",
+  "coincile.io",
+];
+
+/** True when the URL points at a competitor. Subdomains count. */
+export function isCompetitorUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    return COMPETITOR_DOMAINS.some((d) => host === d || host.endsWith("." + d));
+  } catch {
+    return false;
+  }
+}
 
 export const SPENT_CLOSERS: RegExp[] = [
   /\bsecond (opinion|pair of eyes|set of eyes|look)\b/i,

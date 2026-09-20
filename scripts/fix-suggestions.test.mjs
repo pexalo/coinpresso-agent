@@ -82,7 +82,7 @@ console.log("house rules are never stored twice:");
 
 console.log("Liam's seeded rules are intact and distinct:");
 {
-  ok("twenty-two seeds — Liam's 18 plus FAQ links, no bolt-ons, and the 19 Sep linking pointers", SEED_FEEDBACK.length === 22, SEED_FEEDBACK.length);
+  ok("twenty-six seeds — 22 plus the four from the Attribution review", SEED_FEEDBACK.length === 26, SEED_FEEDBACK.length);
   ok("every seed has a unique id", new Set(SEED_FEEDBACK.map((x) => x.id)).size === SEED_FEEDBACK.length);
   ok("every seed has unique text — dedupe cannot eat one", new Set(SEED_FEEDBACK.map((x) => ruleKey(x.rule))).size === SEED_FEEDBACK.length);
   ok("dedupe leaves the seeds exactly as they are",
@@ -98,7 +98,9 @@ console.log("the rest of the table:");
   const cases = [
     ["\"https://coinpresso.io/made-up\" is not a page on coinpresso.io", "invented-page"],
     ["Linking: 7 internal links (the client asked for 3-5 — more reads as stuffing)", "internal-links-many"],
-    ["Linking: 1 external link (needs 3-5 from the ledger)", "external-links"],
+    ["Linking: 4 external links — the client wants readers kept on coinpresso.io; keep only the primary-source citations a claim genuinely needs (at most 3)", "external-links"],
+    ["Linking: \"https://stubgroup.com/blog/x\" is a competitor agency or vendor — never link, cite or name one", "competitor-link"],
+    ["Linking: the conclusion links \"Web3 PR\" (Web3 PR) but the body never discusses that subject — the client's note", "conclusion-introduces-page"],
     ["The introduction is 74 words; the house runs about 190 and the floor is 110.", "intro-length"],
     ["3 paragraphs are over 125 words.", "paragraph-size"],
     ["2 pairs of links sit less than 15 words apart.", "link-spacing"],
@@ -193,7 +195,9 @@ console.log("every rule survives being put in a numbered list:");
     ["invented-page", "Linking: \"https://coinpresso.io/nope\" is not a page on coinpresso.io. Retry the writer."],
     ["internal-links-short", "Linking: 2 internal links to coinpresso.io (needs 3-5). Retry the writer."],
     ["internal-links-many", "Linking: 7 internal links (the client asked for 3-5 — more reads as stuffing). Retry the writer."],
-    ["external-links", "Linking: 1 external link (needs 3-5 from the ledger). Retry the writer."],
+    ["external-links", "Linking: 4 external links — the client wants readers kept on coinpresso.io; keep only the primary-source citations a claim genuinely needs (at most 3). Retry the writer."],
+    ["competitor-link", "Linking: \"https://stubgroup.com/blog/x\" is a competitor agency or vendor — never link, cite or name one; cut the claim if it has no other source. Retry the writer."],
+    ["conclusion-introduces-page", "Linking: the conclusion links \"Web3 PR\" (Web3 PR) but the body never discusses that subject — the client's note: \"these aren't relevant links to support the piece\". Retry the writer."],
     ["machine-written", "The draft reads as machine-written: 1 sentence opening with \"It's worth noting\". Retry the writer."],
     ["closer-repeat", "The piece ends \"a conversation worth having…\" — the closer four of the first seven posts used. Retry the writer."],
     ["opener-repeat", "The piece opens \"An AI engine will not mention you…\" Retry the writer."],

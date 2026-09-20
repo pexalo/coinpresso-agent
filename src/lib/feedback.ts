@@ -49,6 +49,38 @@ export interface FeedbackLog {
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
   {
+    id: "liam-no-competitor-links",
+    source: "Liam, Crypto PPC Attribution review (19 Sep)",
+    date: "2026-09-19",
+    rule:
+      "Liam: \"We should not be linking competitor agency blogs under any circumstances. Gives them a free backlink. Gives them clout for the intent we are looking to capture.\" Never link, cite or name another crypto marketing, PR, SEO, PPC, analytics or attribution agency or vendor. Cite the platform, the regulator, the data publisher or the trade press instead; if a claim's only source is a rival, the claim goes unmade.",
+    active: true,
+  },
+  {
+    id: "liam-keep-readers-in-house",
+    source: "Liam, Crypto PPC Attribution review (19 Sep)",
+    date: "2026-09-19",
+    rule:
+      "Liam: \"We want to keep users within our website hierarchy as much as possible as opposed to sending them elsewhere. We can be using contact us page, case studies page, about page, main blog page.\" Internal links carry the piece; an external link exists only where a claim genuinely needs its primary source. The FAQ answers in particular link inward — a service page, an earlier post, the case studies, the contact page — not to vendors.",
+    active: true,
+  },
+  {
+    id: "liam-one-link-per-page",
+    source: "Liam, Crypto PPC Attribution review (19 Sep)",
+    date: "2026-09-19",
+    rule:
+      "Liam: \"Has also duplicated use of crypto PPC internal link, already been used in the composition.\" Each coinpresso.io page is linked once per post. A page linked in the body is not linked again in the FAQs or the conclusion — pick a different relevant page.",
+    active: true,
+  },
+  {
+    id: "liam-relevant-not-adjacent",
+    source: "Liam, Crypto PPC Attribution review (19 Sep)",
+    date: "2026-09-19",
+    rule:
+      "Liam, on a conclusion that linked a memecoin-programmatic post and the Web3 PR page from a PPC attribution piece: \"These aren't relevant links to support the piece.\" A link supports the sentence it sits in, or it does not go in. Being in the same pillar is not relevance. The conclusion never introduces a page the body has not already discussed.",
+    active: true,
+  },
+  {
     id: "liam-link-the-relevant-page",
     source: "Liam, internal-linking pointers (19 Sep)",
     date: "2026-09-19",
@@ -81,7 +113,7 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     source: "Liam, September batch (FAQ review)",
     date: "2026-09-18",
     rule:
-      "Liam: \"we should also get some internal links in the FAQ as well — looks like none is on the FAQ.\" Where a Coinpresso service page or post genuinely answers the question, link it inside the answer with anchor text naming that page. One or two across the FAQ block, in addition to the 3-5 in the body — not one in every answer.",
+      "Liam: \"we should also get some internal links in the FAQ as well — looks like none is on the FAQ.\" And on the next draft, which cited three vendors in the FAQs instead: \"we want to keep users within our website hierarchy.\" So the FAQ links point inward — a service page, an earlier post, the case studies, the contact page — one or two across the block, never to a page the body already linked, and an external citation only where an answer states a figure that needs its source.",
     active: true,
   },
   {

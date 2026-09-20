@@ -17,6 +17,7 @@ import { linkablePages, linkTargetsBlock, relevantPosts } from "../link-map";
 import {
   CLOSE_MOVES,
   COINPRESSO_PAGES,
+  isCompetitorUrl,
   INTRO_MOVES,
   SPENT_CLOSERS,
   SPENT_OPENERS,
@@ -622,6 +623,8 @@ export function ensurePillarLink(body: string, hub?: string, topic?: string): st
  */
 /** Liam's floor: "3-5 INTERNAL links to coinpresso landing pages and blogs". */
 const MIN_INTERNAL_LINKS = 3;
+/** Liam, 19 Sep: keep readers in-house. External is for primary sources only. */
+const MAX_EXTERNAL_LINKS = 3;
 
 export function trimLinks(
   body: string,
@@ -813,6 +816,35 @@ export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): 
   );
 }
 
+/**
+ * A page is linked once per post. The second link comes off, in code.
+ *
+ * Liam, on the attribution piece: "has also duplicated use of crypto PPC
+ * internal link, already been used in the composition." trimLinks already
+ * dedupes within the body; the FAQs are stored apart and were never checked
+ * against it, so a page linked in section three was linked again in answer
+ * five. The body keeps its link and the FAQ keeps its words. If that leaves
+ * the FAQ block with no internal link, enforceFaqLinks says so and the
+ * writer picks a different page — which is the point.
+ */
+export function dedupeLinksAcrossFaqs(
+  body: string,
+  faqs: Array<{ q: string; a: string }>
+): Array<{ q: string; a: string }> {
+  const seen = new Set(
+    [...proseOf(body).matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => normaliseUrl(m[1]))
+  );
+  return faqs.map((f) => ({
+    ...f,
+    a: f.a.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (whole, text: string, url: string) => {
+      const key = normaliseUrl(url);
+      if (seen.has(key)) return text;
+      seen.add(key);
+      return whole;
+    }),
+  }));
+}
+
 export function enforceFaqLinks(
   faqs: Array<{ q: string; a: string }>,
   known: Map<string, string>,
@@ -835,18 +867,28 @@ export function enforceFaqLinks(
       }
     }
   }
-  const external = faqs.reduce(
-    (n, f) => n + [...f.a.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].filter((m) => !isInternal(m[1])).length,
-    0
+  const externals = faqs.flatMap((f) =>
+    [...f.a.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => m[1]).filter((u) => !isInternal(u))
   );
+  for (const u of externals) {
+    if (isCompetitorUrl(u)) {
+      hard.push(`"${u}" in an FAQ answer is a competitor agency or vendor — never link one`);
+    }
+  }
+  // Liam, 19 Sep, on FAQs that cited three vendors and no Coinpresso page:
+  // "agent is adding them, but adding external links, we want to keep users
+  // within our website hierarchy as much as possible." So the FAQ block is
+  // where the site's own pages go — a service page, an older post, contact,
+  // the case studies. An external citation is allowed where a figure needs
+  // its source, and no more than that.
   if (internal === 0) {
     soft.push(
-      `no internal links in the ${faqs.length} FAQ answers. The client's note: "still think we are missing linking (both internal and external) in the FAQs". Where a Coinpresso page answers the question, link it inside the answer — one or two across the block.`
+      `no internal links in the ${faqs.length} FAQ answers. The client's note: "we want to keep users within our website hierarchy as much as possible". Where a Coinpresso page answers the question — a service page, a case study, an earlier post, or the contact page — link it inside the answer; one or two across the block.`
     );
   }
-  if (external === 0 && faqs.some((f) => /\d/.test(f.a))) {
+  if (externals.length > internal + 1) {
     soft.push(
-      `the FAQ answers state figures but cite nothing. Where an answer repeats a fact from the ledger, link the source there — the client asked for external links in the FAQs too.`
+      `the FAQ answers send readers off-site ${externals.length} time${externals.length === 1 ? "" : "s"} and back into coinpresso.io ${internal} — reverse that. Keep an external citation only where an answer states a figure that needs its source.`
     );
   }
   const chosen = scope === "hard" ? hard : scope === "soft" ? soft : [...hard, ...soft];
@@ -890,16 +932,33 @@ export function enforceLinks(
     soft.push(`${internal.size} internal links (the client asked for 3-5 — more reads as stuffing)`);
   }
 
-  const wantExternal = Math.min(3, ledgerSize);
-  if (external.size < wantExternal) {
-    soft.push(`${external.size} external link${external.size === 1 ? "" : "s"} (needs ${wantExternal}-5 from the ledger)`);
-  } else if (external.size > 5) {
-    soft.push(`${external.size} external links (the client asked for 3-5)`);
+  // EXTERNAL LINKS ARE A CEILING NOW, NOT A FLOOR.
+  //
+  // This used to demand three to five from the ledger, and the writer met the
+  // demand with whatever the ledger held — including vendor blogs. Liam, 19
+  // Sep: "we want to keep users within our website hierarchy as much as
+  // possible as opposed to sending them elsewhere." A claim that needs a
+  // primary source still gets one; nothing else leaves the site. Where the
+  // ledger is thin the count is simply low, and that is now fine.
+  void ledgerSize;
+  if (external.size > MAX_EXTERNAL_LINKS) {
+    soft.push(`${external.size} external links — the client wants readers kept on coinpresso.io; keep only the primary-source citations a claim genuinely needs (at most ${MAX_EXTERNAL_LINKS})`);
   }
 
   // A coinpresso.io path the site does not have is a 404 on the agency's own
   // domain. The link checker would catch it a stage later by fetching it; catching
   // it here costs nothing and retries the writer instead of failing the run.
+  // A rival's domain is a hard fault whatever the anchor says. Liam: "we
+  // should not be linking competitor agency blogs under any circumstances."
+  // Research drops these from the ledger, so a draft that carries one has
+  // either invented it or been fed a stale ledger — both are the writer's
+  // to fix.
+  for (const l of all) {
+    if (isCompetitorUrl(l.url)) {
+      hard.push(`"${l.url}" is a competitor agency or vendor — never link, cite or name one; cut the claim if it has no other source`);
+    }
+  }
+
   for (const l of internalLinks) {
     const topic = known.get(normaliseUrl(l.url));
     if (!topic) {
@@ -948,6 +1007,31 @@ export function enforceLinks(
       soft.push(
         `${before === 0 ? "every internal link sits" : "all but one internal link sit"} in the final section — the client read that as "stuffed on the end, after the fact"; at least two belong in the body`
       );
+    }
+  }
+
+  // And the conclusion does not INTRODUCE a page the body never discussed.
+  // Liam, on a conclusion that linked a memecoin-programmatic post and the
+  // Web3 PR page from an attribution piece: "these aren't relevant links to
+  // support the piece." A link in the last section to a page whose subject
+  // appears nowhere earlier is a link placed to make the count.
+  if (lastH2 > 0) {
+    const bodyBefore = body.slice(0, lastH2);
+    const closing = body.slice(lastH2);
+    const seenWords = anchorTokens(unlink(bodyBefore));
+    for (const m of closing.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g)) {
+      if (!isInternal(m[2])) continue;
+      const topic = known.get(normaliseUrl(m[2]));
+      if (!topic) continue;
+      // Utility pages — contact, about, the blog index — are meant for the
+      // close and have no subject the body would have discussed.
+      if (/\/(contact|about|blog)\/?$/.test(normaliseUrl(m[2]))) continue;
+      const topicWords = [...anchorTokens(topic.split(" | ")[0])];
+      if (topicWords.length && !topicWords.some((w) => seenWords.has(w))) {
+        soft.push(
+          `the conclusion links "${m[1]}" (${topic.split(" | ")[0]}) but the body never discusses that subject — the client's note: "these aren't relevant links to support the piece". Link it where the subject actually comes up, or not at all`
+        );
+      }
     }
   }
 
@@ -1252,6 +1336,16 @@ WHAT WOULD MAKE IT ORIGINAL — use what is true, and where something is missing
 write around the gap honestly rather than inventing it:
 ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- nothing supplied"}
 
+LINKING, IN THE CLIENT'S OWN WORDS. "We want to keep users within our website
+hierarchy as much as possible as opposed to sending them elsewhere." So:
+internal links carry the piece; an external link exists only where a claim
+needs its primary source — the platform, the regulator, the data publisher,
+the trade press. NEVER link, cite or name a competing marketing, PR, SEO, PPC,
+analytics or attribution agency or vendor: "gives them a free backlink, gives
+them clout for the intent we are looking to capture." Each coinpresso.io page
+is linked ONCE per post — a page linked in the body is not linked again in the
+FAQs. And no link goes in the conclusion to a page the body never discussed.
+
 INTERNAL LINKS — the ONLY coinpresso.io pages that exist. Link 3-5 of them
 as markdown links, each where its topic comes up in the body, with anchor text
 naming that topic (the words "crypto SEO" link to the crypto SEO page). Do not
@@ -1261,14 +1355,15 @@ before the final section.
 AT LEAST ONE must be a post from the RECENT POSTS list below, not only service
 pages — the client asked for landing pages AND blogs.
 
-THE FAQ ANSWERS LINK TOO — internal AND external. The client's note: "still
-think we are missing linking (both internal and external) in the FAQs.
-Utilizing more natural places to insert links will stop the agent from
-stuffing." Where a service page or a Coinpresso post genuinely answers the
-question, link it inside the answer with anchor text naming that page; where
-an answer states a fact from the ledger, cite the source there. One or two
-internal across the FAQ block, not one in every answer. These are in addition
-to the 3-5 in the body, and they count toward nothing else. And if you name a
+THE FAQ ANSWERS LINK INWARD. The client's note: "we want to keep users within
+our website hierarchy as much as possible as opposed to sending them
+elsewhere. We can be using contact us page, case studies page, about page,
+main blog page." Where a service page, an earlier Coinpresso post, the case
+studies, or the contact page genuinely answers the question, link it inside
+the answer with anchor text naming that page. One or two across the FAQ
+block, not one in every answer, and NEVER a page already linked in the body —
+each page is linked once per post. An external citation only where an answer
+states a figure that needs its source. And if you name a
 Coinpresso post anywhere in the prose, link it there: a post referred to as
 "our earlier guide" or "a recent guide on X" with no link on it is a miss, and
 it sends the reader hunting for something you could have handed them.
@@ -1432,10 +1527,13 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
 
       // The FAQ answers are prose too, and they carry links now. Same
       // mechanical fixes, so an FAQ anchor is named and cut like any other.
-      parsed.faqs = (parsed.faqs ?? []).map((f) => ({
-        ...f,
-        a: tidyPunctuation(stripAiOpeners(shortenAnchors(nameAnchors(americanize(f.a), knownPages)))),
-      }));
+      parsed.faqs = dedupeLinksAcrossFaqs(
+        parsed.body,
+        (parsed.faqs ?? []).map((f) => ({
+          ...f,
+          a: tidyPunctuation(stripAiOpeners(shortenAnchors(nameAnchors(americanize(f.a), knownPages)))),
+        }))
+      );
 
       // Over-long paragraphs are split at the turn in the argument. Mechanical,
       // so it happens on every attempt rather than costing one.
