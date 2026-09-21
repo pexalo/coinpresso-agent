@@ -53,7 +53,7 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     source: "Liam, his own rewrite of the Circumventing Systems opening (21 Sep)",
     date: "2026-09-21",
     rule:
-      "Liam: \"the humanization of the first paragraphs is really important to create that distinction that these articles are from real authors.\" The opening is where a reader decides whether a person wrote this. Say the thing the way a person would say it across a desk — a turn of phrase, a bit of dry wit, a plain-spoken aside — rather than restating the topic in a formal register. His rewrite below is the standard: the same facts, but the second version sounds like someone.",
+      "Liam: \"the humanization of the first paragraphs is really important to create that distinction that these articles are from real authors.\" The opening is where a reader decides whether a person wrote this. Say the thing the way a person would say it across a desk — a turn of phrase, a bit of dry wit, a plain-spoken aside — rather than restating the topic in a formal register. His rewrite below is the standard: the same facts, but the second version sounds like someone. The example shows the REGISTER, not the words: never reuse \"oops-a-daisy\" or any phrase from it. Each post finds its own aside.",
     before:
       "A Circumventing Systems suspension is Google telling you it caught deliberate rule-breaking, not a mistake. That is a hard thing to accept when your account genuinely wasn't trying to break anything.",
     after:

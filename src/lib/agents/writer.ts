@@ -790,6 +790,25 @@ export function trimLinks(
  * whether the link belongs and a counter can only guess — but it names the
  * clause, so the writer or the editor can cut it.
  */
+/**
+ * Phrases that were shown to the writer as an EXAMPLE and must not be copied.
+ *
+ * Liam's "oops-a-daisy" opening is in the intro instruction as the standard
+ * for register. Bernard: "doesn't need the word oops-a-daisy in all blogs —
+ * it's just to humanise it." A model shown an example reuses the example,
+ * so the phrase itself is barred. Soft: a person can pass it if it truly
+ * belongs, but the second post to say it is the one that gets noticed.
+ */
+const EXEMPLAR_PHRASES = [/\boops[- ]a[- ]daisy\b/i];
+
+export function enforceNoExemplarPhrases(body: string): void {
+  const hits = EXEMPLAR_PHRASES.filter((re) => re.test(proseOf(body)));
+  if (!hits.length) return;
+  throw new Error(
+    `the draft reuses a phrase from the client's example opening ("oops-a-daisy"). The example shows the register, not the words — a phrase that landed once reads as a tic the second time. Find this post's own aside.`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -1341,6 +1360,11 @@ a dry aside, the register of someone explaining it across a desk. Write the
 opening that way. Do not restate the title in a formal voice and call it an
 introduction.
 
+THE EXAMPLE IS THE REGISTER, NOT THE WORDS. Do not reuse "oops-a-daisy" or any
+phrase from that example. A phrase that lands once reads as a tic the second
+time, and the client will notice before the reader does. Find this post's own
+aside.
+
 OPEN IT THIS WAY — "${intro.id}":
 ${intro.how}
 
@@ -1666,6 +1690,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "soft"),
         () => enforceLinkCluster(parsed.body, parsed.faqs ?? [], pillar?.hub, knownPages),
         () => enforceNoBoltOnLinks(parsed.body, knownPages),
+        () => enforceNoExemplarPhrases(parsed.body),
         () => enforceCloser(parsed.body),
         () => enforceLinkSpacing(parsed.body),
         () => enforceParagraphSize(parsed.body),

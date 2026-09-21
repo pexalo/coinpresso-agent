@@ -1,6 +1,6 @@
 import { diffEdits, similarity } from "../src/lib/doc-edits.ts";
 import { COINPRESSO_PAGES, CLUSTER_NEIGHBOURS, clusterOf, clusterOfPillar } from "../src/lib/blog.ts";
-import { enforceLinkCluster, nameAnchors } from "../src/lib/agents/writer.ts";
+import { enforceLinkCluster, nameAnchors, enforceNoExemplarPhrases } from "../src/lib/agents/writer.ts";
 
 let pass = 0, fail = 0;
 const ok = (n, c, e = "") => { if (c) { pass++; console.log("  ok  ", n); } else { fail++; console.log("  FAIL", n, e); } };
@@ -100,6 +100,15 @@ console.log("the anchor fixer replaces rather than prepends when the result is a
   const short = `see the [policy page](${G}).`;
   ok("a short anchor is still prepended", nameAnchors(short, known).includes(`[crypto Google Ads policy page](${G})`), nameAnchors(short, known));
 }
+
+
+console.log("the example's phrase is not for reuse:");
+{
+  ok("'oops-a-daisy' in a new draft is flagged", /example opening/.test(throws(() => enforceNoExemplarPhrases("It comes with none of the usual oops-a-daisy courtesies.")) ?? ""));
+  ok("case and hyphens do not matter", throws(() => enforceNoExemplarPhrases("Oops a Daisy, said nobody.")) !== null);
+  ok("an opening with its own aside passes", throws(() => enforceNoExemplarPhrases("Google does not send a warning, a grace period, or so much as a stern look.")) === null);
+}
+
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
