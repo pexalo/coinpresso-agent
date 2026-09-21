@@ -26,6 +26,14 @@ export interface EditPair {
   distance: number;
   /** The section heading the paragraph sits under, when known. */
   section?: string;
+  /**
+   * "edit" rewrites a paragraph; "delete" removes one he cut; "insert" adds
+   * one he wrote. Missing means "edit". Before this, a cut paragraph stayed
+   * in the app's draft while the Doc no longer had it.
+   */
+  op?: "edit" | "delete" | "insert";
+  /** For an insert: the plain text of the paragraph it follows ("" = top). */
+  afterOf?: string;
 }
 
 export const norm = (s: string) =>
@@ -161,7 +169,7 @@ export function diffEdits(
     if (similarity(ours[i].text, theirs[j].text) < same) pairs.push([i, j]);
   }
 
-  return pairs
+  const edits: EditPair[] = pairs
     .sort((a, b) => a[0] - b[0])
     .map(([i, j]) => ({
       before: ours[i].text,
@@ -171,6 +179,31 @@ export function diffEdits(
       section: ours[i].section,
     }))
     .filter((e) => e.before !== e.after);
+
+  // 4. What is left over on either side was cut or added.
+  const all = [...anchors, ...pairs];
+  const pairedOurs = new Set(all.map(([i]) => i));
+  const pairedTheirs = new Set(all.map(([, j]) => j));
+  ours.forEach((p, i) => {
+    if (pairedOurs.has(i)) return;
+    edits.push({ before: p.text, after: "", afterRaw: "", distance: 1, section: p.section, op: "delete" });
+  });
+  theirs.forEach((p, j) => {
+    if (pairedTheirs.has(j)) return;
+    // The nearest paragraph of ours that sits before it in his Doc.
+    let prev = -1;
+    for (const [i, jj] of all) if (jj < j && i > prev) prev = i;
+    edits.push({
+      before: "",
+      after: p.text,
+      afterRaw: p.raw,
+      distance: 1,
+      section: p.section,
+      op: "insert",
+      afterOf: prev >= 0 ? ours[prev].text : "",
+    });
+  });
+  return edits;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +234,69 @@ export function applyEdits<T extends DraftLike>(
   let applied = 0;
   const missed: EditPair[] = [];
 
+  // A Doc that reads back with most of the post missing is a bad read, not
+  // an edit: never delete on that evidence.
+  const deletes = edits.filter((e) => e.op === "delete").length;
+  const lines = draft.body.split("\n").filter((l) => norm(l).length > 20).length;
+  const trustDeletes = deletes <= Math.max(2, lines * 0.3);
+
+  const findLine = (text: string) => {
+    let best: { b: number; l: number; sim: number } | null = null;
+    blocks.forEach((block, b) => {
+      if (b % 2) return;
+      block.split("\n").forEach((line, l) => {
+        if (/^\s*#/.test(line) || /^\s*\|/.test(line)) return;
+        const sim = similarity(norm(line), text);
+        if (sim >= 0.9 && (!best || sim > best.sim)) best = { b, l, sim };
+      });
+    });
+    return best as { b: number; l: number; sim: number } | null;
+  };
+
   for (const e of edits) {
+    if (e.op === "delete") {
+      const hit = trustDeletes ? findLine(e.before) : null;
+      if (!hit) {
+        const f = trustDeletes ? faqs.findIndex((x) => similarity(norm(x.a), e.before) >= 0.9) : -1;
+        if (f >= 0) {
+          faqs.splice(f, 1);
+          applied++;
+        } else missed.push(e);
+        continue;
+      }
+      const ls = blocks[hit.b].split("\n");
+      ls.splice(hit.l, 1);
+      blocks[hit.b] = ls.join("\n");
+      applied++;
+      continue;
+    }
+    if (e.op === "insert") {
+      if (e.section && /faq/i.test(e.section)) {
+        missed.push(e);
+        continue;
+      }
+      if (!e.afterOf) {
+        blocks[0] = e.afterRaw + "\n\n" + blocks[0];
+        applied++;
+        continue;
+      }
+      const hit = findLine(e.afterOf);
+      if (!hit) {
+        missed.push(e);
+        continue;
+      }
+      // First paragraph of a new section: it goes under that heading, not
+      // at the end of the section before.
+      const headingAt = e.section
+        ? blocks.findIndex((bk, b) => !(b % 2) && b > hit.b &&
+            new RegExp(`^#{2,6}\\s+`).test(bk) && norm(bk.split("\n")[0]) === norm(e.section!))
+        : -1;
+      const nextHeading = blocks.findIndex((bk, b) => !(b % 2) && b > hit.b && /^#{2,6}\s+/.test(bk));
+      const at = headingAt >= 0 && headingAt === nextHeading ? headingAt : hit.b;
+      blocks[at] = blocks[at] + "\n\n" + e.afterRaw;
+      applied++;
+      continue;
+    }
     let best: { b: number; l: number; sim: number } | null = null;
     blocks.forEach((block, b) => {
       if (b % 2) return; // separators
@@ -235,7 +330,8 @@ export function applyEdits<T extends DraftLike>(
     }
     missed.push(e);
   }
-  return { draft: { ...draft, body: blocks.join(""), faqs }, applied, missed };
+  const body = blocks.join("").replace(/\n{3,}/g, "\n\n").replace(/^\n+/, "");
+  return { draft: { ...draft, body, faqs }, applied, missed };
 }
 
 /** A light fix — a typo, a word — is not worth a house rule. */

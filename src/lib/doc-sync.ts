@@ -73,6 +73,8 @@ export async function syncDocEdits(
   const reviewer = opts.reviewer?.trim() || "Liam";
   for (const e of edits) {
     if (e.distance < RULE_WORTHY_DISTANCE) continue;
+    // A cut or added paragraph changes this post; it is not a wording lesson.
+    if (e.op === "delete" || e.op === "insert") continue;
     await addFeedback(clientRef, {
       source: `${reviewer}, edited in the Doc for "${run.brief.title}"${e.section ? ` (${e.section})` : ""}`,
       rule: "The reviewer rewrote this paragraph by hand. Write the way the second version reads, not the first.",

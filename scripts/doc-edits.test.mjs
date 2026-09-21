@@ -44,7 +44,28 @@ A disapproval blocks one ad. A suspension stops the account.`;
   const l = diffEdits(current, light);
   ok("a light edit is reported", l.length === 1 && l[0].distance < 0.4, JSON.stringify(l));
   const deleted = current.replace("The policy doesn't weigh intent the way you might hope. It weighs patterns.\n\n", "");
-  ok("a deleted paragraph is not reported as a pair", diffEdits(current, deleted).length === 0);
+  const del = diffEdits(current, deleted);
+  ok("a deleted paragraph is reported as a delete, not a rewrite", del.length === 1 && del[0].op === "delete" && /weighs patterns/.test(del[0].before), JSON.stringify(del));
+
+  // Cuts and additions reach the app's draft, not only rewrites.
+  {
+    const draft = {
+      body: "Intro paragraph that opens the whole post with some words.\n\n## Disapproval versus suspension\n\nA disapproval blocks one ad and leaves the account running.\n\nThat matters for what you do next, because a disapproval is a content problem.\n\n## What not to do\n\nDo not create a replacement account after a suspension.",
+      faqs: [{ q: "Can a new account be created?", a: "No, Google treats it as circumvention of its systems." }],
+    };
+    const exp = "# T\n\n" + draft.body + "\n\n## FAQs\n\n**Can a new account be created?**\n\nNo, Google treats it as circumvention of its systems.";
+    const doc = exp
+      .replace("That matters for what you do next, because a disapproval is a content problem.\n\n", "")
+      .replace("Do not create a replacement account after a suspension.", "Do not create a replacement account after a suspension.\n\nDo not rotate domains to dodge a flagged one, either, ever.");
+    const ed = diffEdits(exp, doc);
+    const r = applyEdits(draft, ed);
+    ok("the cut paragraph is gone from the app's draft", !/That matters for what you do next/.test(r.draft.body), r.draft.body);
+    ok("the added paragraph is in the app's draft", /rotate domains[\s\S]*$/.test(r.draft.body) && r.draft.body.indexOf("rotate") > r.draft.body.indexOf("replacement account"), r.draft.body);
+    ok("nothing missed", r.missed.length === 0, JSON.stringify(r.missed));
+    ok("no triple blank lines left behind", !/\n{3,}/.test(r.draft.body));
+    const bad = applyEdits(draft, diffEdits(exp, "# T\n\nIntro paragraph that opens the whole post with some words."));
+    ok("a Doc that reads back nearly empty deletes nothing", /A disapproval blocks one ad/.test(bad.draft.body) && /replacement account/.test(bad.draft.body));
+  }
 
   // Sections are attributed.
   const sec = current.replace("A disapproval blocks one ad.", "A disapproval knocks out one ad.");
