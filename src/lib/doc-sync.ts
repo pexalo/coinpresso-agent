@@ -44,7 +44,7 @@ export interface SyncResult {
 export async function syncDocEdits(
   run: Run,
   clientRef: string,
-  opts: { reviewer?: string; moment: "sign" | "release" | "publish" }
+  opts: { reviewer?: string; moment: "sign" | "release" | "publish" | "manual" }
 ): Promise<SyncResult> {
   if (!run.docUrl || !run.draft) return { read: false, applied: 0, rules: 0, missed: [] };
 

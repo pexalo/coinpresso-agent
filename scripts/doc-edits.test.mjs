@@ -73,8 +73,14 @@ A disapproval blocks one ad. A suspension stops the account.`;
   ok("a change under a heading names the section", s2[0]?.section === "Disapproval versus suspension", JSON.stringify(s2));
 
   // Links in our markdown vs plain text in the Doc are the same paragraph.
-  ok("link syntax does not make a paragraph look edited",
-     diffEdits("See [crypto PPC](https://coinpresso.io/x) for more on this topic today.", "See crypto PPC for more on this topic today.").length === 0);
+  // The Doc now reads back with its links, so the same link is no edit…
+  ok("the same link on both sides is not an edit",
+     diffEdits("See [crypto PPC](https://coinpresso.io/x) for more on this topic today.", "See [crypto PPC](https://coinpresso.io/x) for more on this topic today.").length === 0);
+  // …and a link he added or removed is one (Liam linked "crypto marketing" to the homepage).
+  ok("a link added in the Doc is an edit",
+     diffEdits("Here's the awkward bit for a lot of crypto marketing teams reading this.", "Here's the awkward bit for a lot of [crypto marketing](https://coinpresso.io/) teams reading this.").length === 1);
+  ok("a one-word change is an edit (five areas → four areas)",
+     diffEdits("Work through five areas before you touch the appeal form, in order.", "Work through four areas before you touch the appeal form, in order.").length === 1);
   ok("similarity is symmetric-ish and bounded", similarity("a b c", "a b c") === 1 && similarity("a", "z") === 0);
 }
 

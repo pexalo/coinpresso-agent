@@ -4,6 +4,7 @@ import { getRun, listRuns } from "@/lib/store";
 import { getRecord, getRecords, saveRecord } from "@/lib/approval-store";
 import { gateConfig, readSettings } from "@/lib/settings";
 import { fingerprint, gateState, sign, type GateState } from "@/lib/approval";
+import { syncDocEdits } from "@/lib/doc-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,6 +119,14 @@ export async function POST(
     const record = await getRecord(ref, id);
     if (record.releasedAt) {
       skipped.push({ id, why: "already released" });
+      continue;
+    }
+    // Signing a day at once still takes Liam's Doc edits first, exactly as
+    // signing one post does. This path skipped it, so a post signed from the
+    // list kept the agent's text while the Doc held his.
+    const synced = await syncDocEdits(run, ref, { reviewer: approver.name, moment: "sign" });
+    if (synced.error) {
+      skipped.push({ id, why: `the Google Doc could not be read: ${synced.error}` });
       continue;
     }
     const fp = fingerprint(run);

@@ -72,6 +72,11 @@ function paragraphsOf(text: string): Array<{ text: string; raw: string; section?
   return out;
 }
 
+/** The links in a paragraph, so a link added or changed counts as an edit. */
+const linksOf = (raw: string) =>
+  [...raw.matchAll(/\[([^\]]+)\]\(([^)\s]+)\)/g)].map((m) => `${m[1].trim()}>${m[2]}`).join("|");
+const sectionKey = (s?: string) => (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 /** Word-level similarity, 0..1. Cheap and good enough to align paragraphs. */
 export function similarity(a: string, b: string): number {
   const wa = a.toLowerCase().split(/\s+/).filter(Boolean);
@@ -109,7 +114,7 @@ export function diffEdits(
 ): EditPair[] {
   const same = opts.same ?? 0.97;
   const anchorAt = opts.anchor ?? 0.6;
-  const floor = opts.floor ?? 0.12;
+  const floor = opts.floor ?? 0.3;
   const ours = paragraphsOf(exported);
   const theirs = paragraphsOf(current);
 
@@ -141,7 +146,10 @@ export function diffEdits(
     const oi = Array.from({ length: i1 - i0 - 1 }, (_, k) => i0 + 1 + k);
     const tj = Array.from({ length: jB - jA - 1 }, (_, k) => jA + 1 + k);
     if (!oi.length || !tj.length) continue;
-    if (oi.length === tj.length) {
+    // Only ever pair within the same section: a paragraph cut from one
+    // section and a caption added to the next are not a rewrite of each other.
+    const same = (i: number, j: number) => sectionKey(ours[i].section) === sectionKey(theirs[j].section);
+    if (oi.length === tj.length && oi.every((i, k) => same(i, tj[k]))) {
       oi.forEach((i, k) => pairs.push([i, tj[k]]));
       continue;
     }
@@ -150,7 +158,7 @@ export function diffEdits(
       let best = -1;
       let bestSim = 0;
       for (const j of tj) {
-        if (used.has(j)) continue;
+        if (used.has(j) || !same(i, j)) continue;
         const sim = similarity(ours[i].text, theirs[j].text);
         if (sim > bestSim) {
           bestSim = sim;
@@ -166,10 +174,14 @@ export function diffEdits(
 
   // 3. Anchors that are close but not identical are edits too.
   for (const [i, j] of anchors) {
-    if (similarity(ours[i].text, theirs[j].text) < same) pairs.push([i, j]);
+    // Any change at all is his to keep — "five areas" to "four areas" is one word.
+    if (ours[i].text !== theirs[j].text || linksOf(ours[i].raw) !== linksOf(theirs[j].raw)) {
+      pairs.push([i, j]);
+    }
   }
 
   const edits: EditPair[] = pairs
+    .filter(([i, j]) => ours[i].text !== theirs[j].text || linksOf(ours[i].raw) !== linksOf(theirs[j].raw))
     .sort((a, b) => a[0] - b[0])
     .map(([i, j]) => ({
       before: ours[i].text,
@@ -178,7 +190,6 @@ export function diffEdits(
       distance: Number((1 - similarity(ours[i].text, theirs[j].text)).toFixed(2)),
       section: ours[i].section,
     }))
-    .filter((e) => e.before !== e.after);
 
   // 4. What is left over on either side was cut or added.
   const all = [...anchors, ...pairs];
@@ -280,16 +291,27 @@ export function applyEdits<T extends DraftLike>(
         applied++;
         continue;
       }
-      const hit = findLine(e.afterOf);
+      // The paragraph it follows may itself have been rewritten a moment ago.
+      const renamed = edits.find((x) => (x.op ?? "edit") === "edit" && x.before === e.afterOf);
+      const hit = findLine(e.afterOf) ?? (renamed ? findLine(renamed.after) : null);
       if (!hit) {
-        missed.push(e);
+        // Fall back to the top of its own section.
+        const h = e.section
+          ? blocks.findIndex((bk, b) => !(b % 2) && /^#{2,6}\s+/.test(bk) && sectionKey(norm(bk.split("\n")[0])) === sectionKey(e.section))
+          : -1;
+        if (h < 0) {
+          missed.push(e);
+          continue;
+        }
+        blocks[h] = blocks[h] + "\n\n" + e.afterRaw;
+        applied++;
         continue;
       }
       // First paragraph of a new section: it goes under that heading, not
       // at the end of the section before.
       const headingAt = e.section
         ? blocks.findIndex((bk, b) => !(b % 2) && b > hit.b &&
-            new RegExp(`^#{2,6}\\s+`).test(bk) && norm(bk.split("\n")[0]) === norm(e.section!))
+            new RegExp(`^#{2,6}\\s+`).test(bk) && sectionKey(norm(bk.split("\n")[0])) === sectionKey(e.section))
         : -1;
       const nextHeading = blocks.findIndex((bk, b) => !(b % 2) && b > hit.b && /^#{2,6}\s+/.test(bk));
       const at = headingAt >= 0 && headingAt === nextHeading ? headingAt : hit.b;

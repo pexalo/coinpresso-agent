@@ -6,6 +6,7 @@ import { readDocText } from "@/lib/google";
 import { renderMarkdown } from "@/lib/render";
 import { diffEdits, applyEdits } from "@/lib/doc-edits";
 import { addFeedback } from "@/lib/feedback";
+import { syncDocEdits } from "@/lib/doc-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,11 +48,23 @@ export async function POST(
     rules?: Array<{ before: string; after: string; note?: string; section?: string }>;
     applyToDraft?: Array<{ before: string; after: string; afterRaw?: string }>;
     reviewer?: string;
+    /** Take every change in the Doc now — the same sync that runs on sign. */
+    syncAll?: boolean;
   };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Expected a JSON body" }, { status: 400 });
+  }
+
+  if (body.syncAll) {
+    const r = await syncDocEdits(run, ref, { reviewer: body.reviewer, moment: "manual" });
+    if (r.error) return NextResponse.json({ error: r.error }, { status: 424 });
+    return NextResponse.json({
+      saved: r.rules,
+      applied: r.applied,
+      missed: r.missed.map((m) => m.before || m.after),
+    });
   }
 
   let saved = 0;

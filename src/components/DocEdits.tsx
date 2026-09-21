@@ -87,6 +87,33 @@ export default function DocEdits({
     }
   }
 
+  async function takeAll() {
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/clients/${clientRef}/runs/${runId}/doc-edits`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ syncAll: true, reviewer: "Liam" }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? `Sync failed (${res.status})`);
+      setMsg(
+        d.applied
+          ? `Took ${d.applied} change${d.applied === 1 ? "" : "s"} from the Doc — the app now has his text.` +
+              (d.missed?.length ? ` ${d.missed.length} could not be placed: ${d.missed.slice(0, 3).map((m: string) => `"${m.slice(0, 60)}…"`).join(", ")}` : "")
+          : "The app already matches the Doc."
+      );
+      setEdits(null);
+      if (d.applied) await onApplied?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const patch = (i: number, p: Partial<Edit>) =>
     setEdits((es) => (es ? es.map((e, j) => (j === i ? { ...e, ...p } : e)) : es));
 
@@ -101,13 +128,22 @@ export default function DocEdits({
             house rules. Use this to see them early.
           </p>
         </div>
+        <div className="flex gap-2">
+        <button
+          onClick={takeAll}
+          disabled={busy}
+          className="text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[var(--accent)] text-white disabled:opacity-40"
+        >
+          {busy && !edits ? "Working…" : "Take all edits from the Doc"}
+        </button>
         <button
           onClick={read}
           disabled={busy}
           className="text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--accent)] disabled:opacity-40"
         >
-          {busy && !edits ? "Reading…" : "Read his edits"}
+          {busy && !edits ? "Reading…" : "Review one by one"}
         </button>
+        </div>
       </div>
 
       {(msg || err) && (
