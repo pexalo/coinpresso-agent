@@ -326,5 +326,14 @@ console.log("a gutted ledger triggers fresh research instead of more writer atte
 }
 
 
+
+{
+  const { postIsLinkable } = await import("../src/lib/blog.ts");
+  console.log("only posts from 2025 onwards are linkable (Liam, 21 Sep):");
+  ok("2024 post is not linkable", postIsLinkable("2024-12-31") === false);
+  ok("1 Jan 2025 is linkable", postIsLinkable("2025-01-01") === true);
+  ok("2026 timestamp is linkable", postIsLinkable("2026-09-01T10:00:00Z") === true);
+  ok("undated post is not linkable", postIsLinkable(undefined) === false);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

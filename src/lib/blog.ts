@@ -973,3 +973,15 @@ results, or any sentence that would survive being deleted.
 Every claim should survive the question "compared to what, by how much, says
 who?" — and every claim that survives it should still be said like someone
 who means it, not like someone hedging it.`;
+
+/**
+ * Liam, 21 Sep 2026: "only link to blogs 2025 and onwards". Older posts are
+ * out of date and he does not want readers sent to them. Posts published
+ * before this date are never offered to the writer, so it cannot link them;
+ * one it links anyway is repaired or unlinked like any page not on the list.
+ */
+export const OLDEST_LINKABLE_POST = "2025-01-01";
+
+export function postIsLinkable(publishedAt?: string): boolean {
+  return !!publishedAt && publishedAt.slice(0, 10) >= OLDEST_LINKABLE_POST;
+}

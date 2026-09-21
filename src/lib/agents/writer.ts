@@ -36,6 +36,7 @@ import {
   BLOG_STYLE,
   CONTENT_TYPES,
   PILLARS,
+  postIsLinkable,
 } from "../blog";
 import type { CallContext } from "../providers/routing";
 import type { Brief, Draft, GuidanceNote, ResearchBrief, ReviewFinding } from "../types";
@@ -1351,7 +1352,9 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   // "there are 100s of pages on Coinpresso.io and we don't need to always
   // look to fit the same 3-4 links into different articles."
   const recent = relevantPosts(
-    (await allArticles(BLOG_ARCHIVE_ID)).filter((a) => a.kind !== "competitor"),
+    (await allArticles(BLOG_ARCHIVE_ID)).filter(
+      (a) => a.kind !== "competitor" && postIsLinkable(a.publishedAt)
+    ),
     [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? [])].join(" "),
     15
   );
