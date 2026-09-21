@@ -142,6 +142,22 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-early-internal-link",
+    source: "Liam, Crypto PPC Attribution Doc comment (21 Sep)",
+    date: "2026-09-21",
+    rule: "Liam: \"We should look to get one internal link within the first 2-4 paragraphs to improve click through rate to internal pages.\" At least one link to a Coinpresso service page or post (not only the homepage) sits in the first four paragraphs.",
+    active: true,
+  },
+  {
+    id: "liam-crypto-in-anchors",
+    source: "Liam, Crypto PPC Attribution Doc comment (21 Sep)",
+    date: "2026-09-21",
+    rule: "Liam: \"We should always look to add 'crypto' identifier to the anchor text link where possible. 'Programmatic advertising' is very broad on its own and can also mean Web2 ads, a lot more competitive and less relevant.\" Internal anchors carry the crypto qualifier: \"crypto programmatic advertising\", not \"programmatic advertising\". (Added in code where missing.)",
+    before: "our guide on [programmatic advertising](https://coinpresso.io/crypto-programmatic-ads)",
+    after: "our guide on [crypto programmatic advertising](https://coinpresso.io/crypto-programmatic-ads)",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",

@@ -946,6 +946,47 @@ export function enforceHomepageInOpening(body: string): void {
   );
 }
 
+/**
+ * Liam, 21 Sep: "We should always look to add 'crypto' identifier to the
+ * anchor text link where possible. 'Programmatic advertising' is very broad
+ * on its own and can also mean Web2 ads, a lot more competitive and less
+ * relevant." So an internal anchor with no crypto word gets one — taken in
+ * from the word before it when that word is "crypto", otherwise prepended —
+ * as long as the page is a crypto page and the anchor stays five words.
+ */
+const CRYPTO_WORD = /\b(crypto|cryptocurrency|web3|defi|nft|blockchain|token|bitcoin|ethereum|on-chain)\b/i;
+export function cryptoAnchors(body: string, known: Map<string, string>): string {
+  const fix = (prose: string) =>
+    prose.replace(/(\bcrypto\s+)?\[([^\]]+)\]\((https?:\/\/(?:www\.)?coinpresso\.io[^\s)]*)\)/gi, (whole, before: string | undefined, text: string, url: string) => {
+      if (CRYPTO_WORD.test(text) || /coinpresso|contact|case stud|about/i.test(text)) return whole;
+      const topic = known.get(normaliseUrl(url)) ?? "";
+      if (!/crypto/i.test(topic) && !/\/crypto/i.test(url)) return whole;
+      if (text.trim().split(/\s+/).length >= 5) return whole;
+      if (before) return `[${before.trim()} ${text}](${url})`;
+      return `[crypto ${text}](${url})`;
+    });
+  return body
+    .split(/(```[\s\S]*?```)/)
+    .map((seg, i) => (i % 2 ? seg : fix(seg)))
+    .join("");
+}
+
+/**
+ * Liam, 21 Sep: "We should look to get one internal link within the first
+ * 2-4 paragraphs to improve click through rate to internal pages."
+ * The homepage counts only as well as any other page does — what he wants
+ * is a reader clicking deeper, so a service page or post is what satisfies it.
+ */
+export function enforceEarlyInternalLink(body: string): void {
+  const firstFour = paragraphsOf(body).slice(0, 4).join("\n");
+  const links = [...firstFour.matchAll(/\]\((https?:\/\/(?:www\.)?coinpresso\.io[^\s)]*)\)/gi)].map((m) => m[1]);
+  const deeper = links.filter((u) => !/^https?:\/\/(www\.)?coinpresso\.io\/?$/i.test(u) && !/\/contact/i.test(u));
+  if (deeper.length) return;
+  throw new Error(
+    `no internal link to a Coinpresso service page or post in the first four paragraphs. The client: "We should look to get one internal link within the first 2-4 paragraphs to improve click through rate to internal pages." Link the service phrase the opening already uses (e.g. "crypto Google Ads", "crypto PPC") to its page.`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -1784,7 +1825,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // An invented coinpresso.io slug is corrected to the real page or
       // unlinked, before the anchor work — see repairInternalLinks.
       parsed.body = repairInternalLinks(parsed.body, knownPages);
-      parsed.body = nameAnchors(parsed.body, knownPages);
+      parsed.body = cryptoAnchors(nameAnchors(parsed.body, knownPages), knownPages);
       parsed.body = shortenAnchors(parsed.body);
 
       // The connective openers Liam flagged as the AI tell come off. A
@@ -1800,7 +1841,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
           ...f,
           a: tidyPunctuation(
             stripAiOpeners(
-              shortenAnchors(nameAnchors(repairInternalLinks(unlinkCompetitors(americanize(f.a)), knownPages), knownPages))
+              shortenAnchors(cryptoAnchors(nameAnchors(repairInternalLinks(unlinkCompetitors(americanize(f.a)), knownPages), knownPages), knownPages))
             )
           ),
         }))
@@ -1859,6 +1900,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceSentenceVariety(parsed.body),
         () => enforceNoRepetition(parsed.body),
         () => enforceHomepageInOpening(parsed.body),
+        () => enforceEarlyInternalLink(parsed.body),
         () => enforceNoMetaCommentary(parsed.body),
         () => enforceExampleTablesLabelled(parsed.body),
         () => enforceNaturalKeyword(parsed.body, research.primaryKeyword),
