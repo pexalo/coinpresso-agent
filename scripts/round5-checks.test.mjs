@@ -301,7 +301,9 @@ console.log("nameAnchors — the fix that replaced three $0.75 attempts:");
   // end keeps it.
   const long = `Read the [long anchor of many words that goes on and on for a while more](${ppc}).`;
   const both = shortenAnchors(nameAnchors(long, known));
-  ok("survives shortening because the topic is at the front", /\[crypto PPC long anchor/.test(both), both);
+  // A long anchor now gets the topic ALONE as the link and the rest as
+  // prose, which shortenAnchors then has nothing to cut.
+  ok("a long anchor becomes the topic alone, rest as prose", /\[crypto PPC\]\(.*\) long anchor of many words/.test(both), both);
   ok("and is within the length cap afterwards", throws(() => enforceAnchorLength(both)) === null);
 
   ok("fenced code untouched", nameAnchors("```\n[x](" + ppc + ")\n```", known) === "```\n[x](" + ppc + ")\n```");

@@ -21,7 +21,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { dataDir } from "./data-dir";
-import { COINPRESSO_PAGES, type SitePage } from "./blog";
+import { COINPRESSO_PAGES, type SitePage, type Cluster } from "./blog";
 
 const DIR = dataDir("link-map");
 
@@ -153,7 +153,9 @@ export async function linkablePages(clientRef?: string): Promise<SitePage[]> {
     const key = norm(m.url);
     const base = out.get(key);
     const phrases = [...new Set([...(base ? [base.topic] : []), m.topic, ...m.anchors])].filter(Boolean);
-    out.set(key, { url: m.url, topic: phrases.join(" | ") });
+    // A page the compiled list does not know gets a cluster guessed from its
+    // path, so the cluster rule still has something to go on.
+    out.set(key, { url: m.url, topic: phrases.join(" | "), cluster: base?.cluster ?? guessCluster(m.url) });
   }
   return [...out.values()];
 }
@@ -246,4 +248,17 @@ export function relevantPosts<T extends LinkablePost>(
     take(p);
   }
   return out;
+}
+
+/** A cluster for a page the compiled list has not met, from its path. */
+export function guessCluster(url: string): Cluster {
+  const p = url.toLowerCase();
+  if (/seo|geo|llm|link-building|parasite/.test(p)) return "seo";
+  if (/\/crypto-pr|earned-media|press/.test(p)) return "pr";
+  if (/ppc|google-ads|programmatic|facebook|\/aso/.test(p)) return "paid";
+  if (/smm|telegram|discord|twitter|community|influencer/.test(p)) return "social";
+  if (/content|ghostwriting|copywriting|reddit|edm|email/.test(p)) return "content";
+  if (/presale|ico|ido|ieo|airdrop|pump|meme|clipping|launch/.test(p)) return "launch";
+  if (/defi|nft|rwa|ai-token|metaverse|exchange|web3-marketing/.test(p)) return "vertical";
+  return "brand";
 }

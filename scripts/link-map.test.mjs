@@ -249,7 +249,7 @@ console.log("FAQ links point inward:");
 
 console.log("the utility pages Liam named are linkable:");
 {
-  for (const u of ["https://coinpresso.io/contact", "https://coinpresso.io/about", "https://coinpresso.io/blog/category/case-studies", "https://coinpresso.io/blog"]) {
+  for (const u of ["https://coinpresso.io/contact", "https://coinpresso.io/about-us", "https://coinpresso.io/blog/category/case-studies", "https://coinpresso.io/blog"]) {
     ok(u.replace("https://coinpresso.io", ""), COINPRESSO_PAGES.some((p) => p.url === u));
   }
 }

@@ -254,6 +254,49 @@ async function clearDocBody(token: string, docId: string): Promise<boolean> {
   return cleared.ok;
 }
 
+/**
+ * The Doc's current text, as markdown-ish plain text, for diffing against
+ * what was exported. Headings come back as "## …" so the diff can attribute a
+ * paragraph to its section; links come back as their text.
+ */
+export async function readDocText(docUrl: string): Promise<string> {
+  const sa = credentials();
+  if (!sa) throw new Error("GOOGLE_SERVICE_ACCOUNT_B64 is not set, so the Doc cannot be read back.");
+  const id = docUrl.match(/\/document\/d\/([^/]+)/)?.[1];
+  if (!id) throw new Error("That is not a Google Doc link.");
+  const token = await accessToken(sa);
+  const res = await fetch(`https://docs.googleapis.com/v1/documents/${id}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Docs read ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const doc = (await res.json()) as {
+    body?: {
+      content?: Array<{
+        paragraph?: {
+          paragraphStyle?: { namedStyleType?: string };
+          elements?: Array<{ textRun?: { content?: string } }>;
+        };
+        table?: unknown;
+      }>;
+    };
+  };
+  const lines: string[] = [];
+  for (const el of doc.body?.content ?? []) {
+    if (el.table) {
+      lines.push("| table |");
+      continue;
+    }
+    const p = el.paragraph;
+    if (!p) continue;
+    const text = (p.elements ?? []).map((e) => e.textRun?.content ?? "").join("").replace(/\n$/, "");
+    if (!text.trim()) continue;
+    const style = p.paragraphStyle?.namedStyleType ?? "";
+    const level = style === "HEADING_1" ? "# " : style === "HEADING_2" ? "## " : style === "HEADING_3" ? "### " : "";
+    lines.push(level + text);
+  }
+  return lines.join("\n\n");
+}
+
 export async function exportBlogRun(run: Run): Promise<BlogExportResult> {
   const sa = credentials();
   if (!sa) {

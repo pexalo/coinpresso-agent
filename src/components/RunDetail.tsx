@@ -13,6 +13,7 @@ import PublishManually from "@/components/PublishManually";
 import SectionImages from "@/components/SectionImages";
 import EditDraft from "@/components/EditDraft";
 import FixAndRetry from "@/components/FixAndRetry";
+import DocEdits from "@/components/DocEdits";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES, COINPRESSO_PAGES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -490,6 +491,10 @@ export default function RunDetail({
                 ? "No article was produced. The stage that failed is in the timeline on the right."
                 : "No draft yet."}
             </div>
+          )}
+          {/* His edits in the Doc, read back — the loop that was missing. */}
+          {isBlog && run.draft && run.docUrl && (
+            <DocEdits clientRef={ref} runId={id} docUrl={run.docUrl} onApplied={load} />
           )}
           {/* Typing is the cheapest revision there is. Under the article so
               the thing being fixed is right above the box. */}

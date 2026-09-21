@@ -82,7 +82,7 @@ console.log("house rules are never stored twice:");
 
 console.log("Liam's seeded rules are intact and distinct:");
 {
-  ok("twenty-six seeds — 22 plus the four from the Attribution review", SEED_FEEDBACK.length === 26, SEED_FEEDBACK.length);
+  ok("thirty seeds — 26 plus the opening rewrite and three sheet key points", SEED_FEEDBACK.length === 30, SEED_FEEDBACK.length);
   ok("every seed has a unique id", new Set(SEED_FEEDBACK.map((x) => x.id)).size === SEED_FEEDBACK.length);
   ok("every seed has unique text — dedupe cannot eat one", new Set(SEED_FEEDBACK.map((x) => ruleKey(x.rule))).size === SEED_FEEDBACK.length);
   ok("dedupe leaves the seeds exactly as they are",

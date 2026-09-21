@@ -49,6 +49,42 @@ export interface FeedbackLog {
  */
 export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
   {
+    id: "liam-humanise-the-opening",
+    source: "Liam, his own rewrite of the Circumventing Systems opening (21 Sep)",
+    date: "2026-09-21",
+    rule:
+      "Liam: \"the humanization of the first paragraphs is really important to create that distinction that these articles are from real authors.\" The opening is where a reader decides whether a person wrote this. Say the thing the way a person would say it across a desk — a turn of phrase, a bit of dry wit, a plain-spoken aside — rather than restating the topic in a formal register. His rewrite below is the standard: the same facts, but the second version sounds like someone.",
+    before:
+      "A Circumventing Systems suspension is Google telling you it caught deliberate rule-breaking, not a mistake. That is a hard thing to accept when your account genuinely wasn't trying to break anything.",
+    after:
+      "A Circumventing Systems suspension is Google's way of saying it thinks you tried to trick it, not just broke a rule by accident. That's a serious accusation, and it comes with none of the usual \"oops-a-daisy\" courtesies.",
+    active: true,
+  },
+  {
+    id: "liam-link-within-the-cluster",
+    source: "Liam, meta-mapping sheet key points (21 Sep)",
+    date: "2026-09-21",
+    rule:
+      "Liam: \"Look to internally link to pages in line with relevant content clusters to the article. A GEO article can link to crypto content, crypto SEO, contact us, homepage, blog articles etc — very seamlessly. On the flipside, it would not be as relevant to link out to a crypto PPC page when writing a Crypto GEO article. Maybe in very rare occasions when talking about the whole marketing funnel in summary, but the links within the content should be focused around that cluster and closely-connected clusters rather than spray-and-pray approach to our entire stack.\"",
+    active: true,
+  },
+  {
+    id: "liam-anchors-branded-and-grammatical",
+    source: "Liam, meta-mapping sheet key points (21 Sep)",
+    date: "2026-09-21",
+    rule:
+      "Liam: \"If keyword suggestions are not grammatically correct, use a like-for-like word.\" And: \"We do not need to only use organic keywords as anchor texts. We can use branded keywords (to the homepage for example) too.\" So an anchor reads as English first — 'Coinpresso' or 'our crypto marketing team' to the home page is fine; a keyword jammed in where it does not parse is not.",
+    active: true,
+  },
+  {
+    id: "liam-blog-links-corroborate",
+    source: "Liam, meta-mapping sheet key points (21 Sep)",
+    date: "2026-09-21",
+    rule:
+      "Liam: \"Blog article links can also be used, highly desirable when the blogs are guides that suit/corroborate the topic.\" And: \"Use FAQs as an INTERNAL linking play, not external.\" A link to an earlier Coinpresso guide that backs the point being made is worth more than a service page dropped in for the count.",
+    active: true,
+  },
+  {
     id: "liam-no-competitor-links",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",

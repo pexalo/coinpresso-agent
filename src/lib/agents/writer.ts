@@ -17,6 +17,9 @@ import { linkablePages, linkTargetsBlock, relevantPosts } from "../link-map";
 import {
   CLOSE_MOVES,
   COINPRESSO_PAGES,
+  CLUSTER_NEIGHBOURS,
+  clusterOf,
+  clusterOfPillar,
   isCompetitorUrl,
   INTRO_MOVES,
   SPENT_CLOSERS,
@@ -845,6 +848,46 @@ export function dedupeLinksAcrossFaqs(
   }));
 }
 
+/**
+ * Links stay in the post's neighbourhood.
+ *
+ * Liam's meta-mapping sheet: "the links within the content should be
+ * focused around that cluster and closely-connected clusters rather than
+ * spray-and-pray approach to our entire stack." His example: a GEO article
+ * links content, SEO, contact, home and posts — not the PPC page.
+ *
+ * Soft, because the map of what neighbours what is a judgement he can
+ * change, and a person reading the sentence can tell in a second whether
+ * the link earned its place. Brand pages are reachable from everywhere.
+ * Blog posts are not clustered and are not checked here; relevance for
+ * those is the job of relevantPosts and the conclusion rule.
+ */
+export function enforceLinkCluster(
+  body: string,
+  faqs: Array<{ q: string; a: string }>,
+  pillarHub: string | undefined,
+  known: Map<string, string>
+): void {
+  const home = clusterOfPillar(pillarHub);
+  if (!home) return;
+  const allowed = new Set(CLUSTER_NEIGHBOURS[home]);
+  const text = proseOf(body) + "\n" + faqs.map((f) => f.a).join("\n");
+  const strays: string[] = [];
+  for (const m of text.matchAll(/\[([^\]]+)\]\((https?:\/\/(?:www\.)?coinpresso\.io[^)\s]*)\)/gi)) {
+    const url = normaliseUrl(m[2]);
+    if (!known.has(url)) continue;
+    const c = clusterOf(url);
+    if (!c || allowed.has(c)) continue;
+    strays.push(`"${m[1]}" → ${url.replace(/^https?:\/\/(www\.)?coinpresso\.io/, "")} (${c})`);
+  }
+  if (!strays.length) return;
+  throw new Error(
+    `${strays.length} internal link${strays.length === 1 ? " sits" : "s sit"} outside this post's cluster (${home} and its neighbours: ${[...allowed].join(", ")}). The client's note: "links within the content should be focused around that cluster and closely-connected clusters rather than spray-and-pray". Swap for a page in the cluster, or a relevant post, or drop it:\n${strays
+      .map((x) => `      ${x}`)
+      .join("\n")}`
+  );
+}
+
 export function enforceFaqLinks(
   faqs: Array<{ q: string; a: string }>,
   known: Map<string, string>,
@@ -1284,6 +1327,20 @@ Talk to the reader ("you", "your") and, where the brief names the method, name
 it. The first H2 comes after; section 1 develops the opening rather than
 repeating it.
 
+IT HAS TO SOUND LIKE A PERSON. The client: "the humanization of the first
+paragraphs is really important to create that distinction that these articles
+are from real authors." He rewrote one opening himself, and the difference is
+the whole brief. The draft said: "A Circumventing Systems suspension is Google
+telling you it caught deliberate rule-breaking, not a mistake. That is a hard
+thing to accept when your account genuinely wasn't trying to break anything."
+He changed it to: "A Circumventing Systems suspension is Google's way of saying
+it thinks you tried to trick it, not just broke a rule by accident. That's a
+serious accusation, and it comes with none of the usual 'oops-a-daisy'
+courtesies." Same facts. The second one has a person in it — a turn of phrase,
+a dry aside, the register of someone explaining it across a desk. Write the
+opening that way. Do not restate the title in a formal voice and call it an
+introduction.
+
 OPEN IT THIS WAY — "${intro.id}":
 ${intro.how}
 
@@ -1607,6 +1664,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       const styleNotes = collectRejections([
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "soft"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "soft"),
+        () => enforceLinkCluster(parsed.body, parsed.faqs ?? [], pillar?.hub, knownPages),
         () => enforceNoBoltOnLinks(parsed.body, knownPages),
         () => enforceCloser(parsed.body),
         () => enforceLinkSpacing(parsed.body),
@@ -2152,7 +2210,16 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
         }
 
         // 2. Prepend the topic — the first phrase, when the map gives several.
-        return `${before}[${topic.split(" | ")[0].trim()} ${text}](${url})`;
+        //    Unless that makes a mouthful: "crypto Google Ads crypto-related
+        //    product certification categories" reached a client Doc. Past
+        //    five words, the topic alone IS the anchor and the old text goes
+        //    back to being prose after it.
+        const first = topic.split(" | ")[0].trim();
+        const joined = `${first} ${text}`;
+        if (joined.split(/\s+/).length > 5) {
+          return `${before}[${first}](${url}) ${text}`;
+        }
+        return `${before}[${joined}](${url})`;
       }
     );
 

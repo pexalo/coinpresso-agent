@@ -185,84 +185,140 @@ export const PILLARS: Pillar[] = [
  */
 export interface SitePage {
   url: string;
-  /** What the page is about, so the writer links it where that topic arises. */
+  /**
+   * What the page is about, so the writer links it where that topic arises.
+   * Several anchor phrases joined with " | " — the writer is shown them all,
+   * the naming check accepts any, the anchor fixer prepends the first.
+   */
   topic: string;
+  /**
+   * The content cluster the page belongs to. Liam's meta-mapping sheet: "the
+   * links within the content should be focused around that cluster and
+   * closely-connected clusters rather than spray-and-pray approach to our
+   * entire stack." A GEO article links SEO and content pages, not PPC.
+   */
+  cluster: Cluster;
 }
 
+export type Cluster =
+  | "brand"    // home, about, contact, blog index, case studies
+  | "seo"      // SEO, link building, GEO, LLM optimisation, parasite SEO
+  | "pr"       // PR, Web3 PR, earned media
+  | "paid"     // PPC, Google Ads, programmatic, Facebook, ASO
+  | "social"   // SMM, Telegram, Discord, X, community, influencer
+  | "content"  // content, copywriting, ghostwriting, Reddit, email
+  | "launch"   // presale, ICO, IDO, IEO, airdrop, pump.fun, clipping
+  | "vertical"; // DeFi, NFT, RWA, AI tokens, metaverse, exchanges
+
+/**
+ * Which clusters a post may link into, by the cluster of its pillar.
+ *
+ * Liam's example: "A GEO article can link to crypto content, crypto SEO,
+ * contact us, homepage, blog articles etc — very seamlessly. On the flipside,
+ * it would not be as relevant to link out to a crypto PPC page when writing
+ * a Crypto GEO article." Brand pages are reachable from everywhere; the rest
+ * is the neighbourhood.
+ */
+export const CLUSTER_NEIGHBOURS: Record<Cluster, Cluster[]> = {
+  brand: ["brand", "seo", "pr", "paid", "social", "content", "launch", "vertical"],
+  seo: ["seo", "content", "brand"],
+  pr: ["pr", "content", "social", "brand"],
+  paid: ["paid", "launch", "brand"],
+  social: ["social", "pr", "content", "launch", "brand"],
+  content: ["content", "seo", "pr", "social", "brand"],
+  launch: ["launch", "paid", "pr", "social", "brand"],
+  vertical: ["vertical", "launch", "pr", "seo", "brand"],
+};
+
+/**
+ * Every page on coinpresso.io the writer may link, with the anchor phrases
+ * the client wants used.
+ *
+ * REBUILT FROM LIAM'S META-MAPPING SHEET, 21 Sep 2026 — the client's own
+ * silo-ing document, "specific content and keywords mapped to their
+ * respective pages". Where the sheet and the earlier list here gave a
+ * different path for the same page, the sheet wins: it is his site. The
+ * link checker HEAD-checks every internal URL before a draft reaches review,
+ * so a stale row fails loudly rather than publishing a 404. Pages the sheet
+ * does not list but the earlier audit found are kept.
+ *
+ * His anchors, and his note on them: "If keyword suggestions are not
+ * grammatically correct, use a like-for-like word." And: "We do not need to
+ * only use organic keywords as anchor texts. We can use branded keywords (to
+ * the homepage for example) too."
+ */
 export const COINPRESSO_PAGES: SitePage[] = [
-  // Liam's mapped anchors, 19 Sep 2026. Several phrases per page, joined with
-  // " | " — the writer is shown them all, the naming check accepts any of
-  // them, and the anchor fixer prepends the first. One phrase per page is why
-  // every post reached for the same three links.
-  { url: "https://coinpresso.io/", topic: "crypto marketing | crypto marketing agency | crypto advertising agency" },
-  { url: "https://coinpresso.io/crypto-seo", topic: "crypto SEO" },
-  { url: "https://coinpresso.io/crypto-seo/for-web3", topic: "Web3 SEO" },
-  // Added 9 Sep: the client added this link by hand to the piece he approved,
-  // noting "internal linking is really solid, added one opportunity missed".
-  // It was missing from this list, so the writer could not have used it — a
-  // link to a page that is not here is rejected by enforceLinks.
-  {
-    url: "https://coinpresso.io/web3-marketing-agency",
-    topic: "Web3 marketing | Web3 marketing agency",
-  },
-  // Found in the same audit: five more live service pages the writer could
-  // never link because they were absent here. Verified against the live site
-  // before adding — a URL in this list that 404s is worse than a missing one.
-  {
-    url: "https://coinpresso.io/metaverse-marketing",
-    topic: "metaverse marketing",
-  },
-  {
-    url: "https://coinpresso.io/reddit-crypto-marketing",
-    topic: "crypto Reddit marketing",
-  },
-  {
-    url: "https://coinpresso.io/four-meme-marketing",
-    topic: "Four.meme launch marketing",
-  },
-  {
-    url: "https://coinpresso.io/smm-for-crypto/telegram-marketing",
-    topic: "crypto Telegram marketing",
-  },
-  {
-    url: "https://coinpresso.io/smm-for-crypto/discord-marketing",
-    topic: "crypto Discord marketing",
-  },
-  { url: "https://coinpresso.io/geo-llm-optimization-for-crypto-web3", topic: "generative engine optimisation (GEO) for crypto and Web3" },
-  { url: "https://coinpresso.io/llm-optimization-for-crypto-web3-websites", topic: "LLM optimisation for crypto websites" },
-  { url: "https://coinpresso.io/crypto-link-building-services", topic: "crypto link building" },
-  { url: "https://coinpresso.io/parasite-seo-services", topic: "parasite SEO" },
-  { url: "https://coinpresso.io/crypto-pr", topic: "crypto PR | crypto press release distribution | crypto press releases | crypto PR agency" },
-  { url: "https://coinpresso.io/crypto-pr/web3-pr", topic: "Web3 PR" },
-  { url: "https://coinpresso.io/crypto-earned-media", topic: "crypto earned media" },
-  { url: "https://coinpresso.io/crypto-presale-marketing-services", topic: "crypto presale marketing | presale marketing agency" },
-  { url: "https://coinpresso.io/ico-marketing", topic: "ICO marketing" },
-  { url: "https://coinpresso.io/ido-marketing", topic: "IDO marketing" },
-  { url: "https://coinpresso.io/crypto-clipping-strategy-for-viral-growth", topic: "crypto clipping" },
-  { url: "https://coinpresso.io/crypto-ppc-marketing", topic: "crypto PPC | crypto PPC agency | crypto PPC marketing agency | crypto PPC marketing services" },
-  { url: "https://coinpresso.io/crypto-google-ads", topic: "crypto Google Ads" },
-  { url: "https://coinpresso.io/crypto-programmatic-ads", topic: "crypto programmatic advertising" },
-  { url: "https://coinpresso.io/crypto-content", topic: "crypto content | crypto copywriting | crypto content writers" },
-  { url: "https://coinpresso.io/web3-ghostwriting", topic: "Web3 ghostwriting" },
-  { url: "https://coinpresso.io/crypto-community-management", topic: "crypto community management" },
-  { url: "https://coinpresso.io/smm-for-crypto", topic: "crypto social media management | crypto SMM | SMM for crypto" },
-  { url: "https://coinpresso.io/twitter-crypto-marketing", topic: "crypto X/Twitter marketing" },
-  { url: "https://coinpresso.io/crypto-influencer-marketing", topic: "crypto influencer marketing" },
-  { url: "https://coinpresso.io/crypto-email-marketing", topic: "crypto email marketing" },
-  { url: "https://coinpresso.io/defi-marketing", topic: "DeFi marketing" },
-  { url: "https://coinpresso.io/nft-marketing", topic: "NFT marketing" },
-  { url: "https://coinpresso.io/rwa-marketing", topic: "RWA marketing" },
-  { url: "https://coinpresso.io/crypto-ai-token-marketing", topic: "AI token marketing" },
-  { url: "https://coinpresso.io/crypto-airdrop-marketing", topic: "crypto airdrop marketing" },
-  { url: "https://coinpresso.io/pump-fun-launch-marketing", topic: "pump.fun launch marketing" },
-  { url: "https://coinpresso.io/blog", topic: "the Coinpresso blog | our blog | more guides" },
-  // Liam, 19 Sep: "we can be using contact us page, case studies page, about
-  // page, main blog page" — to keep readers inside the site rather than
-  // sending them to a vendor. Verified live on 20 Sep.
-  { url: "https://coinpresso.io/contact", topic: "contact Coinpresso | get in touch | talk to us" },
-  { url: "https://coinpresso.io/blog/category/case-studies", topic: "case studies | our case studies | client results" },
-  { url: "https://coinpresso.io/about", topic: "about Coinpresso | who we are | our team" },
+  // --- brand ---
+  { url: "https://coinpresso.io/", topic: "crypto marketing agency | crypto advertising agency | crypto marketing | crypto marketing services | cryptocurrency marketing agency | Coinpresso", cluster: "brand" },
+  { url: "https://coinpresso.io/about-us", topic: "about Coinpresso | crypto marketing firms | who we are | our team", cluster: "brand" },
+  { url: "https://coinpresso.io/contact", topic: "contact us | contact Coinpresso | free crypto marketing audit | crypto advertising company | get in touch", cluster: "brand" },
+  { url: "https://coinpresso.io/blog", topic: "the Coinpresso blog | crypto blog | crypto blogs | more guides", cluster: "brand" },
+  { url: "https://coinpresso.io/blog/category/case-studies", topic: "case studies | our case studies | client results", cluster: "brand" },
+
+  // --- seo ---
+  { url: "https://coinpresso.io/crypto-seo", topic: "crypto SEO | SEO for crypto | cryptocurrency SEO", cluster: "seo" },
+  { url: "https://coinpresso.io/crypto-seo/for-web3", topic: "Web3 SEO", cluster: "seo" },
+  { url: "https://coinpresso.io/crypto-seo/link-building", topic: "crypto link building | crypto link building services", cluster: "seo" },
+  { url: "https://coinpresso.io/geo-llm-optimization-for-crypto-web3", topic: "generative engine optimization for Web3 | Web3 GEO agency | Web3 generative engine optimization | GEO for crypto", cluster: "seo" },
+  { url: "https://coinpresso.io/llm-optimization-for-crypto-web3-websites", topic: "LLM optimization for crypto websites", cluster: "seo" },
+  { url: "https://coinpresso.io/parasite-seo-services", topic: "parasite SEO", cluster: "seo" },
+
+  // --- pr ---
+  { url: "https://coinpresso.io/crypto-pr", topic: "crypto PR | crypto PR agency | crypto press release distribution | crypto press releases | PR for cryptocurrency", cluster: "pr" },
+  { url: "https://coinpresso.io/crypto-pr/web3-pr", topic: "Web3 PR", cluster: "pr" },
+  { url: "https://coinpresso.io/crypto-earned-media", topic: "crypto earned media | crypto earned media agency", cluster: "pr" },
+
+  // --- paid ---
+  { url: "https://coinpresso.io/crypto-ppc-marketing", topic: "crypto PPC | crypto PPC agency | crypto PPC marketing agency | crypto PPC marketing services", cluster: "paid" },
+  { url: "https://coinpresso.io/crypto-google-ads", topic: "crypto Google Ads | crypto ads on Google | Google Ads for crypto", cluster: "paid" },
+  { url: "https://coinpresso.io/programmatic-ads", topic: "programmatic advertising | programmatic ads | programmatic display ads | crypto programmatic advertising", cluster: "paid" },
+  { url: "https://coinpresso.io/facebook-crypto-advertising", topic: "Facebook crypto advertising | crypto advertising on Facebook | advertise crypto on Facebook", cluster: "paid" },
+  { url: "https://coinpresso.io/aso", topic: "app store optimisation | ASO services | crypto ASO agency | ASO marketing agency", cluster: "paid" },
+
+  // --- social ---
+  { url: "https://coinpresso.io/smm-for-crypto", topic: "crypto social media marketing | crypto social media management | crypto SMM | SMM for crypto", cluster: "social" },
+  { url: "https://coinpresso.io/smm-for-crypto/telegram-marketing", topic: "crypto Telegram marketing | Telegram crypto marketing", cluster: "social" },
+  { url: "https://coinpresso.io/smm-for-crypto/discord-marketing", topic: "crypto Discord marketing | Discord marketing for crypto projects", cluster: "social" },
+  { url: "https://coinpresso.io/twitter-crypto-marketing", topic: "crypto X marketing | crypto Twitter marketing", cluster: "social" },
+  { url: "https://coinpresso.io/crypto-community-management", topic: "crypto community management | crypto community management agency | crypto community management services", cluster: "social" },
+  { url: "https://coinpresso.io/crypto-influencer-marketing", topic: "crypto influencer marketing | crypto influencer marketing agency", cluster: "social" },
+
+  // --- content ---
+  { url: "https://coinpresso.io/crypto-content", topic: "crypto content | crypto copywriting | crypto copywriter | crypto content writers", cluster: "content" },
+  { url: "https://coinpresso.io/crypto-content/web3-ghostwriting", topic: "Web3 ghostwriting | Web3 ghostwriter", cluster: "content" },
+  { url: "https://coinpresso.io/crypto-content/for-reddit", topic: "crypto content marketing for Reddit | Reddit crypto marketing", cluster: "content" },
+  { url: "https://coinpresso.io/crypto-edm", topic: "crypto email marketing | EDM for crypto | blockchain email marketing", cluster: "content" },
+
+  // --- launch ---
+  { url: "https://coinpresso.io/crypto-presale-marketing-services", topic: "crypto presale marketing | presale marketing agency", cluster: "launch" },
+  { url: "https://coinpresso.io/ico-marketing", topic: "ICO marketing | ICO marketing agency", cluster: "launch" },
+  { url: "https://coinpresso.io/ido-marketing", topic: "IDO marketing | IDO marketing agency | IDO marketing services", cluster: "launch" },
+  { url: "https://coinpresso.io/ieo-marketing", topic: "IEO marketing | IEO marketing agency | IEO marketing services", cluster: "launch" },
+  { url: "https://coinpresso.io/airdrop-marketing", topic: "airdrop marketing | airdrop marketing campaign | crypto airdrop marketing", cluster: "launch" },
+  { url: "https://coinpresso.io/pump-fun-launch-marketing", topic: "pump.fun launch marketing", cluster: "launch" },
+  { url: "https://coinpresso.io/four-meme-marketing", topic: "four.meme marketing", cluster: "launch" },
+  { url: "https://coinpresso.io/crypto-clipping-strategy-for-viral-growth", topic: "crypto clipping", cluster: "launch" },
+
+  // --- vertical ---
+  { url: "https://coinpresso.io/defi-marketing", topic: "DeFi marketing | DeFi marketing agency | DeFi marketing strategy", cluster: "vertical" },
+  { url: "https://coinpresso.io/nft-marketing", topic: "NFT marketing", cluster: "vertical" },
+  { url: "https://coinpresso.io/rwa-marketing", topic: "RWA marketing", cluster: "vertical" },
+  { url: "https://coinpresso.io/crypto-ai-token-marketing", topic: "AI token marketing", cluster: "vertical" },
+  { url: "https://coinpresso.io/metaverse-marketing", topic: "metaverse marketing | metaverse marketing agency", cluster: "vertical" },
+  { url: "https://coinpresso.io/crypto-exchange-marketing", topic: "crypto exchange marketing | crypto exchange marketing services", cluster: "vertical" },
+  { url: "https://coinpresso.io/web3-marketing-agency", topic: "Web3 marketing | Web3 marketing agency | Web3 digital marketing | Web3 marketing services", cluster: "vertical" },
 ];
+
+/** The cluster of a page the writer may link, or undefined for a blog post. */
+export function clusterOf(url: string): Cluster | undefined {
+  const key = url.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+  return COINPRESSO_PAGES.find((p) => p.url.replace(/\/+$/, "").toLowerCase() === key)?.cluster;
+}
+
+/** Pillar → the cluster its hub page belongs to. */
+export function clusterOfPillar(hub?: string): Cluster | undefined {
+  return hub ? clusterOf(hub) : undefined;
+}
 
 /** The prompt block listing where a post may link internally. */
 export function internalLinkTargets(pillarHub?: string): string {
