@@ -921,7 +921,7 @@ the turn in the argument, never mid-thought. A wall of text is the fastest way
 to have a piece sent back, and it was his single most repeated note.
 
 Links are scattered through the piece, not clustered. Anchor text is the phrase
-a reader would click — a dozen words at the outside — and the rest of the claim
+a reader would click — two to five words — and the rest of the claim
 stays outside the link as ordinary prose. Two links a few words apart read as
 stuffing even when both are good.
 

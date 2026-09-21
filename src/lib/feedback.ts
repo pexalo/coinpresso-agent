@@ -218,7 +218,7 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     source: "Liam, September batch (E-E-A-T)",
     date: "2026-09-09",
     rule:
-      "Anchor text is the phrase a reader would click, not the whole claim. He flagged 'a lot of really long external links taking up whole sentences'. Cap anchors at about a dozen words and leave the rest of the sentence outside the link.",
+      "Anchor text is the phrase a reader would click, not the whole claim. He flagged 'a lot of really long external links taking up whole sentences'. Anchors are two to five words — the figure or the noun a reader would click (\"8.3 billion ads\", \"Google Ads community thread\") — with the rest of the sentence outside the link. (Tightened 21 Sep; enforced in code.)",
     before:
       "[BrightEdge has tracked AI agent requests reaching 88% of human organic search volume as of April 2026](url)",
     after:
