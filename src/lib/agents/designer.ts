@@ -258,3 +258,64 @@ export async function generateSectionImage(
 
   return { prompt: clean, png, costUsd: IMAGE_COST };
 }
+
+
+/**
+ * A caption for a section image. Liam, 21 Sep: "Can we also add a caption
+ * generator to the agent? One that generates one based on the section image?
+ * (featured image doesn't need a caption)". His own caption on the
+ * Circumventing Systems infographic: "The Crypto-specific Risk Inventory
+ * Framework for Seamless Google Ads Campaigns" — a title for the picture,
+ * naming what it shows in the terms of the section around it.
+ *
+ * A caption that fails to write never costs the image: the caller treats
+ * it as optional.
+ */
+export async function writeCaption(
+  run: Run,
+  section: string,
+  brief: string
+): Promise<{ caption: string; usage: BriefUsage }> {
+  const body = run.draft?.body ?? "";
+  // The section's own text, so the caption speaks its language.
+  const start = body.search(new RegExp(`^##\\s+${section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "im"));
+  const sectionText =
+    start >= 0 ? body.slice(start).split(/\n##\s+/)[0].replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").slice(0, 1500) : "";
+
+  const res = await callClaude({
+    model: MODELS.strategy,
+    system:
+      "You write image captions for a crypto marketing agency's blog. One line. You answer with the caption only.",
+    user: [
+      `Article: ${run.draft?.headline ?? run.brief.title}`,
+      `Section: ${section}`,
+      `What the image shows: ${brief}`,
+      sectionText ? `Section text:\n${sectionText}` : "",
+      "",
+      "Write the caption for this image.",
+      "- A title for the picture, 6 to 14 words, in Title Case (small words like a, the, for, of stay lower case)",
+      "- Name what it shows in the section's own terms; work the section's topic in naturally",
+      "- No full stop, no quotation marks, no numbers or claims that are not in the section text",
+      '- The client\'s example: "The Crypto-specific Risk Inventory Framework for Seamless Google Ads Campaigns"',
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    maxTokens: 60,
+  });
+  const caption = res.text
+    .trim()
+    .split("\n")[0]
+    .replace(/^caption:\s*/i, "")
+    .replace(/^["'“”]+|["'“”.]+$/g, "")
+    .trim();
+  return {
+    caption,
+    usage: {
+      model: MODELS.strategy,
+      tokensIn: res.tokensIn,
+      tokensOut: res.tokensOut,
+      cacheWriteTokens: res.cacheWriteTokens,
+      cacheReadTokens: res.cacheReadTokens,
+    },
+  };
+}

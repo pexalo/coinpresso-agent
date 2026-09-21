@@ -252,9 +252,10 @@ console.log("faqs supplied separately (how the pipeline stores them):");
   ]);
   const h = heads(b);
   ok("FAQs heading added", at(b, h[2].updateParagraphStyle.range).trim() === "FAQs", at(b, h[2].updateParagraphStyle.range));
-  const bold = kinds(b, "updateTextStyle").filter(r => r.updateTextStyle.textStyle.bold);
-  ok("both questions bold", bold.length === 2, bold.length);
-  ok("question text exact", at(b, bold[1].updateTextStyle.range) === "Second question?", at(b, bold[1].updateTextStyle.range));
+  // Liam, 21 Sep: FAQ questions are H3s, not bold paragraphs.
+  const h3 = h.filter(r => r.updateParagraphStyle.paragraphStyle.namedStyleType === "HEADING_3");
+  ok("both questions are H3", h3.length === 2, h3.length);
+  ok("question text exact", at(b, h3[1].updateParagraphStyle.range).trim() === "Second question?", at(b, h3[1].updateParagraphStyle.range));
   ok("answers present as prose", b.text.includes("Second answer."));
   ok("no stray asterisks", !b.text.includes("*"));
 }

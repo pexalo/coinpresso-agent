@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRun, saveRun } from "@/lib/store";
 import { recordImageSpend } from "@/lib/costs";
-import { generateScene, generateSectionImage } from "@/lib/agents/designer";
+import { generateScene, generateSectionImage, writeCaption } from "@/lib/agents/designer";
 import {
   listImages,
   readImage,
@@ -77,11 +77,21 @@ export async function POST(
       section && brief
         ? await generateSectionImage(run, section, brief)
         : await generateScene(run, nudge);
+    // Section images get a caption; the featured image does not. A caption
+    // that fails to write never costs the image.
+    const cap =
+      section && brief
+        ? await writeCaption(run, section, brief).catch((e) => {
+            console.error("[caption]", e instanceof Error ? e.message : e);
+            return undefined;
+          })
+        : undefined;
     const version: ImageVersion = {
       id: `img_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       createdAt: new Date().toISOString(),
       section,
       brief,
+      caption: cap?.caption || undefined,
       prompt: scene.prompt,
       nudge,
       costUsd: scene.costUsd,
@@ -91,7 +101,7 @@ export async function POST(
     // Onto the run's ledger, or the costs page never sees it. Every image —
     // regenerations included — is a real charge, and the brief call before
     // the hero image is real tokens; both were being dropped on the floor.
-    recordImageSpend(run, scene.costUsd, scene.brief);
+    recordImageSpend(run, scene.costUsd, scene.brief ?? cap?.usage);
     await saveRun(run);
 
     return NextResponse.json({ version, versions: await listImages(ref, id) });

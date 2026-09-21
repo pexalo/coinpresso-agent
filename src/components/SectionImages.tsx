@@ -19,6 +19,7 @@ interface Version {
   createdAt: string;
   section?: string;
   brief?: string;
+  caption?: string;
   prompt: string;
   costUsd: number;
 }
@@ -209,6 +210,24 @@ export default function SectionImages({
                   Place it under the heading when you paste the article in.
                 </span>
               </div>
+              {(() => {
+                const cur = mine.find((v) => v.id === (active ?? mine[0].id));
+                if (!cur?.caption) return null;
+                return (
+                  <div className="flex items-start gap-2 rounded-lg border border-[var(--line)] px-3 py-2">
+                    <div className="flex-1">
+                      <div className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">Caption</div>
+                      <div className="text-[13px] italic">{cur.caption}</div>
+                    </div>
+                    <button
+                      onClick={() => navigator.clipboard?.writeText(cur.caption!)}
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-[var(--line)] hover:border-[var(--accent)]/50"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                );
+              })()}
               {mine.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {mine.map((v) => (

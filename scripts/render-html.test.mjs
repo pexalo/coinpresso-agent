@@ -86,7 +86,7 @@ console.log("one Conclusion, then the FAQs — never 'Conclusion and FAQ' follow
   ok("HTML from an old draft: the conclusion heading is just Conclusion", html.includes("<h2>Conclusion</h2>") && !html.includes("Conclusion and FAQ"));
   const md = renderMarkdown(mk(joined));
   ok("Markdown likewise", md.includes("## Conclusion\n") && (md.match(/## FAQs/g) || []).length === 1 && !md.includes("and FAQ"));
-  ok("bodyOf leaves a draft with no FAQs alone", bodyOf({ body: joined, faqs: [] }) === joined);
+  ok("bodyOf leaves a draft with no FAQs alone (bar title case)", !/## Conclusion\n/.test(bodyOf({ body: joined, faqs: [] })) && /and FAQ/i.test(bodyOf({ body: joined, faqs: [] })));
 }
 
 

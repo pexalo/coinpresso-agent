@@ -107,6 +107,27 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-blogs-2025-onwards",
+    source: "Liam, house rules (21 Sep)",
+    date: "2026-09-21",
+    rule: "Only link Coinpresso blog posts published in 2025 or later. Older posts are out of date. (Enforced in code: older posts are never offered to the writer.)",
+    active: true,
+  },
+  {
+    id: "liam-title-case-headings",
+    source: "Liam, house rules (21 Sep)",
+    date: "2026-09-21",
+    rule: "All headings are Title Case: a capital at the start of each word apart from small words like a, the, of, to. FAQ questions stay in normal sentence case. (Applied in code on every export.)",
+    active: true,
+  },
+  {
+    id: "liam-faq-h3",
+    source: "Liam, house rules (21 Sep)",
+    date: "2026-09-21",
+    rule: "FAQ questions are H3 headings, not bold paragraphs. (Applied in code on every export.)",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",

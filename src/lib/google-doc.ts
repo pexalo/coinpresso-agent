@@ -122,7 +122,7 @@ export interface Faq {
 }
 
 type Block =
-  | { kind: "H1" | "H2" | "P"; raw: string }
+  | { kind: "H1" | "H2" | "H3" | "P"; raw: string }
   /** One list item. `ordered` picks the bullet preset; items are grouped by adjacency. */
   | { kind: "LI"; raw: string; ordered: boolean }
   | { kind: "TABLE"; cells: string[][] };
@@ -141,6 +141,11 @@ export function buildDoc(
     const t = para.trim();
     if (!t) continue;
 
+    const h3 = t.match(/^###\s+(.*)$/s);
+    if (h3) {
+      blocks.push({ kind: "H3", raw: h3[1].trim() });
+      continue;
+    }
     const h2 = t.match(/^##\s+(.*)$/s);
     if (h2) {
       blocks.push({ kind: "H2", raw: h2[1].trim() });
@@ -180,13 +185,14 @@ export function buildDoc(
   if (faqs.length) {
     blocks.push({ kind: "H2", raw: "FAQs" });
     for (const f of faqs) {
-      blocks.push({ kind: "P", raw: `**${f.q}**` });
+      // Liam, 21 Sep: FAQ questions are H3s.
+      blocks.push({ kind: "H3", raw: f.q });
       blocks.push({ kind: "P", raw: f.a });
     }
   }
 
   let text = "";
-  const headings: Array<Span & { style: "HEADING_1" | "HEADING_2" }> = [];
+  const headings: Array<Span & { style: "HEADING_1" | "HEADING_2" | "HEADING_3" }> = [];
   const bolds: Span[] = [];
   const links: Array<Span & { url: string }> = [];
   const tables: DocTable[] = [];
@@ -223,7 +229,7 @@ export function buildDoc(
       headings.push({
         start,
         end: text.length,
-        style: b.kind === "H1" ? "HEADING_1" : "HEADING_2",
+        style: b.kind === "H1" ? "HEADING_1" : b.kind === "H3" ? "HEADING_3" : "HEADING_2",
       });
     }
   }

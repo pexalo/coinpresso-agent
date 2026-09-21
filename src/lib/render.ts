@@ -36,11 +36,48 @@ export function renderPlainText(run: Run): string {
   return parts.join("\n");
 }
 
+/**
+ * Liam, 21 Sep: "All headings should be title case (capital letter at start of
+ * each word apart from unimportant words such as 'a' and 'the')". FAQ
+ * questions are exempt — they live outside the body and are not touched.
+ * The first and last word are always capitalised; after a hyphen the word is
+ * left as written ("Crypto-specific"), which is how he wrote them.
+ */
+const MINOR_WORDS = new Set([
+  "a", "an", "the", "and", "but", "or", "nor", "for", "so", "yet",
+  "as", "at", "by", "in", "of", "off", "on", "per", "to", "up", "via", "vs", "vs.",
+]);
+export function titleCase(heading: string): string {
+  const words = heading.split(/(\s+)/);
+  const real = words.map((w, i) => (i % 2 ? null : w)).filter((w) => w !== null && w !== "") as string[];
+  let n = -1;
+  return words
+    .map((w, i) => {
+      if (i % 2 || !w) return w;
+      n++;
+      const lead = w.match(/^[^A-Za-z0-9]*/)?.[0] ?? "";
+      const core = w.slice(lead.length);
+      if (!core) return w;
+      const bare = core.toLowerCase().replace(/[^a-z.]/g, "");
+      const edge = n === 0 || n === real.length - 1;
+      if (!edge && MINOR_WORDS.has(bare)) return lead + core.toLowerCase();
+      // Leave acronyms and mixed case (FAQs, llms.txt, DeFi) alone.
+      if (/[A-Z]/.test(core.slice(1)) || /\./.test(core)) return w;
+      return lead + core[0].toUpperCase() + core.slice(1);
+    })
+    .join("");
+}
+
+export function titleCaseHeadings(body: string): string {
+  return body.replace(/^(#{2,3})[ \t]+(.+)$/gm, (_m, hashes: string, text: string) => `${hashes} ${titleCase(text.trim())}`);
+}
+
 /** See normaliseConclusionHeading in the writer — this catches drafts written before it. */
 export function bodyOf(d: { body: string; faqs: unknown[] }): string {
-  return d.faqs.length
+  const body = d.faqs.length
     ? d.body.replace(/^(##\s+)Conclusion\s+(?:and|&|\+)\s+FAQs?[ \t]*$/im, "$1Conclusion")
     : d.body;
+  return titleCaseHeadings(body);
 }
 
 export function renderMarkdown(run: Run): string {
@@ -49,7 +86,7 @@ export function renderMarkdown(run: Run): string {
   const parts = [`# ${d.headline}`, "", bodyOf(d), ""];
   if (d.faqs.length) {
     parts.push("## FAQs", "");
-    d.faqs.forEach((f) => parts.push(`**${f.q}**`, "", f.a, ""));
+    d.faqs.forEach((f) => parts.push(`### ${f.q}`, "", f.a, ""));
   }
   if (d.tags.length) parts.push(`**Tags:** ${d.tags.join(", ")}`);
   return parts.join("\n");

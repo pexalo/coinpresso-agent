@@ -26,6 +26,8 @@ export interface ImageVersion {
   section?: string;
   /** The brief the operator wrote, for a section image. */
   brief?: string;
+  /** A caption for a section image. The featured image has none. */
+  caption?: string;
   /** The scene brief the designer wrote, kept so a good one can be reused. */
   prompt: string;
   /** What the operator asked for on a regenerate, if anything. */
