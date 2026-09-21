@@ -738,7 +738,35 @@ export const COMPETITOR_DOMAINS: string[] = [
   "northbeam.io",
   "tryflint.com",
   "coincile.io",
+  // Google Ads / PPC agencies that surfaced on the Circumventing Systems piece
+  "almcorp.com",
+  "growthify.in",
 ];
+
+/**
+ * A static list cannot name every agency on the internet. Almcorp and
+ * Growthify reached a client Doc because neither was on it. So a host that
+ * reads as a marketing shop — "growth", "seo", "ppc", "agency" in the name —
+ * is treated as one too, unless it is a platform, regulator or publisher we
+ * know to be a primary source.
+ */
+const VENDOR_HOST_WORDS = /(agency|agencies|marketing|growth|seo|ppc|adsagency|digitalmedia|leadgen|funnel|clicks|webdesign)/;
+const PRIMARY_HOSTS = [
+  "google.com", "blog.google", "about.google", "youtube.com", "meta.com", "facebook.com",
+  "x.com", "twitter.com", "linkedin.com", "microsoft.com", "apple.com", "tiktok.com",
+  "sec.gov", "cftc.gov", "fca.org.uk", "esma.europa.eu", "europa.eu", "gov.uk",
+  "coindesk.com", "theblock.co", "cointelegraph.com", "decrypt.co", "reuters.com",
+  "bloomberg.com", "ft.com", "wsj.com", "searchengineland.com", "searchenginejournal.com",
+  "marketingland.com", "shopify.com", "wikipedia.org", "github.com",
+];
+function isPrimaryHost(host: string): boolean {
+  return PRIMARY_HOSTS.some((d) => host === d || host.endsWith("." + d)) || /\.gov(\.[a-z]{2})?$/.test(host);
+}
+export function looksLikeVendorHost(host: string): boolean {
+  if (isPrimaryHost(host)) return false;
+  const name = host.split(".").slice(0, -1).join(".");
+  return VENDOR_HOST_WORDS.test(name);
+}
 
 /**
  * Is this ledger still worth writing from?
@@ -757,13 +785,13 @@ export const COMPETITOR_DOMAINS: string[] = [
  */
 export const MIN_CITABLE_SOURCES = 3;
 
-export function ledgerIsViable(sources: Array<{ url: string }>): {
+export function ledgerIsViable(sources: Array<{ url: string; publisherType?: string }>): {
   viable: boolean;
   citable: number;
   blocked: number;
   reason?: string;
 } {
-  const blocked = sources.filter((x) => isCompetitorUrl(x.url)).length;
+  const blocked = sources.filter((x) => isCompetitorUrl(x.url) || x.publisherType === "vendor").length;
   const citable = sources.length - blocked;
   if (citable < MIN_CITABLE_SOURCES) {
     return {
@@ -790,7 +818,7 @@ export function ledgerIsViable(sources: Array<{ url: string }>): {
 export function isCompetitorUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
-    return COMPETITOR_DOMAINS.some((d) => host === d || host.endsWith("." + d));
+    return COMPETITOR_DOMAINS.some((d) => host === d || host.endsWith("." + d)) || looksLikeVendorHost(host);
   } catch {
     return false;
   }

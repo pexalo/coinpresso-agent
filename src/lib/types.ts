@@ -101,6 +101,11 @@ export interface Source {
   /** What this source is being used to support. */
   claim: string;
   kind: "prediction" | "news" | "market_data" | "onchain" | "project";
+  /**
+   * Who published it. "vendor" = any agency, consultancy or tool selling
+   * marketing, ads, SEO, PR or analytics — never cited on Coinpresso's blog.
+   */
+  publisherType?: "primary" | "press" | "vendor";
   /** Figures quoted from it, so the reviewer can check the writer didn't drift. */
   figures?: string[];
   /** Filled by the link checker. */

@@ -31,7 +31,7 @@ console.log("the exemplar passes everything it inspired:");
 {
   const md = draft(EXEMPLAR);
   for (const [name, fn] of [
-    ["anchor length", enforceAnchorLength],
+    ["anchor length (after the code shortens it)", (m) => enforceAnchorLength(shortenAnchors(m))],
     ["link spacing", enforceLinkSpacing],
     ["paragraph size", enforceParagraphSize],
     ["sentence variety", enforceSentenceVariety],
@@ -122,7 +122,8 @@ console.log("american spelling (his inline edits):");
 
 console.log("the three cleared drafts, americanized, still pass every check:");
 for (const f of ["1-schema-markup-checklist","2-crypto-comparison-pages","3-how-ai-evaluates-defi-exchanges"]) {
-  const md = americanize(draft(f));
+  // Anchors are capped at 5 words since Liam's 21 Sep review; the code shortens them.
+  const md = shortenAnchors(americanize(draft(f)));
   const errs = [enforceAnchorLength, enforceLinkSpacing, enforceParagraphSize]
     .map((fn) => throws(() => fn(md))).filter(Boolean);
   ok(`${f}: anchors, spacing and paragraphs`, errs.length === 0, errs[0]);
@@ -135,22 +136,30 @@ console.log("shortenAnchors — the fix that replaced three paid retries:");
   const liam = `Coinbase announced it was [signing a deal to acquire up to 90 million MORPHO tokens over four years](${url}), which surprised nobody.`;
   const out = shortenAnchors(liam);
   ok("the offending anchor no longer fails the check", throws(() => enforceAnchorLength(out)) === null, out);
-  ok("cut at the last natural boundary, not mid-phrase",
-     out.includes(`[signing a deal to acquire up to 90 million MORPHO tokens](${url}) over four years, which`), out);
-  ok("nothing else in the sentence changed", out.startsWith("Coinbase announced it was [") && out.endsWith("surprised nobody."));
+  ok("an external anchor with a figure keeps the figure and its noun",
+     out.includes(`acquire up to [90 million MORPHO tokens](${url}) over four years, which`), out);
+  ok("nothing else in the sentence changed", out.startsWith("Coinbase announced it was signing") && out.endsWith("surprised nobody."));
+  const g = shortenAnchors(`Google [blocked or removed over 8.3 billion ads in 2025 alone](https://blog.google/x) last year.`);
+  ok("Liam's example: '8.3 billion ads'", g.includes("[8.3 billion ads](https://blog.google/x) in 2025 alone"), g);
+  const t = shortenAnchors(`One account, [posted in a Google Ads community thread](https://community.shopify.com/t/1), says so.`);
+  ok("Liam's example: the noun at the end", t.includes("posted in a [Google Ads community thread](https://community.shopify.com/t/1), says"), t);
+  const r = shortenAnchors(`A disapproval is [normally cleared by editing and resubmitting](https://support.google.com/x) the asset.`);
+  ok("tail after a preposition", r.includes("normally cleared by [editing and resubmitting](https://support.google.com/x) the asset"), r);
+  const inner = shortenAnchors(`See our [crypto Google Ads practice for regulated exchanges](https://coinpresso.io/crypto-google-ads).`);
+  ok("internal anchors keep the topic at the front", inner.includes("[crypto Google Ads practice](https://coinpresso.io/crypto-google-ads) for regulated exchanges"), inner);
 
   const short = `See [our crypto GEO guide](${url}) for more.`;
   ok("a short anchor is untouched", shortenAnchors(short) === short);
 
   const noBoundary = `[alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi](${url}) end.`;
   const nb = shortenAnchors(noBoundary);
-  ok("with no boundary word it cuts at the limit", nb.startsWith(`[alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu](${url}) nu xi end.`), nb);
+  ok("with no boundary word it cuts at the limit", nb.startsWith(`[alpha beta gamma delta epsilon](${url}) zeta`), nb);
 
   const comma = `[one two three four five six seven eight nine ten eleven, twelve thirteen fourteen](${url}).`;
   ok("trailing punctuation does not end up inside the link", !/,\]\(/.test(shortenAnchors(comma)), shortenAnchors(comma));
 
   const early = `[to be clear about this the deal was signed on Tuesday morning in Zurich](${url}) x.`;
-  ok("never cuts to fewer than three words", wordsInAnchor(shortenAnchors(early)) >= 3, shortenAnchors(early));
+  ok("never cuts to fewer than two words", wordsInAnchor(shortenAnchors(early)) >= 2, shortenAnchors(early));
 
   const code = "```\n[a b c d e f g h i j k l m n o](https://x.com)\n```\n\n" + liam;
   const c = shortenAnchors(code);
@@ -427,10 +436,10 @@ console.log("link counts are soft, invented URLs are hard:");
   ok("two internal links is not a HARD fault", throws(() => enforceLinks(two, 5, known, undefined, "hard")) === null,
      throws(() => enforceLinks(two, 5, known, undefined, "hard")));
   const softErr = throws(() => enforceLinks(two, 5, known, undefined, "soft"));
-  ok("…but it is a SOFT note", softErr !== null && /2 internal links/.test(softErr), softErr);
+  ok("…but it is a SOFT note", softErr !== null && /2 related internal links/.test(softErr), softErr);
   const invented = `See [crypto PPC](https://coinpresso.io/made-up-page).`;
   ok("an invented URL is HARD", /not a page/.test(throws(() => enforceLinks(invented, 5, known, undefined, "hard")) ?? ""));
-  ok("'all' still reports everything", /2 internal/.test(throws(() => enforceLinks(two, 5, known)) ?? ""));
+  ok("'all' still reports everything", /2 related internal/.test(throws(() => enforceLinks(two, 5, known)) ?? ""));
 }
 
 console.log("trimLinks no longer strips the links the check demands:");

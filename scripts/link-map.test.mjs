@@ -211,7 +211,7 @@ console.log("the conclusion does not introduce a page the body never discussed:"
   const liam = `## Why attribution is hard\n\nWallet connects are not conversions, and [crypto PPC](${P}) reporting collapses them.\n\n## Conclusion\n\nOur work on [Web3 PR](${W}) covers the policy side. [Contact Coinpresso](${C}).`;
   const err = throws(() => enforceLinks(liam, 5, known, undefined, "soft"));
   ok("Web3 PR in the conclusion of a PPC piece is flagged", /never discusses/.test(err ?? "") && /Web3 PR/.test(err ?? ""), err);
-  ok("the contact page in the conclusion is fine", !/contact/.test(err ?? ""));
+  ok("the contact page in the conclusion is fine", !/never discusses[^;]*contact/i.test(err ?? ""));
   const fine = `## Why PR matters\n\nGood [Web3 PR](${W}) sets the record.\n\n## Conclusion\n\nSee the [Web3 PR](${W}) page.`;
   ok("a page the body discussed may be linked in the close", !/never discusses/.test(throws(() => enforceLinks(fine, 5, known, undefined, "soft")) ?? ""));
 }

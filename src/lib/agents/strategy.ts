@@ -115,6 +115,11 @@ RULES
    circumstances. Gives them a free backlink. Gives them clout for the intent
    we are looking to capture." If the only source for a claim is a rival's
    blog, the claim goes unmade.
+   Label every source's "publisherType": "primary" (the platform, regulator,
+   exchange, protocol or data publisher), "press" (independent trade or news
+   press) or "vendor" (ANY company that sells marketing, ads, SEO, PPC, PR,
+   analytics or consulting — including its blog and guides). Vendors are
+   dropped automatically, so do not build a claim on one.
 5. Identify the real buyer question underneath the keyword — what a founder is
    actually worried about, not the search string.
 6. Note honestly where Coinpresso would need its own campaign data to make the
@@ -280,7 +285,7 @@ Research this and return JSON:
       : ""
   }
   "riskNotes": ["anything unverifiable, or where Coinpresso data is needed and absent"],
-  "sources": [{ "id": "s1", "publisher": "...", "title": "...", "url": "https://...", "claim": "...", "kind": "news | market_data | project", "figures": ["..."] }]
+  "sources": [{ "id": "s1", "publisher": "...", "title": "...", "url": "https://...", "claim": "...", "kind": "news | market_data | project", "publisherType": "primary | press | vendor", "figures": ["..."] }]
 }`;
 
   const r = await callClaude({
@@ -310,8 +315,8 @@ Research this and return JSON:
   // them, so a rival's blog cannot be cited even if the model ignored the
   // instruction above. The dropped ones are kept on the research record so
   // the operator can see what was excluded and why.
-  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url));
-  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url));
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor");
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor");
   if (dropped.length) {
     research.riskNotes = [
       ...(research.riskNotes || []),
@@ -406,8 +411,8 @@ ${schemaBlock()}`;
   // them, so a rival's blog cannot be cited even if the model ignored the
   // instruction above. The dropped ones are kept on the research record so
   // the operator can see what was excluded and why.
-  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url));
-  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url));
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor");
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor");
   if (dropped.length) {
     research.riskNotes = [
       ...(research.riskNotes || []),

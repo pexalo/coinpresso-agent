@@ -809,6 +809,113 @@ export function enforceNoExemplarPhrases(body: string): void {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Review of the Circumventing Systems draft, 21 Sep. Each of these reached the
+// client's Doc and had to be fixed by hand. All are soft: they go back to the
+// writer as a revision pass, never fail a run.
+// ---------------------------------------------------------------------------
+
+const STOP = new Set(("the a an and or but of to in on at by for with from as is are was were be been it its this that these those " +
+  "you your we our they their not no so if than then there here what which who when where how can will would should could " +
+  "just only more most less into over under about after before because while also very much such any each every one").split(" "));
+
+function contentWords(sentence: string): Set<string> {
+  return new Set(
+    unlink(sentence).toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3 && !STOP.has(w))
+  );
+}
+
+/** The same point made twice in the body — "disapproval = one ad" said three times. */
+export function enforceNoRepetition(body: string): void {
+  // Within a section only. Across sections a post legitimately picks a thread
+  // back up; the fault Liam's review caught was one section saying its own
+  // point three times.
+  const sentences = proseOf(body)
+    .split(/^##\s+/m)
+    .flatMap((section, si) =>
+      paragraphsOf(section)
+        .filter((p) => !LIST_ITEM.test(p))
+        .flatMap((p) => p.split(/(?<=[.!?])\s+/))
+        .map((t) => ({ t, si, w: contentWords(t) }))
+    )
+    .filter((x) => x.w.size >= 5);
+  const pairs: string[] = [];
+  for (let i = 0; i < sentences.length; i++) {
+    for (let j = i + 1; j < sentences.length; j++) {
+      if (sentences[i].si !== sentences[j].si) continue;
+      const a = sentences[i].w, b = sentences[j].w;
+      const shared = [...a].filter((w) => b.has(w)).length;
+      // Overlap against the shorter sentence: a restatement is usually the
+      // short version of a point a longer sentence already made.
+      const overlap = shared / Math.min(a.size, b.size);
+      if (shared >= 5 && overlap >= 0.5) pairs.push(`"${unlink(sentences[j].t).slice(0, 90)}…" repeats an earlier sentence`);
+    }
+  }
+  if (!pairs.length) return;
+  throw new Error(
+    `the draft makes the same point more than once. Say each point once, in the section where it belongs, and cut the restatement (the FAQs may recap; the body should not):\n${pairs.slice(0, 4).map((x) => `      ${x}`).join("\n")}`
+  );
+}
+
+/** The writer narrating its own sourcing: "we hold no data… we won't pretend otherwise". */
+const META_COMMENTARY = [
+  /\b(we('re| are)|i('m| am)) not going to pretend otherwise\b/i,
+  /\bholds? no (internal )?data\b/i,
+  /\b(we|coinpresso) (do(es)?n'?t|do(es)? not) have (any )?(internal |our own )?data\b/i,
+  /\bdressing (it )?up\b/i,
+  /\b(no|not a) (figure|number|statistic)s? (we|that we) (can|could) (cite|verify)\b/i,
+];
+export function enforceNoMetaCommentary(body: string): void {
+  const prose = proseOf(body);
+  const hits = META_COMMENTARY.filter((re) => re.test(prose));
+  if (!hits.length) return;
+  throw new Error(
+    `the draft tells the reader what data Coinpresso does not have. That is a note to the editor, not copy. Where a figure is missing, state what the reader can rely on (e.g. "Google publishes no timeline") and move on.`
+  );
+}
+
+/** A table of dated rows reads as real records unless it is introduced as an example. */
+export function enforceExampleTablesLabelled(body: string): void {
+  const blocks = body.split(/\n{2,}/);
+  const bad: number[] = [];
+  blocks.forEach((b, i) => {
+    if (!b.trim().startsWith("|")) return;
+    if (!/\b(19|20)\d{2}-\d{2}-\d{2}\b|\b\d{1,2} (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(b)) return;
+    const lead = (blocks[i - 1] ?? "").toLowerCase();
+    if (!/\b(example|illustrat|sample|hypothetical|for instance)\w*/.test(lead)) bad.push(i);
+  });
+  if (!bad.length) return;
+  throw new Error(
+    `a table with dates and named owners is presented as if it were a real record. Introduce it as an example ("Here's an example of how the log should look:") so no reader takes it for client data.`
+  );
+}
+
+/** The raw search string dropped into a sentence: "Google Ads circumventing systems crypto cases". */
+export function enforceNaturalKeyword(body: string, keyword?: string): void {
+  if (!keyword) return;
+  const kw = keyword.trim().toLowerCase();
+  if (kw.split(/\s+/).length < 4) return;
+  const prose = unlink(proseOf(body)).toLowerCase();
+  const body_ = paragraphsOf(prose).join("\n");
+  if (!body_.includes(kw)) return;
+  throw new Error(
+    `the exact search phrase "${keyword}" is dropped into a sentence as it was typed. It reads as keyword stuffing. Put the idea in natural word order ("Circumventing Systems cases in crypto"); the title and headings carry the keyword.`
+  );
+}
+
+/** Counts and timeframes stated as fact with no source in the paragraph. */
+const UNSOURCED_SPECIFIC = /\b(within (hours|days|minutes|weeks)( or (hours|days|weeks))?|(two|three|four|five|six|seven|eight|nine|ten) ([a-z-]+ ){0,2}(categories|classes|tiers))\b/i;
+export function enforceSourcedSpecifics(body: string): void {
+  const hits = paragraphsOf(body)
+    .filter((p) => !/\]\(https?:\/\//.test(p))
+    .map((p) => unlink(p).match(UNSOURCED_SPECIFIC)?.[0])
+    .filter(Boolean) as string[];
+  if (!hits.length) return;
+  throw new Error(
+    `specific counts or timeframes are stated with no source in the paragraph: ${hits.map((h) => `"${h}"`).join(", ")}. Cite the source from the ledger, or soften it ("several categories", "very likely to be flagged again").`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -988,8 +1095,11 @@ export function enforceLinks(
   const hard: string[] = [];
   const soft: string[] = [];
 
-  if (internal.size < MIN_INTERNAL_LINKS) {
-    soft.push(`${internal.size} internal link${internal.size === 1 ? "" : "s"} to coinpresso.io (needs 3-5)`);
+  // The contact page is a call to action, not a related page. The Circumventing
+  // Systems draft met the floor with two service pages and /contact.
+  const relatedInternal = [...internal].filter((u) => !/\/contact(-us)?\/?$/i.test(u));
+  if (relatedInternal.length < MIN_INTERNAL_LINKS) {
+    soft.push(`${relatedInternal.length} related internal link${relatedInternal.length === 1 ? "" : "s"} to coinpresso.io, not counting the contact page (needs 3-5: service pages in this cluster plus at least one related Coinpresso post)`);
   } else if (internal.size > 5) {
     soft.push(`${internal.size} internal links (the client asked for 3-5 — more reads as stuffing)`);
   }
@@ -1275,8 +1385,10 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   //
   // So the filter runs wherever the ledger is USED. An old run is cured by a
   // retry rather than by re-buying research.
-  const blockedSources = research.sources.filter((x) => isCompetitorUrl(x.url));
-  const citable = research.sources.filter((x) => !isCompetitorUrl(x.url));
+  const isVendor = (x: { url: string; publisherType?: string }) =>
+    isCompetitorUrl(x.url) || x.publisherType === "vendor";
+  const blockedSources = research.sources.filter(isVendor);
+  const citable = research.sources.filter((x) => !isVendor(x));
   const sourceLedger = citable
     .map(
       (x) =>
@@ -1359,6 +1471,24 @@ courtesies." Same facts. The second one has a person in it — a turn of phrase,
 a dry aside, the register of someone explaining it across a desk. Write the
 opening that way. Do not restate the title in a formal voice and call it an
 introduction.
+
+SAY EACH POINT ONCE. Make it in the section where it belongs; do not restate it
+two paragraphs later in different words. The FAQs may recap; the body may not.
+
+NO NOTES TO THE EDITOR IN THE COPY. Never tell the reader what data Coinpresso
+lacks or that you "won't pretend otherwise". If a figure is missing, say what
+the reader can rely on and move on.
+
+EXAMPLES ARE LABELLED. A table or scenario you made up to illustrate a point is
+introduced as an example ("Here's an example of how the log should look:").
+
+SPECIFICS NEED A SOURCE. A count ("four categories") or a timeframe ("within
+hours") is either cited from the ledger in the same paragraph or softened.
+
+KEYWORDS IN NATURAL ORDER. Never drop the search phrase into a sentence as typed.
+
+LINK TEXT IS SHORT: two to five words, the phrase a reader would click — "8.3
+billion ads", not "blocked or removed over 8.3 billion ads in 2025 alone".
 
 THE EXAMPLE IS THE REGISTER, NOT THE WORDS. Do not reuse "oops-a-daisy" or any
 phrase from that example. A phrase that lands once reads as a tic the second
@@ -1607,7 +1737,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // Surplus links come off on every attempt. This only ever removes, so
       // there is nothing to be gained by spending a paid attempt discovering
       // the writer overshot a cap it cannot count to.
-      parsed.body = trimLinks(parsed.body, pillar?.hub);
+      parsed.body = trimLinks(unlinkCompetitors(parsed.body), pillar?.hub, 5, MAX_EXTERNAL_LINKS);
 
       // House spelling is American. Mechanical, so it is corrected on every
       // attempt rather than spending a paid one telling the writer that
@@ -1638,7 +1768,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
           ...f,
           a: tidyPunctuation(
             stripAiOpeners(
-              shortenAnchors(nameAnchors(repairInternalLinks(americanize(f.a), knownPages), knownPages))
+              shortenAnchors(nameAnchors(repairInternalLinks(unlinkCompetitors(americanize(f.a)), knownPages), knownPages))
             )
           ),
         }))
@@ -1695,6 +1825,11 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceLinkSpacing(parsed.body),
         () => enforceParagraphSize(parsed.body),
         () => enforceSentenceVariety(parsed.body),
+        () => enforceNoRepetition(parsed.body),
+        () => enforceNoMetaCommentary(parsed.body),
+        () => enforceExampleTablesLabelled(parsed.body),
+        () => enforceNaturalKeyword(parsed.body, research.primaryKeyword),
+        () => enforceSourcedSpecifics(parsed.body),
       ]).map((f) => f.replace(/\s*Retry the writer\.\s*$/, "").trim());
 
       if (fixedStructure) {
@@ -1952,7 +2087,7 @@ Start your reply with ===HEADLINE=== and end it after the tags line.`;
 // ---------------------------------------------------------------------------
 
 /** Anchors this long stop being anchors and become the sentence. */
-const ANCHOR_MAX_WORDS = 12;
+const ANCHOR_MAX_WORDS = 5;
 /** Two links closer than this read as stuffed rather than scattered. */
 const LINK_MIN_GAP_WORDS = 15;
 /** One close pair is a citation beside its source. Several is the fault. */
@@ -2014,7 +2149,7 @@ const ANCHOR_BREAK_WORDS = new Set([
   "through", "during", "while", "because", "but", "or", "than", "until",
 ]);
 /** An anchor shorter than this is no longer the phrase a reader would click. */
-const ANCHOR_MIN_WORDS = 3;
+const ANCHOR_MIN_WORDS = 2;
 
 /**
  * Shorten every over-long anchor, keeping the rest of the claim as prose.
@@ -2254,21 +2389,60 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
     .join("");
 }
 
+/**
+ * Liam, 21 Sep review of Circumventing Systems: "blocked or removed over 8.3
+ * billion ads in 2025 alone" and "posted in a Google Ads community thread"
+ * are sentences, not anchors. The cap was 12 words, which let both through.
+ * It is now 5, and an external anchor is cut to the phrase a reader would
+ * click — the figure ("8.3 billion ads") or the noun at the end ("Google Ads
+ * community thread") — not merely the first five words.
+ *
+ * Internal anchors are still cut from the end: nameAnchors put the page's
+ * topic at the front and it has to survive.
+ */
+const TAIL_BREAK_WORDS = new Set([...ANCHOR_BREAK_WORDS, "a", "an", "the", "its", "their", "our", "your"]);
+
+function pickAnchor(words: string[], internal: boolean): [number, number] {
+  const n = words.length;
+  const bare = (w: string) => w.toLowerCase().replace(/[^a-z]/g, "");
+  if (!internal) {
+    // 1. A figure: the number and the noun after it.
+    const at = words.findIndex((w) => /\d/.test(w));
+    if (at >= 0) {
+      let end = at + 1;
+      while (end < n && end - at < 4 && !ANCHOR_BREAK_WORDS.has(bare(words[end]))) end++;
+      if (end - at >= 2) return [at, end];
+    }
+    // 2. The noun phrase at the end, after the last article or preposition.
+    for (let i = n - 1; i >= 0; i--) {
+      const rest = n - 1 - i;
+      if (rest > ANCHOR_MAX_WORDS) break;
+      if (rest >= ANCHOR_MIN_WORDS && TAIL_BREAK_WORDS.has(bare(words[i]))) return [i + 1, n];
+    }
+  }
+  // 3. From the front, cut at the last natural boundary inside the limit.
+  let cut = ANCHOR_MAX_WORDS;
+  for (let i = ANCHOR_MAX_WORDS; i >= ANCHOR_MIN_WORDS + 1; i--) {
+    if (ANCHOR_BREAK_WORDS.has(bare(words[i]))) {
+      cut = i;
+      break;
+    }
+  }
+  return [0, cut];
+}
+
 export function shortenAnchors(body: string): string {
+  const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const fix = (prose: string) =>
     prose.replace(/\[([^\]]+)\]\(([^)]*)\)/g, (whole, text: string, url: string) => {
       const words = text.trim().split(/\s+/);
       if (words.length <= ANCHOR_MAX_WORDS) return whole;
-      let cut = ANCHOR_MAX_WORDS;
-      for (let i = ANCHOR_MAX_WORDS; i >= ANCHOR_MIN_WORDS; i--) {
-        if (ANCHOR_BREAK_WORDS.has(words[i].toLowerCase().replace(/[^a-z]/g, ""))) {
-          cut = i;
-          break;
-        }
-      }
-      const anchor = words.slice(0, cut).join(" ").replace(/[,;:]+$/, "");
-      const rest = words.slice(cut).join(" ");
-      return `[${anchor}](${url}) ${rest}`;
+      const [a, b] = pickAnchor(words, isInternal(url));
+      const anchor = words.slice(a, b).join(" ").replace(/[,;:]+$/, "");
+      const trail = words.slice(a, b).join(" ").match(/[,;:]+$/)?.[0] ?? "";
+      const before = words.slice(0, a).join(" ");
+      const after = words.slice(b).join(" ");
+      return [before, `[${anchor}](${url})${trail}`, after].filter(Boolean).join(" ");
     });
 
   // Only prose. Splitting on fences keeps the odd segments (code) untouched.
@@ -2276,6 +2450,17 @@ export function shortenAnchors(body: string): string {
     .split(/(```[\s\S]*?```)/)
     .map((seg, i) => (i % 2 ? seg : fix(seg)))
     .join("");
+}
+
+/**
+ * A competitor link in the draft loses its link and keeps its words. The
+ * hard check stays as the invariant; this means a run is not rejected and
+ * re-billed for something the code can settle.
+ */
+export function unlinkCompetitors(body: string): string {
+  return body.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (whole, text: string, url: string) =>
+    isCompetitorUrl(url) ? text : whole
+  );
 }
 
 export function enforceAnchorLength(body: string): void {
