@@ -576,3 +576,49 @@ export async function uploadImageToDrive(
     folder,
   };
 }
+
+/**
+ * The reviewer's comments on a Doc, with the text each one is anchored to.
+ * Comments carry the WHY that an edit alone does not: "add 'crypto' to the
+ * anchor — programmatic advertising on its own means Web2 ads".
+ */
+export interface DocComment {
+  author: string;
+  text: string;
+  quote?: string;
+  replies: string[];
+  resolved: boolean;
+}
+
+export async function readDocComments(docUrl: string): Promise<DocComment[]> {
+  const sa = credentials();
+  if (!sa) return [];
+  const id = docUrl.match(/\/document\/d\/([^/]+)/)?.[1];
+  if (!id) return [];
+  const token = await accessToken(sa);
+  const fields = "comments(content,resolved,deleted,author/displayName,quotedFileContent/value,replies(content,deleted))";
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${id}/comments?pageSize=100&fields=${encodeURIComponent(fields)}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) return [];
+  const json = (await res.json()) as {
+    comments?: Array<{
+      content?: string;
+      resolved?: boolean;
+      deleted?: boolean;
+      author?: { displayName?: string };
+      quotedFileContent?: { value?: string };
+      replies?: Array<{ content?: string; deleted?: boolean }>;
+    }>;
+  };
+  return (json.comments ?? [])
+    .filter((c) => !c.deleted && c.content?.trim())
+    .map((c) => ({
+      author: c.author?.displayName ?? "",
+      text: c.content!.trim(),
+      quote: c.quotedFileContent?.value?.trim() || undefined,
+      replies: (c.replies ?? []).filter((r) => !r.deleted && r.content?.trim()).map((r) => r.content!.trim()),
+      resolved: Boolean(c.resolved),
+    }));
+}
