@@ -917,6 +917,35 @@ export function enforceSourcedSpecifics(body: string): void {
   );
 }
 
+/**
+ * Liam links the homepage in the opening, on "crypto marketing" — he did it
+ * by hand on Circumventing Systems and again on Crypto PPC Attribution
+ * (21 Sep). If the phrase is already in the intro, the code links it; if it
+ * is not, the writer gets a note to work it in.
+ */
+const HOMEPAGE = "https://coinpresso.io/";
+const introOf = (body: string) => body.split(/^##\s+/m)[0];
+const hasHomepageLink = (text: string) => /\]\(https?:\/\/(www\.)?coinpresso\.io\/?\)/i.test(text);
+
+export function linkHomepageInOpening(body: string): string {
+  const intro = introOf(body);
+  if (hasHomepageLink(body)) return body;
+  // Only an unlinked "crypto marketing" that is not already inside [..].
+  const re = /(^|[^\[\w])(crypto marketing)(?![^\[]*\])(?!\w)/i;
+  const m = intro.match(re);
+  if (!m || m.index === undefined) return body;
+  const at = m.index + m[1].length;
+  const fixed = intro.slice(0, at) + `[${m[2]}](${HOMEPAGE})` + intro.slice(at + m[2].length);
+  return fixed + body.slice(intro.length);
+}
+
+export function enforceHomepageInOpening(body: string): void {
+  if (hasHomepageLink(introOf(body))) return;
+  throw new Error(
+    `the opening does not link the Coinpresso homepage. The client links it in the first two paragraphs on the words "crypto marketing" (e.g. "a lot of [crypto marketing](${HOMEPAGE}) teams reading this"). Work the phrase in naturally and link it.`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -1740,7 +1769,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // Surplus links come off on every attempt. This only ever removes, so
       // there is nothing to be gained by spending a paid attempt discovering
       // the writer overshot a cap it cannot count to.
-      parsed.body = trimLinks(unlinkCompetitors(parsed.body), pillar?.hub, 5, MAX_EXTERNAL_LINKS);
+      parsed.body = trimLinks(linkHomepageInOpening(unlinkCompetitors(parsed.body)), pillar?.hub, 5, MAX_EXTERNAL_LINKS);
 
       // House spelling is American. Mechanical, so it is corrected on every
       // attempt rather than spending a paid one telling the writer that
@@ -1829,6 +1858,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceParagraphSize(parsed.body),
         () => enforceSentenceVariety(parsed.body),
         () => enforceNoRepetition(parsed.body),
+        () => enforceHomepageInOpening(parsed.body),
         () => enforceNoMetaCommentary(parsed.body),
         () => enforceExampleTablesLabelled(parsed.body),
         () => enforceNaturalKeyword(parsed.body, research.primaryKeyword),

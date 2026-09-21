@@ -128,6 +128,20 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-homepage-in-opening",
+    source: "Liam, Circumventing Systems and Crypto PPC Attribution Docs (21 Sep)",
+    date: "2026-09-21",
+    rule: "Link the Coinpresso homepage (https://coinpresso.io/) in the opening two paragraphs, on the words \"crypto marketing\" — e.g. \"a lot of crypto marketing teams reading this\". He added it by hand on both posts. (Linked in code when the phrase is there.)",
+    active: true,
+  },
+  {
+    id: "liam-section-image-captions",
+    source: "Liam, Crypto PPC Attribution Doc (21 Sep)",
+    date: "2026-09-21",
+    rule: "Every section image carries a caption directly under it: a short title for the picture in the section's own terms, sometimes with a turn of phrase — e.g. \"Building an Attribution-Confidence Report Allows Projects to 'Cut Through the Smoke' of Vanity Metrics\". The featured image has no caption.",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",

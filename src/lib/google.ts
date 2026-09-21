@@ -265,9 +265,13 @@ export async function readDocText(docUrl: string): Promise<string> {
   const id = docUrl.match(/\/document\/d\/([^/]+)/)?.[1];
   if (!id) throw new Error("That is not a Google Doc link.");
   const token = await accessToken(sa);
-  const res = await fetch(`https://docs.googleapis.com/v1/documents/${id}`, {
-    headers: { authorization: `Bearer ${token}` },
-  });
+  // Read the Doc as if every suggestion were accepted. Liam reviews in
+  // Suggesting mode; the default view returns both the suggested and the
+  // deleted text run together ("project foundersfinance").
+  const res = await fetch(
+    `https://docs.googleapis.com/v1/documents/${id}?suggestionsViewMode=PREVIEW_SUGGESTIONS_ACCEPTED`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
   if (!res.ok) throw new Error(`Docs read ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return docToMarkdown(await res.json());
 }
