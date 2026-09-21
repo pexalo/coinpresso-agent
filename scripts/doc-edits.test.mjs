@@ -1,4 +1,6 @@
-import { diffEdits, similarity } from "../src/lib/doc-edits.ts";
+import { diffEdits, similarity, applyEdits, RULE_WORTHY_DISTANCE } from "../src/lib/doc-edits.ts";
+import { docToMarkdown } from "../src/lib/google.ts";
+import { dedupe, entryKey, feedbackBlock, DOC_EDITS_IN_PROMPT } from "../src/lib/feedback.ts";
 import { COINPRESSO_PAGES, CLUSTER_NEIGHBOURS, clusterOf, clusterOfPillar } from "../src/lib/blog.ts";
 import { enforceLinkCluster, nameAnchors, enforceNoExemplarPhrases } from "../src/lib/agents/writer.ts";
 
@@ -107,6 +109,100 @@ console.log("the example's phrase is not for reuse:");
   ok("'oops-a-daisy' in a new draft is flagged", /example opening/.test(throws(() => enforceNoExemplarPhrases("It comes with none of the usual oops-a-daisy courtesies.")) ?? ""));
   ok("case and hyphens do not matter", throws(() => enforceNoExemplarPhrases("Oops a Daisy, said nobody.")) !== null);
   ok("an opening with its own aside passes", throws(() => enforceNoExemplarPhrases("Google does not send a warning, a grace period, or so much as a stern look.")) === null);
+}
+
+
+
+console.log("the Doc reads back as markdown — links, bold, bullets:");
+{
+  const doc = { body: { content: [
+    { paragraph: { paragraphStyle: { namedStyleType: "HEADING_1" }, elements: [{ textRun: { content: "Title\n" } }] } },
+    { paragraph: { elements: [
+      { textRun: { content: "Run a " } },
+      { textRun: { content: "crypto PPC", textStyle: { link: { url: "https://coinpresso.io/crypto-ppc-marketing" } } } },
+      { textRun: { content: " audit first.\n" } },
+    ] } },
+    { paragraph: { bullet: {}, elements: [
+      { textRun: { content: "Ownership. ", textStyle: { bold: true } } },
+      { textRun: { content: "Does it match?\n" } },
+    ] } },
+    { paragraph: { elements: [
+      { textRun: { content: "split ", textStyle: { link: { url: "https://a.com" } } } },
+      { textRun: { content: "link", textStyle: { link: { url: "https://a.com" } } } },
+      { textRun: { content: " here.\n" } },
+    ] } },
+    { table: {} },
+  ] } };
+  const md = docToMarkdown(doc);
+  ok("H1 comes back as '# '", md.startsWith("# Title"));
+  ok("a link comes back as a markdown link", md.includes("Run a [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) audit first."), md);
+  ok("bold hugs the words, not the trailing space", md.includes("- **Ownership.** Does it match?"), md);
+  ok("a bulleted paragraph gets '- '", /\n- \*\*Ownership/.test(md));
+  ok("a link Docs split in two is one link", md.includes("[split link](https://a.com) here."), md);
+  ok("tables are marked, not dumped", md.includes("| table |"));
+}
+
+console.log("his text goes into the draft with its links:");
+{
+  const draft = {
+    body: "Intro paragraph with [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) in it and more words besides.\n\n## Risks\n\n- **Ownership.** Are all linked accounts disclosed and consistent across the board?\n- **Scope.** Does it advertise only what it is certified for?",
+    faqs: [{ q: "Can a new account be created?", a: "No. Google treats it as circumvention by definition in every case." }],
+  };
+  const edit = (before, afterRaw, distance = 0.5) => ({ before, after: afterRaw.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\*\*/g, ""), afterRaw, distance });
+
+  // The old bug: a paragraph with a link was never found.
+  const e1 = edit("Intro paragraph with crypto PPC in it and more words besides.",
+                  "Intro, rewritten by Liam, with [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) kept in it.");
+  const r1 = applyEdits(draft, [e1]);
+  ok("a paragraph that held a link is found and replaced", r1.applied === 1, JSON.stringify(r1.missed));
+  ok("his link survives the swap", r1.draft.body.startsWith("Intro, rewritten by Liam, with [crypto PPC](https://coinpresso.io/crypto-ppc-marketing)"), r1.draft.body.slice(0, 90));
+
+  const e2 = edit("Ownership. Are all linked accounts disclosed and consistent across the board?",
+                  "**Ownership.** Are the billing entity, domain and applicant the same legal person?");
+  const r2 = applyEdits(draft, [e2]);
+  ok("a list item is replaced in place, marker kept", r2.draft.body.includes("\n- **Ownership.** Are the billing entity"), r2.draft.body);
+  ok("its neighbour is untouched", r2.draft.body.includes("- **Scope.** Does it advertise only"));
+
+  const e3 = edit("No. Google treats it as circumvention by definition in every case.", "No — and it is the fastest way to make things worse.");
+  const r3 = applyEdits(draft, [e3]);
+  ok("an FAQ answer is replaced", r3.applied === 1 && r3.draft.faqs[0].a.startsWith("No — and it is"));
+  ok("headings are never touched", applyEdits(draft, [edit("Risks", "Something else")]).applied === 0);
+  const r4 = applyEdits(draft, [edit("A paragraph that does not exist anywhere in this draft at all.", "x")]);
+  ok("an edit it cannot place is reported, not guessed", r4.applied === 0 && r4.missed.length === 1);
+  ok("the original draft object is not mutated", draft.body.startsWith("Intro paragraph with"));
+}
+
+console.log("end to end — edit in the Doc, sync, and the next diff is empty:");
+{
+  const exported = "# T\n\nThe policy doesn't weigh intent the way you might hope, and [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) teams learn it late.\n\n## A\n\nA disapproval blocks one ad and a suspension stops the account.";
+  const docMd = "# T\n\nGoogle does not care what you meant. It cares what it saw, and [crypto PPC](https://coinpresso.io/crypto-ppc-marketing) teams learn it the hard way.\n\n## A\n\nA disapproval blocks one ad and a suspension stops the account.";
+  const edits = diffEdits(exported, docMd);
+  ok("one edit found", edits.length === 1, JSON.stringify(edits));
+  ok("it carries the raw markdown", edits[0].afterRaw.includes("](https://coinpresso.io/crypto-ppc-marketing)"));
+  const draft = { body: exported.replace(/^# T\n\n/, ""), faqs: [] };
+  const { draft: synced, applied } = applyEdits(draft, edits);
+  ok("applied", applied === 1);
+  const again = diffEdits("# T\n\n" + synced.body, docMd);
+  ok("the second sync finds nothing — idempotent", again.length === 0, JSON.stringify(again));
+}
+
+console.log("edits become rules without clobbering each other:");
+{
+  const base = { rule: "The reviewer rewrote this paragraph by hand. Write the way the second version reads, not the first.", source: "Liam", date: "d", active: true, addedAt: "1", id: "a" };
+  const a = { ...base, before: "one", after: "uno" };
+  const b = { ...base, id: "b", before: "two", after: "dos" };
+  ok("same rule text, different example → both kept", dedupe([a, b]).length === 2);
+  ok("an exact repeat is dropped", dedupe([a, { ...a, id: "c" }]).length === 1);
+  ok("keys differ on the example", entryKey(a) !== entryKey(b));
+  ok("a typo fix is below the rule threshold", 0.1 < RULE_WORTHY_DISTANCE);
+
+  const many = Array.from({ length: 30 }, (_, i) => ({ ...base, id: `e${i}`, before: `b${i}`, after: `a${i}`, kind: "doc-edit", addedAt: String(1000 + i) }));
+  const written = { ...base, id: "w", rule: "Liam wrote this one on purpose.", kind: undefined };
+  const block = feedbackBlock({ entries: [written, ...many], updatedAt: "" }, "writer");
+  ok("every written rule is in the prompt", block.includes("Liam wrote this one on purpose."));
+  ok(`only the newest ${DOC_EDITS_IN_PROMPT} edits ride along`, (block.match(/Not this: "b\d+"/g) || []).length === DOC_EDITS_IN_PROMPT,
+     (block.match(/Not this: "b\d+"/g) || []).length);
+  ok("and they are the newest", block.includes('"b29"') && !block.includes('"b0"'));
 }
 
 

@@ -4,6 +4,7 @@ import { getRun, saveRun } from "@/lib/store";
 import { gateConfig, readSettings } from "@/lib/settings";
 import { getRecord } from "@/lib/approval-store";
 import { fingerprint, gateState } from "@/lib/approval";
+import { syncDocEdits } from "@/lib/doc-sync";
 import { createDraft } from "@/lib/wordpress";
 import { wpCategoryFor } from "@/lib/blog";
 
@@ -50,6 +51,20 @@ export async function POST(
     );
   }
 
+  // Last look at the Doc before anything reaches coinpresso.io. A piece
+  // already RELEASED takes the edits and publishes: signing is closed after
+  // release, and these are the approver's own changes in the approval Doc.
+  // One not yet released stops, because the signatures were on older text.
+  const sync = await syncDocEdits(run, ref, { moment: "publish" });
+  if (sync.error) {
+    return NextResponse.json(
+      {
+        error: `Couldn't read the Google Doc before publishing, so nothing was sent to WordPress. ${sync.error} Try again in a minute — publishing without checking could put an older version live over the reviewer's edits.`,
+      },
+      { status: 424 }
+    );
+  }
+
   const settings = await readSettings(ref);
 
   // The approval gate, checked again here rather than trusted from the release
@@ -66,6 +81,15 @@ export async function POST(
     fingerprint(run),
     true
   );
+  if (!gate.released && !gate.canRelease && sync.applied) {
+    return NextResponse.json(
+      {
+        error: `The Doc was edited after it was signed — ${sync.applied} paragraph${sync.applied === 1 ? " was" : "s were"} changed. That text is now in the draft and needs signing again before it can go live. Nothing was lost.`,
+        gate,
+      },
+      { status: 409 }
+    );
+  }
   if (!gate.released && !gate.canRelease) {
     return NextResponse.json(
       {

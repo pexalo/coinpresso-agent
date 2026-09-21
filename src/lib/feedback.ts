@@ -30,6 +30,12 @@ export interface FeedbackEntry {
   /** Rules can be retired without being lost. */
   active: boolean;
   addedAt: string;
+  /**
+   * "doc-edit" for a paragraph the reviewer rewrote in the Google Doc,
+   * captured automatically. Counted separately in the prompt so a year of
+   * edits cannot crowd out the rules he wrote on purpose.
+   */
+  kind?: "doc-edit";
 }
 
 export interface FeedbackLog {
@@ -380,10 +386,20 @@ export function ruleKey(rule: string): string {
  * id and unique text, and this keeps the FIRST of any duplicate pair, which
  * for a seed is the seed.
  */
+/**
+ * Rule AND example. Every Doc edit is saved under the same instruction —
+ * "write the way the second version reads" — with a different before/after,
+ * so keying on the rule text alone kept the first edit ever captured and
+ * silently refused every one after it.
+ */
+export function entryKey(e: { rule: string; before?: string; after?: string }): string {
+  return [e.rule, e.before ?? "", e.after ?? ""].map(ruleKey).join("|");
+}
+
 export function dedupe(entries: FeedbackEntry[]): FeedbackEntry[] {
   const seen = new Set<string>();
   return entries.filter((e) => {
-    const k = ruleKey(e.rule);
+    const k = entryKey(e);
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
@@ -392,13 +408,14 @@ export function dedupe(entries: FeedbackEntry[]): FeedbackEntry[] {
 
 export async function addFeedback(
   clientRef: string,
-  entry: Pick<FeedbackEntry, "source" | "rule"> & Partial<Pick<FeedbackEntry, "date" | "before" | "after">>
+  entry: Pick<FeedbackEntry, "source" | "rule"> & Partial<Pick<FeedbackEntry, "date" | "before" | "after" | "kind">>
 ): Promise<FeedbackLog> {
   const log = await readFeedback(clientRef);
-  // Already a rule, in the same words: nothing to add. Returning the log
-  // unchanged rather than throwing, because the caller is usually saving
-  // several notes at once and one repeat should not fail the rest.
-  if (log.entries.some((e) => ruleKey(e.rule) === ruleKey(entry.rule))) return log;
+  // Already a rule, in the same words and with the same example: nothing to
+  // add. Returning the log unchanged rather than throwing, because the caller
+  // is usually saving several notes at once and one repeat should not fail
+  // the rest.
+  if (log.entries.some((e) => entryKey(e) === entryKey(entry))) return log;
   const now = new Date().toISOString();
   log.entries.push({
     id: `fb-${Date.now().toString(36)}`,
@@ -409,6 +426,7 @@ export async function addFeedback(
     after: entry.after?.trim() || undefined,
     active: true,
     addedAt: now,
+    ...(entry.kind ? { kind: entry.kind } : {}),
   });
   return write(clientRef, log);
 }
@@ -438,8 +456,19 @@ export async function removeFeedback(clientRef: string, id: string): Promise<Fee
  * instructions, the reviewer as the checklist — and a point the client has
  * already made once is a MAJOR finding the second time.
  */
+/** How many captured Doc edits ride in each prompt, newest first. */
+export const DOC_EDITS_IN_PROMPT = 12;
+
 export function feedbackBlock(log: FeedbackLog, audience: "writer" | "reviewer"): string {
-  const live = log.entries.filter((e) => e.active);
+  // Every rule he wrote, plus his most recent hand edits. Edits accumulate
+  // with every post he touches; unbounded, they would push the written rules
+  // out of the model's attention within a month.
+  const written = log.entries.filter((e) => e.active && e.kind !== "doc-edit");
+  const edits = log.entries
+    .filter((e) => e.active && e.kind === "doc-edit")
+    .sort((a, b) => b.addedAt.localeCompare(a.addedAt))
+    .slice(0, DOC_EDITS_IN_PROMPT);
+  const live = [...written, ...edits];
   if (!live.length) return "";
   const lines = live.map((e, i) => {
     const ex =

@@ -16,6 +16,7 @@ import { useState } from "react";
 interface Edit {
   before: string;
   after: string;
+  afterRaw: string;
   distance: number;
   section?: string;
   rule: boolean;
@@ -67,7 +68,7 @@ export default function DocEdits({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           rules: edits.filter((e) => e.rule).map(({ before, after, section }) => ({ before, after, section })),
-          applyToDraft: edits.filter((e) => e.apply).map(({ before, after }) => ({ before, after })),
+          applyToDraft: edits.filter((e) => e.apply).map(({ before, after, afterRaw }) => ({ before, after, afterRaw })),
           reviewer: "Liam",
         }),
       });
@@ -95,9 +96,9 @@ export default function DocEdits({
         <div>
           <h2 className="font-bold text-sm">What Liam changed in the Doc</h2>
           <p className="text-[11px] text-[var(--ink-3)] mt-0.5 max-w-xl leading-relaxed">
-            Reads the Doc and lines it up against what was exported. Each
-            paragraph he rewrote can become a house rule the writer imitates,
-            and can replace the draft so the next export keeps his words.
+            This happens automatically when the piece is signed, released and
+            published — his text goes into the draft and his rewrites become
+            house rules. Use this to see them early.
           </p>
         </div>
         <button

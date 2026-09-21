@@ -16,18 +16,21 @@
 // ---------------------------------------------------------------------------
 
 export interface EditPair {
-  /** What the pipeline wrote. */
+  /** What the pipeline wrote, as plain words — for display and matching. */
   before: string;
-  /** What the reviewer changed it to. */
+  /** What the reviewer changed it to, as plain words. */
   after: string;
+  /** His paragraph as markdown, links and bold intact — what goes into the draft. */
+  afterRaw: string;
   /** How different, 0..1 — 1 is a rewrite, near 0 is a typo fix. */
   distance: number;
   /** The section heading the paragraph sits under, when known. */
   section?: string;
 }
 
-const norm = (s: string) =>
+export const norm = (s: string) =>
   s
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "") // list marker
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links → their text
     .replace(/[*_`#>|]/g, "")
     .replace(/[“”]/g, '"')
@@ -36,8 +39,8 @@ const norm = (s: string) =>
     .trim();
 
 /** Paragraphs worth comparing: prose, not headings, table rows or blank. */
-function paragraphsOf(text: string): Array<{ text: string; section?: string }> {
-  const out: Array<{ text: string; section?: string }> = [];
+function paragraphsOf(text: string): Array<{ text: string; raw: string; section?: string }> {
+  const out: Array<{ text: string; raw: string; section?: string }> = [];
   let section: string | undefined;
   for (const raw of text.split(/\n{2,}|\n(?=#)/)) {
     const t = raw.trim();
@@ -48,14 +51,14 @@ function paragraphsOf(text: string): Array<{ text: string; section?: string }> {
       if (h[1].length >= 2) section = h[2].trim();
       const rest = t.replace(/^#{1,6}\s+.*$/m, "").trim();
       if (!rest) continue;
-      out.push({ text: norm(rest), section });
+      out.push({ text: norm(rest), raw: rest, section });
       continue;
     }
     if (t.startsWith("|")) continue;
     // A Doc paragraph that lost its blank lines can hold several of ours.
     for (const piece of t.split(/\n/)) {
       const n = norm(piece);
-      if (n.length > 20) out.push({ text: n, section });
+      if (n.length > 20) out.push({ text: n, raw: piece.trim(), section });
     }
   }
   return out;
@@ -163,8 +166,77 @@ export function diffEdits(
     .map(([i, j]) => ({
       before: ours[i].text,
       after: theirs[j].text,
+      afterRaw: theirs[j].raw,
       distance: Number((1 - similarity(ours[i].text, theirs[j].text)).toFixed(2)),
       section: ours[i].section,
     }))
     .filter((e) => e.before !== e.after);
 }
+
+// ---------------------------------------------------------------------------
+// Putting his text into the draft.
+// ---------------------------------------------------------------------------
+
+export interface DraftLike {
+  body: string;
+  faqs: Array<{ q: string; a: string }>;
+}
+
+/**
+ * Replace each paragraph he rewrote with his version, markdown and all.
+ *
+ * Matched on the plain words, because the Doc never shows markdown and the
+ * draft always does: the first version searched the draft for his plain
+ * text, so any paragraph that had held a link was never found and his edit
+ * was silently dropped. Now each draft line is normalised the same way the
+ * diff saw it, and the best match above 0.9 is replaced. A list item keeps
+ * its marker. FAQ answers and questions are matched the same way.
+ */
+export function applyEdits<T extends DraftLike>(
+  draft: T,
+  edits: EditPair[]
+): { draft: T; applied: number; missed: EditPair[] } {
+  const blocks = draft.body.split(/(\n{2,})/);
+  const faqs = draft.faqs.map((f) => ({ ...f }));
+  let applied = 0;
+  const missed: EditPair[] = [];
+
+  for (const e of edits) {
+    let best: { b: number; l: number; sim: number } | null = null;
+    blocks.forEach((block, b) => {
+      if (b % 2) return; // separators
+      block.split("\n").forEach((line, l) => {
+        if (/^\s*#/.test(line) || /^\s*\|/.test(line)) return;
+        const sim = similarity(norm(line), e.before);
+        if (sim >= 0.9 && (!best || sim > best.sim)) best = { b, l, sim };
+      });
+    });
+    if (best) {
+      const { b, l } = best as { b: number; l: number };
+      const lines = blocks[b].split("\n");
+      const marker = lines[l].match(/^\s*(?:[-*+]|\d+[.)])\s+/)?.[0] ?? "";
+      const text = e.afterRaw.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "");
+      lines[l] = marker + text;
+      blocks[b] = lines.join("\n");
+      applied++;
+      continue;
+    }
+    const f = faqs.findIndex((x) => similarity(norm(x.a), e.before) >= 0.9);
+    if (f >= 0) {
+      faqs[f].a = e.afterRaw;
+      applied++;
+      continue;
+    }
+    const q = faqs.findIndex((x) => similarity(norm(x.q), e.before) >= 0.9);
+    if (q >= 0) {
+      faqs[q].q = e.afterRaw.replace(/^\*\*|\*\*$/g, "");
+      applied++;
+      continue;
+    }
+    missed.push(e);
+  }
+  return { draft: { ...draft, body: blocks.join(""), faqs }, applied, missed };
+}
+
+/** A light fix — a typo, a word — is not worth a house rule. */
+export const RULE_WORTHY_DISTANCE = 0.25;

@@ -4,6 +4,7 @@ import { getRun } from "@/lib/store";
 import { getRecord, history, saveRecord } from "@/lib/approval-store";
 import { gateConfig, readSettings } from "@/lib/settings";
 import { fingerprint, gateState, reject, sign, withdraw } from "@/lib/approval";
+import { syncDocEdits } from "@/lib/doc-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,8 +63,6 @@ export async function POST(
   { params }: { params: Promise<{ ref: string; id: string }> }
 ) {
   const { ref, id } = await params;
-  const ctx = await load(ref, id);
-  if (!ctx) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let body: Body;
   try {
@@ -71,6 +70,28 @@ export async function POST(
   } catch {
     return NextResponse.json({ error: "Expected JSON" }, { status: 400 });
   }
+
+  // Before a SIGNATURE, take the reviewer's Doc edits into the draft, so what
+  // is signed is the text he is looking at. Reject and withdraw skip this:
+  // neither binds anyone to the text. See lib/doc-sync.ts.
+  if ((body.action ?? "sign") === "sign") {
+    const pre = await getRun(id, ref);
+    if (pre?.docUrl && pre.draft) {
+      const sync = await syncDocEdits(pre, ref, { moment: "sign" });
+      if (sync.error) {
+        return NextResponse.json(
+          {
+            error: `Couldn't read the Google Doc to pick up any edits before signing, so nothing was signed. ${sync.error} Try again in a minute; signing a draft that may be behind the Doc would put a signature on text the reviewer has already changed.`,
+          },
+          { status: 424 }
+        );
+      }
+    }
+  }
+
+  // Loaded AFTER the sync, so the fingerprint is of the text as it now stands.
+  const ctx = await load(ref, id);
+  if (!ctx) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const approver = ctx.approvers.find((a) => a.id === body.approverId);
   if (!approver) {

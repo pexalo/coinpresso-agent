@@ -269,17 +269,36 @@ export async function readDocText(docUrl: string): Promise<string> {
     headers: { authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Docs read ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const doc = (await res.json()) as {
-    body?: {
-      content?: Array<{
-        paragraph?: {
-          paragraphStyle?: { namedStyleType?: string };
-          elements?: Array<{ textRun?: { content?: string } }>;
-        };
-        table?: unknown;
-      }>;
-    };
+  return docToMarkdown(await res.json());
+}
+
+interface DocJson {
+  body?: {
+    content?: Array<{
+      paragraph?: {
+        paragraphStyle?: { namedStyleType?: string };
+        bullet?: unknown;
+        elements?: Array<{
+          textRun?: {
+            content?: string;
+            textStyle?: { bold?: boolean; link?: { url?: string } };
+          };
+        }>;
+      };
+      table?: unknown;
+    }>;
   };
+}
+
+/**
+ * A Docs body as markdown — links and bold kept, bullets as "- ".
+ *
+ * The first version returned bare text. That was enough to SEE what the
+ * reviewer changed, and not enough to KEEP it: his paragraph went back into
+ * the draft with every link stripped out of it. Pure, so it is tested
+ * against a Docs JSON fixture rather than a live Doc.
+ */
+export function docToMarkdown(doc: DocJson): string {
   const lines: string[] = [];
   for (const el of doc.body?.content ?? []) {
     if (el.table) {
@@ -288,11 +307,38 @@ export async function readDocText(docUrl: string): Promise<string> {
     }
     const p = el.paragraph;
     if (!p) continue;
-    const text = (p.elements ?? []).map((e) => e.textRun?.content ?? "").join("").replace(/\n$/, "");
-    if (!text.trim()) continue;
     const style = p.paragraphStyle?.namedStyleType ?? "";
-    const level = style === "HEADING_1" ? "# " : style === "HEADING_2" ? "## " : style === "HEADING_3" ? "### " : "";
-    lines.push(level + text);
+    const heading = style === "HEADING_1" ? "# " : style === "HEADING_2" ? "## " : style === "HEADING_3" ? "### " : "";
+
+    // Adjacent runs with the same link are one link; Docs splits a link at
+    // any style change inside it.
+    const runs: Array<{ text: string; url?: string; bold: boolean }> = [];
+    for (const e of p.elements ?? []) {
+      const r = e.textRun;
+      if (!r?.content) continue;
+      const url = r.textStyle?.link?.url;
+      const bold = !heading && Boolean(r.textStyle?.bold);
+      const prev = runs[runs.length - 1];
+      if (prev && prev.url === url && prev.bold === bold) prev.text += r.content;
+      else runs.push({ text: r.content, url, bold });
+    }
+    // Markdown wants the markers hugging the words, not the spaces round them.
+    const wrap = (t: string, open: string, close: string) => {
+      const m = t.match(/^(\s*)([\s\S]*?)(\s*)$/)!;
+      return m[2] ? `${m[1]}${open}${m[2]}${close}${m[3]}` : t;
+    };
+    let text = runs
+      .map((r) => {
+        let t = r.text;
+        if (r.url) t = wrap(t, "[", `](${r.url})`);
+        if (r.bold) t = wrap(t, "**", "**");
+        return t;
+      })
+      .join("")
+      .replace(/\n$/, "");
+    if (!text.trim()) continue;
+    if (p.bullet && !heading) text = `- ${text}`;
+    lines.push(heading + text);
   }
   return lines.join("\n\n");
 }

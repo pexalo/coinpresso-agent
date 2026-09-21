@@ -4,7 +4,7 @@ import { getClient } from "@/lib/clients";
 import { getRun, saveRun } from "@/lib/store";
 import { readDocText } from "@/lib/google";
 import { renderMarkdown } from "@/lib/render";
-import { diffEdits } from "@/lib/doc-edits";
+import { diffEdits, applyEdits } from "@/lib/doc-edits";
 import { addFeedback } from "@/lib/feedback";
 
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export async function POST(
   if (!run) return NextResponse.json({ error: "Unknown run" }, { status: 404 });
   let body: {
     rules?: Array<{ before: string; after: string; note?: string; section?: string }>;
-    applyToDraft?: Array<{ before: string; after: string }>;
+    applyToDraft?: Array<{ before: string; after: string; afterRaw?: string }>;
     reviewer?: string;
   };
   try {
@@ -64,25 +64,22 @@ export async function POST(
         "The reviewer rewrote this paragraph by hand. Write the way the second version reads, not the first.",
       before: r.before,
       after: r.after,
+      kind: "doc-edit",
     });
     saved++;
   }
 
   let applied = 0;
   if (body.applyToDraft?.length && run.draft) {
-    let text = run.draft.body;
-    for (const a of body.applyToDraft) {
-      if (!a.before?.trim() || !a.after?.trim()) continue;
-      // The draft holds markdown; the diff saw link text. Match on the
-      // plain words so the swap lands even where the original had a link.
-      const idx = text.indexOf(a.before);
-      if (idx >= 0) {
-        text = text.slice(0, idx) + a.after + text.slice(idx + a.before.length);
-        applied++;
-      }
-    }
+    // Same path as the automatic sync — see applyEdits for why a plain text
+    // search dropped every edit to a paragraph that held a link.
+    const edits = body.applyToDraft
+      .filter((a) => a.before?.trim() && (a.afterRaw ?? a.after)?.trim())
+      .map((a) => ({ before: a.before, after: a.after, afterRaw: a.afterRaw ?? a.after, distance: 1 }));
+    const out = applyEdits(run.draft, edits);
+    applied = out.applied;
     if (applied) {
-      run.draft = { ...run.draft, body: text };
+      run.draft = { ...run.draft, ...out.draft };
       run.review = undefined;
       run.updatedAt = new Date().toISOString();
       run.stages = [

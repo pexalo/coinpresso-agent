@@ -4,6 +4,7 @@ import { exportRun } from "@/lib/google";
 import { getRecord, saveRecord } from "@/lib/approval-store";
 import { gateConfig, readSettings } from "@/lib/settings";
 import { fingerprint, gateState } from "@/lib/approval";
+import { syncDocEdits } from "@/lib/doc-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,11 +36,35 @@ export async function POST(
     );
   }
 
+  // Take any Doc edits made since signing. If there are some, the signatures
+  // were given on different text, and releasing would publish words nobody
+  // signed — so stop and say exactly why. See lib/doc-sync.ts.
+  const sync = await syncDocEdits(run, ref, { moment: "release" });
+  if (sync.error) {
+    return NextResponse.json(
+      {
+        error: `Couldn't read the Google Doc to check for last-minute edits, so nothing was released. ${sync.error} Try again in a minute — releasing without checking could publish over the reviewer's changes.`,
+      },
+      { status: 424 }
+    );
+  }
+
   const settings = await readSettings(ref);
   const { approvers, required } = gateConfig(settings);
   const record = await getRecord(ref, id);
   const fp = fingerprint(run);
   const gate = gateState(record, approvers, required, fp, true);
+
+  if (sync.applied && !gate.canRelease && !record.releasedAt) {
+    return NextResponse.json(
+      {
+        error: `The Doc was edited after it was signed — ${sync.applied} paragraph${sync.applied === 1 ? " was" : "s were"} changed. That text is now in the draft, so it needs signing again before release. Nothing was lost.`,
+        gate,
+        docEdits: sync.applied,
+      },
+      { status: 409 }
+    );
+  }
 
   if (!gate.canRelease) {
     return NextResponse.json({ error: gate.reason, gate }, { status: 409 });
