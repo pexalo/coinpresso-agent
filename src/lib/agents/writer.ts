@@ -1480,8 +1480,10 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   //
   // So the filter runs wherever the ledger is USED. An old run is cured by a
   // retry rather than by re-buying research.
-  const isVendor = (x: { url: string; publisherType?: string }) =>
-    isCompetitorUrl(x.url) || x.publisherType === "vendor";
+  const isVendor = (x: { url: string; publisherType?: string; publisher?: string; title?: string }) =>
+    isCompetitorUrl(x.url) ||
+    x.publisherType === "vendor" ||
+    competitorNamesIn(`${x.publisher ?? ""} ${x.title ?? ""}`).length > 0;
   const blockedSources = research.sources.filter(isVendor);
   const citable = research.sources.filter((x) => !isVendor(x));
   const sourceLedger = citable
