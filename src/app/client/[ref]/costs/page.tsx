@@ -11,9 +11,9 @@ import {
 import { SEARCH_PRICE_PER_1000, IMAGE_PRICES, PRICED_ON } from "@/lib/model-registry";
 import { PRICING } from "@/lib/models";
 import CostForecast from "@/components/CostForecast";
-import { listSpend, summarizeSpend } from "@/lib/spend-log";
+import { listSpend, summarizeSpend, SPEND_LABELS } from "@/lib/spend-log";
 import { isAdmin } from "@/lib/portal-session";
-import { forecast } from "@/lib/costs";
+import { forecast, monthlyStatement, previousMonth } from "@/lib/costs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,10 +25,13 @@ const TRACK_LABEL: Record<string, string> = {
 
 export default async function CostsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ ref: string }>;
+  searchParams?: Promise<{ month?: string }>;
 }) {
   const { ref } = await params;
+  const sp = (await searchParams) ?? {};
   const client = getClient(ref);
   if (!client) notFound();
 
@@ -61,6 +64,16 @@ export default async function CostsPage({
   // deployment; 0 (the default) means "included in the retainer" and the tile
   // does not render. Not marked up — it is a pass-through.
   const hostingUsd = Math.max(0, Number(process.env.BILLING_HOSTING_USD ?? 0) || 0);
+
+  // Monthly statement — billed at the start of each month for the one before.
+  const month = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : previousMonth();
+  const statement = monthlyStatement(await listRuns(ref), await listSpend(ref), month, SPEND_LABELS);
+  const recentMonths = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1)).toISOString().slice(0, 7);
+  });
+  const monthName = (m: string) =>
+    new Date(`${m}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
     <div className="space-y-5 pt-2">
@@ -109,6 +122,79 @@ export default async function CostsPage({
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--line)] flex items-center gap-3 flex-wrap">
+          <h2 className="font-bold text-sm">Monthly statement · {monthName(month)}</h2>
+          <div className="flex gap-1 flex-wrap">
+            {recentMonths.map((m) => (
+              <a
+                key={m}
+                href={`?month=${m}`}
+                className={`text-[11px] px-2 py-1 rounded-md border ${m === month ? "border-[var(--accent)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-3)]"}`}
+              >
+                {m}
+              </a>
+            ))}
+          </div>
+          <a
+            href={`/api/clients/${ref}/costs/statement?month=${month}&format=csv`}
+            className="ml-auto text-[12px] font-semibold px-3.5 py-2 rounded-lg border border-[var(--line)] hover:border-[var(--accent)]"
+          >
+            Download CSV
+          </a>
+        </div>
+        <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Cost for the month", value: usd(statement.totalUsd) },
+            { label: "Tokens", value: usd(statement.tokenCostUsd) },
+            { label: "Search", value: usd(statement.searchCostUsd) },
+            { label: "Images", value: usd(statement.imageCostUsd) },
+            ...(admin
+              ? [
+                  { label: `Markup ${markupPct}%`, value: usd(statement.totalUsd * (markupPct / 100)) },
+                  ...(hostingUsd ? [{ label: "Hosting allowance", value: usd(hostingUsd) }] : []),
+                  { label: "To invoice", value: usd(billable(statement.totalUsd) + hostingUsd) },
+                ]
+              : []),
+          ].map((k) => (
+            <div key={k.label}>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">{k.label}</div>
+              <div className="text-lg font-extrabold mt-1 tabular-nums">{k.value}</div>
+            </div>
+          ))}
+        </div>
+        {statement.lines.length ? (
+          <div className="overflow-x-auto border-t border-[var(--line)]">
+            <table className="w-full text-[12px] tabular-nums">
+              <thead className="text-[var(--ink-3)] text-left">
+                <tr>
+                  <th className="px-5 py-2 font-semibold">Item</th>
+                  <th className="px-3 py-2 font-semibold">Track</th>
+                  <th className="px-3 py-2 font-semibold text-right">Tokens</th>
+                  <th className="px-3 py-2 font-semibold text-right">Search</th>
+                  <th className="px-3 py-2 font-semibold text-right">Images</th>
+                  <th className="px-5 py-2 font-semibold text-right">Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {statement.lines.map((l, i) => (
+                  <tr key={l.runId ?? `o${i}`} className="border-t border-[var(--line)]">
+                    <td className="px-5 py-2">{l.title}</td>
+                    <td className="px-3 py-2 text-[var(--ink-3)]">{l.track === "other" ? "Planning" : TRACK_LABEL[l.track]}</td>
+                    <td className="px-3 py-2 text-right">{usd(l.tokenCostUsd)}</td>
+                    <td className="px-3 py-2 text-right">{usd(l.searchCostUsd)}</td>
+                    <td className="px-3 py-2 text-right">{usd(l.imageCostUsd)}</td>
+                    <td className="px-5 py-2 text-right font-semibold">{usd(l.totalUsd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="px-5 pb-5 text-[12px] text-[var(--ink-3)]">No spend recorded in {monthName(month)}.</div>
+        )}
       </div>
 
       {admin && (

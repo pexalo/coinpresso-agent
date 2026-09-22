@@ -548,3 +548,96 @@ export function tokens(n: number): string {
 // The formulas, and the two things about them that are easy to get wrong, are
 // written up in PEXALO-HQ-BILLING.md so the reasoning survives the deletion.
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Monthly statement.
+//
+// Bernard, 22 Sep: "we will bill coinpresso the start of every month for the
+// previous month api cost." The report above is lifetime; an invoice needs
+// one calendar month, itemised. Spend is dated by the STAGE that incurred it,
+// not the run: a post drafted on 30 Sep and rewritten on 2 Oct is billed
+// across both months, exactly as the providers billed it. Months are UTC.
+// ---------------------------------------------------------------------------
+
+export interface StatementLine {
+  runId?: string;
+  title: string;
+  track: Track | "other";
+  tokenCostUsd: number;
+  searchCostUsd: number;
+  imageCostUsd: number;
+  totalUsd: number;
+}
+
+export interface MonthlyStatement {
+  month: string; // YYYY-MM
+  lines: StatementLine[];
+  tokenCostUsd: number;
+  searchCostUsd: number;
+  imageCostUsd: number;
+  totalUsd: number;
+}
+
+/** The month before `now`, as YYYY-MM (UTC). */
+export function previousMonth(now = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+export function monthlyStatement(
+  runs: Run[],
+  offRun: Array<{ at: string; kind: string; tokenCostUsd: number; searchCostUsd: number; totalUsd: number }>,
+  month: string,
+  offRunLabels: Record<string, string> = {}
+): MonthlyStatement {
+  const lines: StatementLine[] = [];
+  for (const run of runs.filter((r) => !r.mock)) {
+    let tok = 0, srch = 0, img = 0;
+    for (const s of run.stages) {
+      const when = (s.startedAt ?? run.createdAt).slice(0, 7);
+      if (when !== month) continue;
+      tok += s.costUsd ?? 0;
+      srch += s.searchCostUsd ?? 0;
+      img += s.imageCostUsd ?? 0;
+    }
+    const total = tok + srch + img;
+    if (total <= 0) continue;
+    lines.push({ runId: run.id, title: run.brief.title, track: trackOf(run), tokenCostUsd: tok, searchCostUsd: srch, imageCostUsd: img, totalUsd: total });
+  }
+  const byKind = new Map<string, StatementLine>();
+  for (const e of offRun) {
+    if (e.at.slice(0, 7) !== month) continue;
+    const l = byKind.get(e.kind) ?? { title: offRunLabels[e.kind] ?? e.kind, track: "other" as const, tokenCostUsd: 0, searchCostUsd: 0, imageCostUsd: 0, totalUsd: 0 };
+    l.tokenCostUsd += e.tokenCostUsd;
+    l.searchCostUsd += e.searchCostUsd;
+    l.totalUsd += e.totalUsd;
+    byKind.set(e.kind, l);
+  }
+  lines.sort((a, b) => b.totalUsd - a.totalUsd);
+  lines.push(...byKind.values());
+  const sum = (k: keyof StatementLine) => lines.reduce((a, l) => a + (Number(l[k]) || 0), 0);
+  return {
+    month,
+    lines,
+    tokenCostUsd: sum("tokenCostUsd"),
+    searchCostUsd: sum("searchCostUsd"),
+    imageCostUsd: sum("imageCostUsd"),
+    totalUsd: sum("totalUsd"),
+  };
+}
+
+export function statementCsv(st: MonthlyStatement, markupPct = 0, hostingUsd = 0): string {
+  const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  const f = (n: number) => n.toFixed(4);
+  const rows = [
+    ["Month", "Item", "Track", "Tokens USD", "Search USD", "Images USD", "Cost USD"].join(","),
+    ...st.lines.map((l) =>
+      [st.month, q(l.title), l.track, f(l.tokenCostUsd), f(l.searchCostUsd), f(l.imageCostUsd), f(l.totalUsd)].join(",")
+    ),
+    ["", q("Cost base"), "", f(st.tokenCostUsd), f(st.searchCostUsd), f(st.imageCostUsd), f(st.totalUsd)].join(","),
+  ];
+  if (markupPct) rows.push(["", q(`Markup ${markupPct}%`), "", "", "", "", f(st.totalUsd * markupPct / 100)].join(","));
+  if (hostingUsd) rows.push(["", q("Hosting allowance"), "", "", "", "", f(hostingUsd)].join(","));
+  if (markupPct || hostingUsd) rows.push(["", q("Total to invoice"), "", "", "", "", f(st.totalUsd * (1 + markupPct / 100) + hostingUsd)].join(","));
+  return rows.join("\n") + "\n";
+}

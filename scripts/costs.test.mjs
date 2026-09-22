@@ -117,5 +117,22 @@ console.log("the forecast models an image for the blog track:");
   ok("per-month is 30 x per-article", near(blog.perMonthUsd, blog.perArticleUsd * 30));
 }
 
+
+{
+  const { monthlyStatement, statementCsv, previousMonth } = await import("../src/lib/costs.ts");
+  console.log("monthly statement — billed at the start of each month for the one before:");
+  const runs = [
+    { id: "r1", createdAt: "2026-09-30T10:00:00Z", brief: { title: "Post A", track: "blog" },
+      stages: [{ startedAt: "2026-09-30T10:00:00Z", costUsd: 0.5, searchCostUsd: 0.1 }, { startedAt: "2026-10-02T10:00:00Z", costUsd: 0.3, imageCostUsd: 0.2 }] },
+    { id: "r2", mock: true, createdAt: "2026-09-01T00:00:00Z", brief: { title: "Mock", track: "wire" }, stages: [{ costUsd: 9 }] },
+  ];
+  const spend = [{ at: "2026-09-10T00:00:00Z", kind: "ideas-scan", tokenCostUsd: 0.2, searchCostUsd: 0.05, totalUsd: 0.25 }];
+  const sep = monthlyStatement(runs, spend, "2026-09");
+  ok("September: the stages run in September plus ideation", Math.abs(sep.totalUsd - 0.85) < 1e-9, sep.totalUsd);
+  ok("a rewrite on 2 Oct is October's cost", Math.abs(monthlyStatement(runs, spend, "2026-10").totalUsd - 0.5) < 1e-9);
+  ok("mock runs are never billed", !sep.lines.some((l) => l.title === "Mock"));
+  ok("January bills December", previousMonth(new Date("2026-01-03T00:00:00Z")) === "2025-12");
+  ok("CSV totals with markup", /Total to invoice",,,,,0\.9350/.test(statementCsv(sep, 10, 0)));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
