@@ -5,6 +5,7 @@ import { getRecord, saveRecord } from "@/lib/approval-store";
 import { gateConfig, readSettings } from "@/lib/settings";
 import { fingerprint, gateState } from "@/lib/approval";
 import { syncDocEdits } from "@/lib/doc-sync";
+import { competitorProblems } from "@/lib/blog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,15 @@ export async function POST(
         error: `Couldn't read the Google Doc to check for last-minute edits, so nothing was released. ${sync.error} Try again in a minute — releasing without checking could publish over the reviewer's changes.`,
       },
       { status: 424 }
+    );
+  }
+
+  // Competitors never leave the app, however they got into the draft.
+  const rivals = competitorProblems(run.draft);
+  if (rivals.length) {
+    return NextResponse.json(
+      { error: `Not released: the post mentions a competitor (${rivals.join("; ")}). Remove it in the Google Doc, click "Take all edits from the Doc", and try again.` },
+      { status: 409 }
     );
   }
 

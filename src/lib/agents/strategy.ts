@@ -14,7 +14,7 @@ import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
 import type { CallContext } from "../providers/routing";
-import { CONTENT_TYPES, PILLARS, isCompetitorUrl } from "../blog";
+import { CONTENT_TYPES, PILLARS, isCompetitorUrl, competitorNamesIn } from "../blog";
 import { linkablePages, linkTargetsBlock } from "../link-map";
 
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
@@ -315,8 +315,8 @@ Research this and return JSON:
   // them, so a rival's blog cannot be cited even if the model ignored the
   // instruction above. The dropped ones are kept on the research record so
   // the operator can see what was excluded and why.
-  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor");
-  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor");
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor" || competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length > 0);
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor" && competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length === 0);
   if (dropped.length) {
     research.riskNotes = [
       ...(research.riskNotes || []),
@@ -411,8 +411,8 @@ ${schemaBlock()}`;
   // them, so a rival's blog cannot be cited even if the model ignored the
   // instruction above. The dropped ones are kept on the research record so
   // the operator can see what was excluded and why.
-  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor");
-  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor");
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor" || competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length > 0);
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor" && competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length === 0);
   if (dropped.length) {
     research.riskNotes = [
       ...(research.riskNotes || []),

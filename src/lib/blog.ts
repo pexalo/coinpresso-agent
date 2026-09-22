@@ -741,7 +741,38 @@ export const COMPETITOR_DOMAINS: string[] = [
   // Google Ads / PPC agencies that surfaced on the Circumventing Systems piece
   "almcorp.com",
   "growthify.in",
+  // Crypto PR agencies Liam flagged on the wire-distribution piece (21 Sep)
+  "luvkaizen.com",
+  "slicedbrand.com",
+  "badenbower.com",
+  "quorum-media.com",
 ];
+
+/**
+ * Competitors by NAME. The link barrier only ever looked at URLs, so a draft
+ * could still write "As LuvKaizen puts it…" with no link and sail through —
+ * Liam: "LuvKaizen are a competitor, big no no naughty agent". Naming a rival
+ * gives them the same clout a link does. Matched as whole words, any case,
+ * spaces optional ("Sliced Brand" / "SlicedBrand").
+ */
+export const COMPETITOR_NAMES: string[] = [
+  "LuvKaizen", "SlicedBrand", "Baden Bower", "Quorum Media", "Chainstory",
+  "Coinbound", "Wolf Financial", "NinjaPromo", "Lunar Strategy", "MarketAcross",
+  "Melrose PR", "GuerrillaBuzz", "Single Grain", "Blockwiz", "Crowdcreate", "ICODA",
+  "Omnius", "Formo", "Mintfunnel", "Spindl", "Cookie3", "Safary", "Northbeam",
+  "Coincile", "Stub Group", "ALM Corp", "AlmCorp", "Growthify", "CryptoVirally",
+];
+
+export function competitorNamesIn(text: string, extra: string[] = []): string[] {
+  const found = new Set<string>();
+  for (const name of [...COMPETITOR_NAMES, ...extra]) {
+    const words = name.trim().replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/).filter(Boolean);
+    if (!words.length || name.trim().length < 4) continue;
+    const pattern = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*");
+    if (new RegExp(`(^|[^A-Za-z0-9])${pattern}(?![A-Za-z0-9])`, "i").test(text)) found.add(name);
+  }
+  return [...found];
+}
 
 /**
  * A static list cannot name every agency on the internet. Almcorp and
@@ -984,4 +1015,20 @@ export const OLDEST_LINKABLE_POST = "2025-01-01";
 
 export function postIsLinkable(publishedAt?: string): boolean {
   return !!publishedAt && publishedAt.slice(0, 10) >= OLDEST_LINKABLE_POST;
+}
+
+/**
+ * The last barrier before a post leaves the app: any competitor link or name
+ * in the body or FAQs, whoever put it there — the writer, an old draft, or an
+ * edit in the Doc. Release and publish refuse while this is non-empty.
+ */
+export function competitorProblems(draft?: { body: string; faqs?: Array<{ q: string; a: string }> }): string[] {
+  if (!draft) return [];
+  const text = [draft.body, ...(draft.faqs ?? []).flatMap((f) => [f.q, f.a])].join("\n");
+  const out: string[] = [];
+  for (const m of text.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) {
+    if (isCompetitorUrl(m[1])) out.push(`link to ${new URL(m[1]).hostname}`);
+  }
+  for (const n of competitorNamesIn(text)) out.push(`names ${n}`);
+  return [...new Set(out)];
 }

@@ -5,6 +5,7 @@ import { gateConfig, readSettings } from "@/lib/settings";
 import { getRecord } from "@/lib/approval-store";
 import { fingerprint, gateState } from "@/lib/approval";
 import { syncDocEdits } from "@/lib/doc-sync";
+import { competitorProblems } from "@/lib/blog";
 import { createDraft } from "@/lib/wordpress";
 import { wpCategoryFor } from "@/lib/blog";
 
@@ -62,6 +63,15 @@ export async function POST(
         error: `Couldn't read the Google Doc before publishing, so nothing was sent to WordPress. ${sync.error} Try again in a minute — publishing without checking could put an older version live over the reviewer's edits.`,
       },
       { status: 424 }
+    );
+  }
+
+  // Competitors never leave the app, however they got into the draft.
+  const rivals = competitorProblems(run.draft);
+  if (rivals.length) {
+    return NextResponse.json(
+      { error: `Not published: the post mentions a competitor (${rivals.join("; ")}). Remove it in the Google Doc, click "Take all edits from the Doc", and try again.` },
+      { status: 409 }
     );
   }
 

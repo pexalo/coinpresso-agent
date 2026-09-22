@@ -21,6 +21,7 @@ import {
   clusterOf,
   clusterOfPillar,
   isCompetitorUrl,
+  competitorNamesIn,
   INTRO_MOVES,
   SPENT_CLOSERS,
   SPENT_OPENERS,
@@ -987,6 +988,27 @@ export function enforceEarlyInternalLink(body: string): void {
   );
 }
 
+/**
+ * No competitor named anywhere in the piece, linked or not. Liam, 21 Sep, on
+ * the wire-distribution post: "LuvKaizen are a competitor, big no no naughty
+ * agent" and "more competitors here, SlicedBrand and Baden Bower both have
+ * crypto PR offerings". The URL barrier caught links; the names went through
+ * as plain text. Hard: the writer can see and fix every one, and it must not
+ * reach a client Doc again.
+ */
+export function enforceNoCompetitorNames(
+  body: string,
+  faqs: Array<{ q: string; a: string }>,
+  extra: string[] = []
+): void {
+  const text = [body, ...faqs.flatMap((f) => [f.q, f.a])].join("\n");
+  const names = competitorNamesIn(text, extra);
+  if (!names.length) return;
+  throw new Error(
+    `the draft names ${names.length === 1 ? "a competitor" : "competitors"}: ${names.join(", ")}. The client's rule is absolute — never link, quote, cite or NAME a rival agency or vendor, even without a link ("big no no"). Cut the attribution; if the point stands on its own or on a primary source, keep it in our own voice, otherwise cut it.`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -1545,6 +1567,12 @@ a dry aside, the register of someone explaining it across a desk. Write the
 opening that way. Do not restate the title in a formal voice and call it an
 introduction.
 
+NEVER NAME A COMPETITOR. No other marketing, PR, SEO, PPC, analytics or
+attribution agency or vendor appears in the piece — not linked, not quoted,
+not "as X puts it", not as a cautionary example. A rival's name gives them the
+same clout as a link. Primary sources only: platforms, regulators, exchanges,
+protocols, independent press.
+
 SAY EACH POINT ONCE. Make it in the section where it belongs; do not restate it
 two paragraphs later in different words. The FAQs may recap; the body may not.
 
@@ -1881,6 +1909,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceIntro(parsed.body),
         () => enforceProse(parsed.body),
         () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
+        () => enforceNoCompetitorNames(parsed.body, parsed.faqs ?? [], blockedSources.map((x) => x.publisher).filter(Boolean)),
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "hard"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "hard"),
         () => enforceAnchorLength(parsed.body),

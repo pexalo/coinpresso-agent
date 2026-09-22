@@ -158,6 +158,13 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-never-name-competitors",
+    source: "Liam, wire-distribution post comments (21 Sep)",
+    date: "2026-09-21",
+    rule: "Liam: \"LuvKaizen are a competitor, big no no naughty agent\" and \"more competitors here, SlicedBrand and Baden Bower both have crypto PR offerings\". Never NAME a rival agency or vendor — not linked, not quoted, not as a cautionary example. (Enforced in code: drafts naming one are rejected, and release/publish refuse.)",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",
