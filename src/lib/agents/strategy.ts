@@ -118,7 +118,9 @@ RULES
    Label every source's "publisherType": "primary" (the platform, regulator,
    exchange, protocol or data publisher), "press" (independent trade or news
    press) or "vendor" (ANY company that sells marketing, ads, SEO, PPC, PR,
-   analytics or consulting — including its blog and guides). Vendors are
+   analytics or consulting — including its blog and guides — and ANY press-release
+   wire or distribution network such as Chainwire or InvestorWire, which
+   Coinpresso white-labels and must never name). Vendors are
    dropped automatically, so do not build a claim on one.
 5. Identify the real buyer question underneath the keyword — what a founder is
    actually worried about, not the search string.
@@ -411,8 +413,8 @@ ${schemaBlock()}`;
   // them, so a rival's blog cannot be cited even if the model ignored the
   // instruction above. The dropped ones are kept on the research record so
   // the operator can see what was excluded and why.
-  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor" || competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length > 0);
-  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor" && competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length === 0);
+  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url, false) || src.publisherType === "vendor" || competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`, [], false).length > 0);
+  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url, false) && src.publisherType !== "vendor" && competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`, [], false).length === 0);
   if (dropped.length) {
     research.riskNotes = [
       ...(research.riskNotes || []),

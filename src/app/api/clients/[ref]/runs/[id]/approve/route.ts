@@ -51,7 +51,8 @@ export async function POST(
   }
 
   // Competitors never leave the app, however they got into the draft.
-  const rivals = competitorProblems(run.draft);
+  // Blog only: a wire release legitimately goes out through a wire.
+  const rivals = run.brief.track === "blog" ? competitorProblems(run.draft) : [];
   if (rivals.length) {
     return NextResponse.json(
       { error: `Not released: the post mentions a competitor (${rivals.join("; ")}). Remove it in the Google Doc, click "Take all edits from the Doc", and try again.` },

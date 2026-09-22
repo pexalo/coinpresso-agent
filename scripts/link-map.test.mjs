@@ -345,6 +345,9 @@ console.log("a gutted ledger triggers fresh research instead of more writer atte
   ok("SlicedBrand and Baden Bower are caught", p.includes("names SlicedBrand") && p.includes("names Baden Bower"), p);
   ok("a quorum-media.com link is caught", competitorProblems({ body: "[x](https://quorum-media.com/blog/y)" }).length === 1);
   ok("Coinpresso's own 'crypto PR' is not a competitor", competitorNamesIn("Our crypto PR team runs the crypto PR playbook.").length === 0);
+  const w = competitorProblems({ body: "[Chainwire](https://chainwire.org/) and InvestorWire's page, plus GlobeNewswire." });
+  ok("white-label wires are blocked by name and link (Liam, 22 Sep)", w.includes("names Chainwire") && w.includes("names InvestorWire") && w.includes("link to chainwire.org") && w.includes("names GlobeNewswire"), w);
+  ok("describing a wire without a name is fine", competitorProblems({ body: "A crypto press-release wire pushes it to 100+ outlets." }).length === 0);
   ok("FAQ answers are checked too", competitorProblems({ body: "", faqs: [{ q: "Q?", a: "Per Sliced Brand, no." }] }).length === 1);
 }
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -165,6 +165,13 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-never-name-suppliers",
+    source: "Liam, wire-distribution post (22 Sep)",
+    date: "2026-09-22",
+    rule: "Liam: \"chainwire and investorwire I would avoid mentioning where possible, as coinpresso white label their services sometimes, so I don't want to give potential clients a way of cutting us out.\" Never name or link a press-release wire or distribution network (Chainwire, InvestorWire, GlobeNewswire, PR Newswire, Business Wire and similar). Write about what they do — \"a crypto press-release wire\" — without the name. (Enforced in code on the blog.)",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",

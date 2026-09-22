@@ -763,9 +763,30 @@ export const COMPETITOR_NAMES: string[] = [
   "Coincile", "Stub Group", "ALM Corp", "AlmCorp", "Growthify", "CryptoVirally",
 ];
 
-export function competitorNamesIn(text: string, extra: string[] = []): string[] {
+/**
+ * Suppliers Coinpresso white-labels. Liam, 22 Sep: "chainwire and
+ * investorwire I would avoid mentioning where possible, as coinpresso white
+ * label their services sometimes, so I don't want to give potential clients a
+ * way of cutting us out." Bernard: "not to mention them and similar companies
+ * as well. We can write about the content but don't need to mention the name
+ * of the company." So press-release wires and distribution networks are
+ * treated exactly like competitors on the BLOG: never named, never linked.
+ * The wire track is not affected — it is how releases go out.
+ */
+export const SUPPLIER_NAMES: string[] = [
+  "Chainwire", "InvestorWire", "BTCWire", "Coinwire", "Blockchain Wire", "GlobeNewswire",
+  "PR Newswire", "PRNewswire", "Business Wire", "BusinessWire", "Accesswire", "EIN Presswire",
+  "Newsfile", "PRWeb", "Newswire.com", "Cision", "PRLog", "Crypto Wire", "CryptoWire",
+];
+export const SUPPLIER_DOMAINS: string[] = [
+  "chainwire.org", "investorwire.com", "btcwire.com", "globenewswire.com", "prnewswire.com",
+  "businesswire.com", "accesswire.com", "einpresswire.com", "newsfilecorp.com", "prweb.com",
+  "newswire.com", "cision.com", "prlog.org",
+];
+
+export function competitorNamesIn(text: string, extra: string[] = [], suppliers = true): string[] {
   const found = new Set<string>();
-  for (const name of [...COMPETITOR_NAMES, ...extra]) {
+  for (const name of [...COMPETITOR_NAMES, ...(suppliers ? SUPPLIER_NAMES : []), ...extra]) {
     const words = name.trim().replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/).filter(Boolean);
     if (!words.length || name.trim().length < 4) continue;
     const pattern = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*");
@@ -846,10 +867,14 @@ export function ledgerIsViable(sources: Array<{ url: string; publisherType?: str
 }
 
 /** True when the URL points at a competitor. Subdomains count. */
-export function isCompetitorUrl(url: string): boolean {
+/** `suppliers` false for the wire track, where the wires are the channel. */
+export function isCompetitorUrl(url: string, suppliers = true): boolean {
   try {
     const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
-    return COMPETITOR_DOMAINS.some((d) => host === d || host.endsWith("." + d)) || looksLikeVendorHost(host);
+    return (
+      [...COMPETITOR_DOMAINS, ...(suppliers ? SUPPLIER_DOMAINS : [])].some((d) => host === d || host.endsWith("." + d)) ||
+      looksLikeVendorHost(host)
+    );
   } catch {
     return false;
   }

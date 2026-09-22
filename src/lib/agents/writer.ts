@@ -1569,10 +1569,13 @@ a dry aside, the register of someone explaining it across a desk. Write the
 opening that way. Do not restate the title in a formal voice and call it an
 introduction.
 
-NEVER NAME A COMPETITOR. No other marketing, PR, SEO, PPC, analytics or
-attribution agency or vendor appears in the piece — not linked, not quoted,
-not "as X puts it", not as a cautionary example. A rival's name gives them the
-same clout as a link. Primary sources only: platforms, regulators, exchanges,
+NEVER NAME A COMPETITOR OR A SUPPLIER. No other marketing, PR, SEO, PPC,
+analytics or attribution agency or vendor appears in the piece — not linked,
+not quoted, not "as X puts it", not as a cautionary example. Nor any
+press-release wire or distribution network (Chainwire, InvestorWire and the
+like): Coinpresso white-labels them, and naming one hands a reader the way to
+cut Coinpresso out. Describe what they do ("a crypto press-release wire",
+"a distribution network of 100+ outlets") without the name. Primary sources only: platforms, regulators, exchanges,
 protocols, independent press.
 
 SAY EACH POINT ONCE. Make it in the section where it belongs; do not restate it
