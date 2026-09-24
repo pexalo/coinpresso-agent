@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { getRun, saveRun } from "@/lib/store";
+import { getRun, saveRun, deleteRun } from "@/lib/store";
+import { getRecord } from "@/lib/approval-store";
+import { listSeeds, updateTopic } from "@/lib/blog-seed";
 import type { StageRecord } from "@/lib/types";
 import { renderHtml, renderMarkdown, renderPlainText } from "@/lib/render";
 
@@ -27,6 +29,52 @@ export async function GET(
         }
       : null,
   });
+}
+
+/**
+ * Remove a post from the queue and put its topic back on the list.
+ *
+ * Bernard, 24 Sep: "some of the blogs in blog queue can go back into the
+ * queue as it is not needed now… remove it from blog queue and the topic goes
+ * back into the list." So this is an UNSCHEDULE, not a delete of the record of
+ * something that happened: a released or published post is refused, and a run
+ * still being written is refused until it stops.
+ */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ ref: string; id: string }> }
+) {
+  const { ref, id } = await params;
+  const run = await getRun(id, ref);
+  if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (run.status === "running" || run.status === "queued") {
+    return NextResponse.json(
+      { error: "This post is still being written. Wait for it to finish, then remove it." },
+      { status: 409 }
+    );
+  }
+  const record = await getRecord(ref, id);
+  if (record.releasedAt) {
+    return NextResponse.json(
+      { error: "This post has been released, so it stays on the record. Removing it would erase what was approved." },
+      { status: 409 }
+    );
+  }
+
+  // The topic goes back on the list, ready to be planned again.
+  let topic: string | undefined;
+  const seedId = run.brief.seedTopicId;
+  if (seedId) {
+    const seeds = await listSeeds(ref);
+    const t = seeds.topics.find((x) => x.id === seedId);
+    if (t && t.status === "used") {
+      await updateTopic(ref, seedId, { status: "queued" });
+      topic = t.topic;
+    }
+  }
+
+  await deleteRun(id, ref);
+  return NextResponse.json({ removed: true, topic: topic ?? null, title: run.brief.title });
 }
 
 interface PasteBody {

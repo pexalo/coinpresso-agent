@@ -75,3 +75,15 @@ export async function listRuns(clientRef: string): Promise<Run[]> {
   }
   return runs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
+
+/**
+ * Drop a run entirely. Used when a post is pulled from the queue before it
+ * goes anywhere — the topic behind it goes back on the list, so the work is
+ * not lost, only unscheduled. Scoped by client like every other read.
+ */
+export async function deleteRun(id: string, clientRef: string): Promise<boolean> {
+  const run = await getRun(id, clientRef);
+  if (!run) return false;
+  await fs.rm(path.join(DIR, `${id}.json`), { force: true });
+  return true;
+}

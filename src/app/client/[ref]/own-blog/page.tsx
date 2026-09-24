@@ -42,6 +42,11 @@ export default function BlogQueuePage() {
   const [approvers, setApprovers] = useState<Approver[]>([]);
   const [signingAs, setSigningAs] = useState("");
   const [busyDay, setBusyDay] = useState<string | null>(null);
+  // Removing a post is a two-click action rather than a browser confirm: the
+  // first click arms the row, the second does it, and clicking away cancels.
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [removeMsg, setRemoveMsg] = useState<string | null>(null);
 
   const loadGates = useCallback(async () => {
     const res = await fetch(`/api/clients/${ref}/approvals?track=blog`);
@@ -51,6 +56,27 @@ export default function BlogQueuePage() {
     setApprovers(data.approvers ?? []);
     setSigningAs((w) => w || data.approvers?.[0]?.id || "");
   }, [ref]);
+
+  async function removeRun(id: string) {
+    setRemoving(id);
+    setRemoveMsg(null);
+    try {
+      const res = await fetch(`/api/clients/${ref}/runs/${id}`, { method: "DELETE" });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? `Remove failed (${res.status})`);
+      setRuns((rs) => (rs ? rs.filter((r) => r.id !== id) : rs));
+      setRemoveMsg(
+        d.topic
+          ? `Removed "${d.title}" — the topic "${d.topic}" is back on the topics list.`
+          : `Removed "${d.title}".`
+      );
+    } catch (e) {
+      setRemoveMsg(e instanceof Error ? e.message : "Remove failed");
+    } finally {
+      setRemoving(null);
+      setConfirmRemove(null);
+    }
+  }
 
   useEffect(() => {
     loadGates();
@@ -126,6 +152,9 @@ export default function BlogQueuePage() {
 
   return (
     <div className="space-y-6">
+      {removeMsg && (
+        <div className="card px-4 py-3 text-[12px] text-[var(--ink-2)]">{removeMsg}</div>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-4 pt-2">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">
@@ -275,10 +304,10 @@ export default function BlogQueuePage() {
               const pillar = PILLARS.find((p) => p.id === r.brief.pillar);
               const type = CONTENT_TYPES[r.brief.contentType as ContentTypeId];
               return (
+                <div key={r.id} className="flex items-stretch group">
                 <Link
-                  key={r.id}
                   href={`${base}/runs/${r.id}`}
-                  className="flex items-center gap-4 p-4 hover:bg-[var(--surface-2)] transition-colors"
+                  className="flex items-center gap-4 p-4 flex-1 min-w-0 hover:bg-[var(--surface-2)] transition-colors"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -330,6 +359,34 @@ export default function BlogQueuePage() {
                     )}
                   </div>
                 </Link>
+                <div className="flex items-center pr-4 shrink-0">
+                  {confirmRemove === r.id ? (
+                    <span className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => removeRun(r.id)}
+                        disabled={removing === r.id}
+                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-[var(--danger)]/50 text-[var(--danger)] disabled:opacity-40"
+                      >
+                        {removing === r.id ? "Removing…" : "Remove it"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmRemove(null)}
+                        className="text-[11px] px-2 py-1.5 rounded-md text-[var(--ink-3)]"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => { setConfirmRemove(r.id); setRemoveMsg(null); }}
+                      title="Take this post off the queue. Its topic goes back on the topics list."
+                      className="text-[11px] px-2.5 py-1.5 rounded-md border border-transparent text-[var(--ink-3)] hover:text-[var(--danger)] hover:border-[var(--line)] md:opacity-0 md:group-hover:opacity-100 transition"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                </div>
               );
             })}
           </div>
