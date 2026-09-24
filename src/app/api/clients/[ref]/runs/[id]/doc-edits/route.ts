@@ -63,6 +63,7 @@ export async function POST(
     return NextResponse.json({
       saved: r.rules,
       applied: r.applied,
+      comments: r.comments ?? 0,
       missed: r.missed.map((m) => m.before || m.after),
     });
   }

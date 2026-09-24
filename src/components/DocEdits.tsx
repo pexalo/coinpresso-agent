@@ -99,13 +99,17 @@ export default function DocEdits({
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? `Sync failed (${res.status})`);
-      setMsg(
+      const parts = [
         d.applied
           ? `Took ${d.applied} change${d.applied === 1 ? "" : "s"} from the Doc — the app now has his text.` +
               (d.missed?.length ? ` ${d.missed.length} could not be placed: ${d.missed.slice(0, 3).map((m: string) => `"${m.slice(0, 60)}…"`).join(", ")}` : "")
-          : "The app already matches the Doc."
-      ) ;
-      if (d.saved) setMsg((m) => `${m ?? ""} Learned ${d.saved} new rule${d.saved === 1 ? "" : "s"} from his edits and comments — see Blog style → Learnings.`.trim());
+          : "The app already matches the Doc.",
+        `Read ${d.comments ?? 0} comment${d.comments === 1 ? "" : "s"}.`,
+        d.saved
+          ? `Learned ${d.saved} new rule${d.saved === 1 ? "" : "s"} — see Blog style → Learnings.`
+          : "No new rules: nothing here that the house rules don't already cover.",
+      ];
+      setMsg(parts.join(" "));
       setEdits(null);
       if (d.applied) await onApplied?.();
     } catch (e) {

@@ -39,6 +39,8 @@ export interface SyncResult {
   rules: number;
   /** Edits found but not placed — a paragraph he rewrote beyond recognition. */
   missed: EditPair[];
+  /** Comments read from the Doc — so the operator can see it looked. */
+  comments?: number;
   error?: string;
 }
 
@@ -66,8 +68,10 @@ export async function syncDocEdits(
   if (!edits.length) {
     // No text changed, but his comments may still hold a rule.
     let rules = 0;
+    let commentCount = 0;
     try {
       const comments = await readDocComments(run.docUrl).catch(() => []);
+      commentCount = comments.length;
       if (comments.length) {
         const log = await readFeedback(clientRef);
         const out = await learnFromEdits({
@@ -88,7 +92,7 @@ export async function syncDocEdits(
     } catch (err) {
       console.error("[doc-lessons]", err instanceof Error ? err.message : err);
     }
-    return { read: true, applied: 0, rules, missed: [] };
+    return { read: true, applied: 0, rules, missed: [], comments: commentCount };
   }
 
   const { draft, applied, missed } = applyEdits(run.draft, edits);
@@ -105,9 +109,11 @@ export async function syncDocEdits(
   // doc-lessons.ts. If it fails, the old behaviour — keep the rewrites as
   // before/after examples — still runs, so nothing he did is lost.
   let learned = false;
+  let commentsRead = 0;
   try {
     const log = await readFeedback(clientRef);
     const comments = await readDocComments(run.docUrl).catch(() => []);
+    commentsRead = comments.length;
     const out = await learnFromEdits({
       title: run.brief.title,
       reviewer,
@@ -169,5 +175,5 @@ export async function syncDocEdits(
     ];
     await saveRun(run);
   }
-  return { read: true, applied, rules, missed };
+  return { read: true, applied, rules, missed, comments: commentsRead };
 }
