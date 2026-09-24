@@ -1578,6 +1578,11 @@ cut Coinpresso out. Describe what they do ("a crypto press-release wire",
 "a distribution network of 100+ outlets") without the name. Primary sources only: platforms, regulators, exchanges,
 protocols, independent press.
 
+NO REGULATORY DETOURS. Securities law, anti-touting rules, licensing regimes,
+MiCA, SEC enforcement: leave them out unless the post is ABOUT them. The
+client: "I would avoid regulatory stuff like this unless absolutely essential
+to the composition. It's a grey area." Make the marketing point instead.
+
 SAY EACH POINT ONCE. Make it in the section where it belongs; do not restate it
 two paragraphs later in different words. The FAQs may recap; the body may not.
 

@@ -172,6 +172,15 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-avoid-regulatory-detour",
+    source: "Liam, wire-distribution post Doc (22 Sep)",
+    date: "2026-09-22",
+    rule: "Liam deleted a paragraph on securities law: \"I would avoid regulatory stuff like this unless absolutely essential to the composition. It's a grey area, and one a lot of agencies and marketers delve into...\" Keep out law, securities rules and compliance claims (SEC, anti-touting, MiCA, licensing) unless the post is about them. Make the marketing point instead; do not cite legal analysis to sound authoritative.",
+    before: "There's a legal dimension here too, not just a marketing one. Anti-touting rules under Section 17(b) of the Securities Act make it unlawful to circulate paid promotional material about a security without disclosing the payment...",
+    after: "(cut — the piece is about judging a vendor, not securities law)",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",
