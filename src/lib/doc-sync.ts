@@ -28,7 +28,7 @@ import type { Run } from "./types";
 import { readDocText, readDocComments } from "./google";
 import { learnFromEdits } from "./doc-lessons";
 import { renderMarkdown } from "./render";
-import { diffEdits, applyEdits, RULE_WORTHY_DISTANCE, type EditPair } from "./doc-edits";
+import { diffEdits, applyEdits, faqPairs, RULE_WORTHY_DISTANCE, type EditPair } from "./doc-edits";
 import { addFeedback, readFeedback } from "./feedback";
 import { saveRun } from "./store";
 
@@ -41,6 +41,9 @@ export interface SyncResult {
   missed: EditPair[];
   /** Comments read from the Doc — so the operator can see it looked. */
   comments?: number;
+  /** FAQ pairs parsed on each side, so "no changes" can be told apart from
+   *  "the FAQ block was not recognised". */
+  faq?: { ours: number; theirs: number };
   error?: string;
 }
 
@@ -64,7 +67,12 @@ export async function syncDocEdits(
     };
   }
 
-  const edits = diffEdits(renderMarkdown(run), current);
+  const exported = renderMarkdown(run);
+  const faqSeen = {
+    ours: faqPairs(exported.split(/^##\s+FAQs?\s*$/im)[1] ?? "").length,
+    theirs: faqPairs(current.split(/^##\s+FAQs?\s*$/im)[1] ?? "").length,
+  };
+  const edits = diffEdits(exported, current);
   if (!edits.length) {
     // No text changed, but his comments may still hold a rule.
     let rules = 0;
@@ -92,7 +100,7 @@ export async function syncDocEdits(
     } catch (err) {
       console.error("[doc-lessons]", err instanceof Error ? err.message : err);
     }
-    return { read: true, applied: 0, rules, missed: [], comments: commentCount };
+    return { read: true, applied: 0, rules, missed: [], comments: commentCount, faq: faqSeen };
   }
 
   const { draft, applied, missed } = applyEdits(run.draft, edits);
@@ -175,5 +183,5 @@ export async function syncDocEdits(
     ];
     await saveRun(run);
   }
-  return { read: true, applied, rules, missed, comments: commentsRead };
+  return { read: true, applied, rules, missed, comments: commentsRead, faq: faqSeen };
 }

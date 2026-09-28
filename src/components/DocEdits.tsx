@@ -105,6 +105,7 @@ export default function DocEdits({
               (d.missed?.length ? ` ${d.missed.length} could not be placed: ${d.missed.slice(0, 3).map((m: string) => `"${m.slice(0, 60)}…"`).join(", ")}` : "")
           : "The app already matches the Doc.",
         `Read ${d.comments ?? 0} comment${d.comments === 1 ? "" : "s"}.`,
+        d.faq ? `FAQ: ${d.faq.ours} here, ${d.faq.theirs} in the Doc.` : "",
         d.saved
           ? `Learned ${d.saved} new rule${d.saved === 1 ? "" : "s"} — see Blog style → Learnings.`
           : "No new rules: nothing here that the house rules don't already cover.",

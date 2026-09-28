@@ -106,9 +106,12 @@ export function faqPairs(faqBlock: string): Array<{ q: string; a: string; aRaw: 
   for (const raw of faqBlock.split(/\n{2,}|\n(?=#)/)) {
     const t = raw.trim();
     if (!t) continue;
-    const h3 = t.match(/^#{3,6}\s+(.+)$/s);
-    const bold = t.match(/^\*\*(.+?)\*\*[.:]?$/s);
-    const q = h3?.[1] ?? bold?.[1];
+    const h3 = t.match(/^#{3,6}\s+(.+?)\s*$/s);
+    // Bold, with or without stray spaces inside the markers, and with or
+    // without the emphasis at all: a short line ending in "?" is a question.
+    const bold = t.match(/^\*\*\s*(.+?)\s*\*\*\s*[.:]?\s*$/s);
+    const bare = /\?["')\]]?\s*$/.test(t) && t.split(/\s+/).length <= 20 && !/[.!]\s/.test(t) ? t : undefined;
+    const q = h3?.[1] ?? bold?.[1] ?? bare;
     if (q) {
       out.push({ q: norm(q), a: "", aRaw: "" });
       continue;

@@ -64,6 +64,7 @@ export async function POST(
       saved: r.rules,
       applied: r.applied,
       comments: r.comments ?? 0,
+      faq: r.faq ?? null,
       missed: r.missed.map((m) => m.before || m.after),
     });
   }
