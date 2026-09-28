@@ -233,5 +233,30 @@ console.log("edits become rules without clobbering each other:");
 }
 
 
+
+{
+  console.log("the FAQ block is matched pair by pair (Mercenary Communities, 28 Sep):");
+  const PH = "Provide a concise, practical answer with any relevant safety or measurement limitation.";
+  const qs = ["Are farmers bad for a project?", "Is a holder a community member?", "How should contribution be measured?"];
+  const draft = {
+    body: "## Why Community Is Overloaded\n\nSome prose that is long enough to count as a paragraph here.\n\n## Conclusion\n\nEnding words that go on for a little while here.",
+    faqs: qs.map((q) => ({ q, a: PH })),
+  };
+  const exported = "# T\n\n" + draft.body + "\n\n## FAQs\n\n" + qs.map((q) => `### ${q}\n\n${PH}`).join("\n\n");
+  const answers = [
+    "Not inherently. Reward campaigns do what they are designed to do, which is drive traffic and stress-test the product.",
+    "No. An address reflects a balance, not an advocate, and a few days of holding is a minimal signal at best.",
+    "Score what people actually do per identity cluster: repeat use, support given, governance comments, retained referrals.",
+  ];
+  // The Doc was exported before FAQ questions became H3s, so it has them bold.
+  const doc = "# T\n\n" + draft.body + "\n\n## FAQs\n\n" + qs.map((q, i) => `**${q}**\n\n${answers[i]}`).join("\n\n");
+  const ed = diffEdits(exported, doc);
+  ok("one edit per answer, none for the unchanged body", ed.length === 3 && ed.every((e) => e.op === "faq"), JSON.stringify(ed.map((e) => e.op)));
+  const r = applyEdits(draft, ed);
+  ok("all three answers land, in the right order", r.applied === 3 && r.draft.faqs.every((f, i) => f.a === answers[i]), JSON.stringify(r.draft.faqs));
+  ok("identical placeholders do not all overwrite FAQ #1", new Set(r.draft.faqs.map((f) => f.a)).size === 3);
+  ok("nothing missed", r.missed.length === 0);
+  ok("an unchanged FAQ block reports nothing", diffEdits(doc, doc).length === 0);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -31,7 +31,10 @@ export interface EditPair {
    * one he wrote. Missing means "edit". Before this, a cut paragraph stayed
    * in the app's draft while the Doc no longer had it.
    */
-  op?: "edit" | "delete" | "insert";
+  op?: "edit" | "delete" | "insert" | "faq";
+  /** For op "faq": which FAQ (by position) and which half changed. */
+  faqIndex?: number;
+  faqField?: "q" | "a";
   /** For an insert: the plain text of the paragraph it follows ("" = top). */
   afterOf?: string;
 }
@@ -56,7 +59,10 @@ function paragraphsOf(text: string): Array<{ text: string; raw: string; section?
     const h = t.match(/^(#{1,6})\s+(.*)$/m);
     if (h) {
       // The H1 is the title, not a section; the intro has no section.
-      if (h[1].length >= 2) section = h[2].trim();
+      // Only an H2 starts a section: FAQ questions are H3s, and letting them
+      // become sections put every answer in a section of its own — so the
+      // Doc's answers (all under "FAQs") could never pair with ours.
+      if (h[1].length === 2) section = h[2].trim();
       const rest = t.replace(/^#{1,6}\s+.*$/m, "").trim();
       if (!rest) continue;
       out.push({ text: norm(rest), raw: rest, section });
@@ -76,6 +82,44 @@ function paragraphsOf(text: string): Array<{ text: string; raw: string; section?
 const linksOf = (raw: string) =>
   [...raw.matchAll(/\[([^\]]+)\]\(([^)\s]+)\)/g)].map((m) => `${m[1].trim()}>${m[2]}`).join("|");
 const sectionKey = (s?: string) => (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+const FAQ_HEADING = /^##\s+FAQs?\s*$/im;
+
+/** Everything before the FAQ block, and the FAQ block itself. */
+function splitFaqBlock(text: string): { body: string; faq: string } {
+  const m = text.match(FAQ_HEADING);
+  if (!m || m.index === undefined) return { body: text, faq: "" };
+  return { body: text.slice(0, m.index), faq: text.slice(m.index + m[0].length) };
+}
+
+/**
+ * Question/answer pairs out of a rendered FAQ block.
+ *
+ * Both shapes count, because the Docs exported before 21 Sep write the
+ * question as a bold paragraph and the ones after write it as an H3:
+ *
+ *     ### Is a holder a member?      **Is a holder a member?**
+ *     No. A wallet is a balance.     No. A wallet is a balance.
+ */
+export function faqPairs(faqBlock: string): Array<{ q: string; a: string; aRaw: string }> {
+  const out: Array<{ q: string; a: string; aRaw: string }> = [];
+  for (const raw of faqBlock.split(/\n{2,}|\n(?=#)/)) {
+    const t = raw.trim();
+    if (!t) continue;
+    const h3 = t.match(/^#{3,6}\s+(.+)$/s);
+    const bold = t.match(/^\*\*(.+?)\*\*[.:]?$/s);
+    const q = h3?.[1] ?? bold?.[1];
+    if (q) {
+      out.push({ q: norm(q), a: "", aRaw: "" });
+      continue;
+    }
+    if (!out.length) continue;
+    const last = out[out.length - 1];
+    last.a = last.a ? `${last.a} ${norm(t)}` : norm(t);
+    last.aRaw = last.aRaw ? `${last.aRaw} ${t}` : t;
+  }
+  return out.filter((p) => p.q);
+}
 
 /** Word-level similarity, 0..1. Cheap and good enough to align paragraphs. */
 export function similarity(a: string, b: string): number {
@@ -115,8 +159,10 @@ export function diffEdits(
   const same = opts.same ?? 0.97;
   const anchorAt = opts.anchor ?? 0.6;
   const floor = opts.floor ?? 0.3;
-  const ours = paragraphsOf(exported);
-  const theirs = paragraphsOf(current);
+  const exportedSplit = splitFaqBlock(exported);
+  const currentSplit = splitFaqBlock(current);
+  const ours = paragraphsOf(exportedSplit.body);
+  const theirs = paragraphsOf(currentSplit.body);
 
   // 1. Anchors: strong matches, in order, each side used once.
   const anchors: Array<[number, number]> = [];
@@ -214,6 +260,25 @@ export function diffEdits(
       afterOf: prev >= 0 ? ours[prev].text : "",
     });
   });
+  // The FAQ block is matched pair by pair, not paragraph by paragraph: five
+  // identical placeholder answers have nothing for a similarity match to grip,
+  // and the question is an H3 on one side and a bold line on the other.
+  const oursFaq = faqPairs(exportedSplit.faq);
+  const theirsFaq = faqPairs(currentSplit.faq);
+  for (let i = 0; i < Math.min(oursFaq.length, theirsFaq.length); i++) {
+    const a = oursFaq[i];
+    const b = theirsFaq[i];
+    // Position is the default pairing; a question that moved is found by text.
+    const j = a.q === b.q ? i : theirsFaq.findIndex((x) => similarity(x.q, a.q) >= 0.7);
+    const them = j >= 0 ? theirsFaq[j] : b;
+    if (them.q !== a.q) {
+      edits.push({ before: a.q, after: them.q, afterRaw: them.q, distance: Number((1 - similarity(a.q, them.q)).toFixed(2)), section: "FAQs", op: "faq", faqIndex: i, faqField: "q" });
+    }
+    if (them.a !== a.a) {
+      edits.push({ before: a.a, after: them.a, afterRaw: them.aRaw, distance: Number((1 - similarity(a.a, them.a)).toFixed(2)), section: "FAQs", op: "faq", faqIndex: i, faqField: "a" });
+    }
+  }
+
   return edits;
 }
 
@@ -242,6 +307,9 @@ export function applyEdits<T extends DraftLike>(
 ): { draft: T; applied: number; missed: EditPair[] } {
   const blocks = draft.body.split(/(\n{2,})/);
   const faqs = draft.faqs.map((f) => ({ ...f }));
+  // Five identical placeholder answers must not all match FAQ #1. Each answer
+  // is claimed once, in order.
+  const usedFaq = new Set<number>();
   let applied = 0;
   const missed: EditPair[] = [];
 
@@ -265,10 +333,21 @@ export function applyEdits<T extends DraftLike>(
   };
 
   for (const e of edits) {
+    if (e.op === "faq") {
+      const i = e.faqIndex ?? -1;
+      if (i < 0 || i >= faqs.length) {
+        missed.push(e);
+        continue;
+      }
+      if (e.faqField === "q") faqs[i].q = e.afterRaw.replace(/^\*\*|\*\*$/g, "");
+      else faqs[i].a = e.afterRaw;
+      applied++;
+      continue;
+    }
     if (e.op === "delete") {
       const hit = trustDeletes ? findLine(e.before) : null;
       if (!hit) {
-        const f = trustDeletes ? faqs.findIndex((x) => similarity(norm(x.a), e.before) >= 0.9) : -1;
+        const f = trustDeletes ? faqs.findIndex((x, k) => !usedFaq.has(k) && similarity(norm(x.a), e.before) >= 0.9) : -1;
         if (f >= 0) {
           faqs.splice(f, 1);
           applied++;
@@ -338,14 +417,16 @@ export function applyEdits<T extends DraftLike>(
       applied++;
       continue;
     }
-    const f = faqs.findIndex((x) => similarity(norm(x.a), e.before) >= 0.9);
+    const f = faqs.findIndex((x, k) => !usedFaq.has(k) && similarity(norm(x.a), e.before) >= 0.9);
     if (f >= 0) {
+      usedFaq.add(f);
       faqs[f].a = e.afterRaw;
       applied++;
       continue;
     }
-    const q = faqs.findIndex((x) => similarity(norm(x.q), e.before) >= 0.9);
+    const q = faqs.findIndex((x, k) => !usedFaq.has(k) && similarity(norm(x.q), e.before) >= 0.9);
     if (q >= 0) {
+      usedFaq.add(q);
       faqs[q].q = e.afterRaw.replace(/^\*\*|\*\*$/g, "");
       applied++;
       continue;
