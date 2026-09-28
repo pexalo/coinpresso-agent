@@ -258,5 +258,26 @@ console.log("edits become rules without clobbering each other:");
   ok("nothing missed", r.missed.length === 0);
   ok("an unchanged FAQ block reports nothing", diffEdits(doc, doc).length === 0);
 }
+
+{
+  console.log("a draft with no FAQs adopts the Doc's block (28 Sep):");
+  const body = "## Why Community Is Overloaded\n\nSome prose that is long enough to count as a paragraph here.\n\n## Conclusion\n\nEnding words that go on for a little while here.";
+  const draft = { body, faqs: [] };
+  const qs = ["Are airdrop farmers always bad?", "Is a holder a member?"];
+  const as = [
+    "No. Incentive programs do what they are designed to do, which is pull in attention and testing.",
+    "No. A wallet tells you about a balance, not a person, and a week of holding is a weak signal.",
+  ];
+  const doc = "# T\n\n" + body + "\n\n## FAQs\n\n" + qs.map((q, i) => `**${q}**\n\n${as[i]}`).join("\n\n");
+  const ed = diffEdits("# T\n\n" + body, doc);
+  const r = applyEdits(draft, ed);
+  ok("both FAQs are taken from the Doc", r.draft.faqs.length === 2 && r.draft.faqs[1].a === as[1], JSON.stringify(r.draft.faqs));
+  ok("the questions keep their text", r.draft.faqs[0].q === qs[0]);
+  ok("nothing missed", r.missed.length === 0);
+  // And a FAQ is never removed by a delete — that is how a block went missing.
+  const withFaqs = { body, faqs: [{ q: qs[0], a: as[0] }] };
+  const gone = applyEdits(withFaqs, [{ before: as[0], after: "", afterRaw: "", distance: 1, op: "delete" }]);
+  ok("a delete never strips an FAQ entry", gone.draft.faqs.length === 1);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

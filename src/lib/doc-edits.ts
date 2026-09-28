@@ -31,7 +31,7 @@ export interface EditPair {
    * one he wrote. Missing means "edit". Before this, a cut paragraph stayed
    * in the app's draft while the Doc no longer had it.
    */
-  op?: "edit" | "delete" | "insert" | "faq";
+  op?: "edit" | "delete" | "insert" | "faq" | "faq-add";
   /** For op "faq": which FAQ (by position) and which half changed. */
   faqIndex?: number;
   faqField?: "q" | "a";
@@ -268,6 +268,15 @@ export function diffEdits(
   // and the question is an H3 on one side and a bold line on the other.
   const oursFaq = faqPairs(exportedSplit.faq);
   const theirsFaq = faqPairs(currentSplit.faq);
+  // The Doc has an FAQ block and the draft has none: take the whole block.
+  // (A draft can end up with no FAQs — an early version of this sync could
+  // delete them, and a writer can fail to produce the section at all.)
+  if (!oursFaq.length && theirsFaq.length) {
+    for (const [i, t] of theirsFaq.entries()) {
+      edits.push({ before: "", after: `${t.q} ${t.a}`, afterRaw: `${t.q}\n${t.aRaw}`, distance: 1, section: "FAQs", op: "faq-add", faqIndex: i });
+    }
+    return edits;
+  }
   for (let i = 0; i < Math.min(oursFaq.length, theirsFaq.length); i++) {
     const a = oursFaq[i];
     const b = theirsFaq[i];
@@ -336,6 +345,12 @@ export function applyEdits<T extends DraftLike>(
   };
 
   for (const e of edits) {
+    if (e.op === "faq-add") {
+      const [q, ...rest] = e.afterRaw.split("\n");
+      faqs.push({ q: q.replace(/^\*\*|\*\*$/g, "").trim(), a: rest.join("\n").trim() });
+      applied++;
+      continue;
+    }
     if (e.op === "faq") {
       const i = e.faqIndex ?? -1;
       if (i < 0 || i >= faqs.length) {
@@ -350,11 +365,10 @@ export function applyEdits<T extends DraftLike>(
     if (e.op === "delete") {
       const hit = trustDeletes ? findLine(e.before) : null;
       if (!hit) {
-        const f = trustDeletes ? faqs.findIndex((x, k) => !usedFaq.has(k) && similarity(norm(x.a), e.before) >= 0.9) : -1;
-        if (f >= 0) {
-          faqs.splice(f, 1);
-          applied++;
-        } else missed.push(e);
+        // A FAQ is never dropped here. An answer that vanished from the Doc
+        // is a formatting difference far more often than a decision, and
+        // splicing the entry is how a whole FAQ block was lost once.
+        missed.push(e);
         continue;
       }
       const ls = blocks[hit.b].split("\n");
