@@ -156,12 +156,32 @@ export async function callClaude(opts: ClaudeCall): Promise<ClaudeResult> {
     return body;
   };
 
-  const post = (withTemperature: boolean, withThinkingOff: boolean) =>
-    fetch(route.url, {
-      method: "POST",
-      headers: route.headers,
-      body: JSON.stringify(buildBody(withTemperature, withThinkingOff)),
-    });
+  // A CALL THAT NEVER RETURNS IS WORSE THAN ONE THAT FAILS.
+  //
+  // Two runs sat at "writer: running" for thirteen hours with a connection
+  // that had gone quiet: no error, no result, and retry refuses while a run is
+  // running. A request that has produced nothing for this long is dead, and
+  // failing it lets the operator retry. Research gets longer — it runs a dozen
+  // web searches inside the one call.
+  const TIMEOUT_MS = opts.webSearch ? 15 * 60_000 : 8 * 60_000;
+  const post = async (withTemperature: boolean, withThinkingOff: boolean) => {
+    try {
+      return await fetch(route.url, {
+        method: "POST",
+        headers: route.headers,
+        body: JSON.stringify(buildBody(withTemperature, withThinkingOff)),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch (e) {
+      const name = e instanceof Error ? e.name : "";
+      if (name === "TimeoutError" || name === "AbortError") {
+        throw new Error(
+          `The model did not answer within ${Math.round(TIMEOUT_MS / 60_000)} minutes (${opts.model}). The request was dropped — retry the stage.`
+        );
+      }
+      throw e;
+    }
+  };
 
   // The register says whether this model still takes temperature. Trusting it
   // alone would be brittle — it is a hand-maintained fact about a target that
