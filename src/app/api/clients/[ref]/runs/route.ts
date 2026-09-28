@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { executeRun, newRun } from "@/lib/pipeline";
 import { listRuns, newRunId, saveRun } from "@/lib/store";
+import { reapStalledRuns } from "@/lib/stalled";
 import { PUBLICATIONS } from "@/lib/publications";
 import { defaultCampaign, getClient, hasModule } from "@/lib/clients";
 import { resolveCampaign } from "@/lib/campaign-store";
@@ -39,7 +40,8 @@ export async function GET(
   const g = gate(ref);
   if (g.error) return g.error;
 
-  const runs = await listRuns(ref);
+  // A run left "running" by a deploy or a crash would spin in the UI forever.
+  const runs = await reapStalledRuns(await listRuns(ref));
   return NextResponse.json(
     runs.map((r) => ({
       id: r.id,
@@ -47,7 +49,21 @@ export async function GET(
       campaignId: r.campaignId,
       createdAt: r.createdAt,
       status: r.status,
-      brief: r.brief,
+      // The LIST sends a summary of the brief, not the whole thing. The full
+      // contentBrief — outline, FAQs, guardrails — is several KB per run, and
+      // this endpoint is polled every four seconds: with forty runs the page
+      // was downloading over a megabyte a minute and locking up. The run page
+      // fetches the full record when it needs it.
+      brief: {
+        title: r.brief.title,
+        keywords: r.brief.keywords,
+        publication: r.brief.publication,
+        track: r.brief.track,
+        pillar: r.brief.pillar,
+        pillarHub: r.brief.pillarHub,
+        contentType: r.brief.contentType,
+        seedTopicId: r.brief.seedTopicId,
+      },
       track: r.brief.track ?? "wire",
       revisions: r.revisions,
       mock: r.mock,
