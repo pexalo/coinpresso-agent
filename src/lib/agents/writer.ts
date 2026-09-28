@@ -1064,6 +1064,45 @@ export function enforceCoinpressoLongest(body: string): void {
   );
 }
 
+/**
+ * FAQ answers have to be answers.
+ *
+ * The Mercenary Communities post reached a client Doc with all five answers
+ * reading "Provide a concise, practical answer with any relevant safety or
+ * measurement limitation." — the instruction, copied in place of the answer,
+ * and nothing in the pipeline noticed. Liam marked it approved before he saw
+ * it. Hard: a post cannot go out with its FAQ block unwritten.
+ */
+const FAQ_PLACEHOLDER = /(provide|write|give) (a |an )?(concise|short|brief|clear|practical|two-sentence)|answer (here|goes here)|\blorem ipsum\b|\btbd\b|\bplaceholder\b|^\s*\.{3}\s*$/i;
+const FAQ_MIN_WORDS = 15;
+
+export function enforceFaqAnswers(faqs: Array<{ q: string; a: string }>): void {
+  if (!faqs.length) return;
+  const bad: string[] = [];
+  const seen = new Map<string, number>();
+  faqs.forEach((f, i) => {
+    const a = (f.a ?? "").trim();
+    if (!a || FAQ_PLACEHOLDER.test(a)) {
+      bad.push(`"${f.q}" — the answer is an instruction or a placeholder, not an answer`);
+      return;
+    }
+    if (wordCount(unlink(a)) < FAQ_MIN_WORDS) {
+      bad.push(`"${f.q}" — the answer is ${wordCount(unlink(a))} words; give it at least ${FAQ_MIN_WORDS}`);
+      return;
+    }
+    const key = unlink(a).replace(/\s+/g, " ").trim().toLowerCase();
+    const at = seen.get(key);
+    if (at !== undefined) bad.push(`"${f.q}" repeats the answer given to "${faqs[at].q}" word for word`);
+    else seen.set(key, i);
+  });
+  if (!bad.length) return;
+  throw new Error(
+    `${bad.length} FAQ answer${bad.length === 1 ? " is" : "s are"} not written. Answer each question in two or three sentences from the post's own material:\n${bad
+      .map((x) => `      ${x}`)
+      .join("\n")}`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -1995,6 +2034,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
             : enforceNoCompetitorNames(parsed.body, parsed.faqs ?? [], blockedSources.map((x) => x.publisher).filter(Boolean)),
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "hard"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "hard"),
+        () => enforceFaqAnswers(parsed.faqs ?? []),
         () => enforceAnchorLength(parsed.body),
         () => enforcePromisedStructures(parsed.body),
       ]);

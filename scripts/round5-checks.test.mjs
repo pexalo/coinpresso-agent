@@ -510,5 +510,17 @@ console.log("FAQ answers carry internal links (Liam, 18 Sep):");
   ok("a shorter Coinpresso entry is a style note",
      /lengthiest/.test(throws(() => enforceCoinpressoLongest(body.replace("word ".repeat(80), "word ".repeat(10)))) ?? ""));
 }
+
+{
+  const { enforceFaqAnswers } = await import("../src/lib/agents/writer.ts");
+  console.log("FAQ answers have to be answers (Mercenary Communities, 27 Sep):");
+  const real = "A wallet that repeats a product action without a reward attached is the signal that matters, and it is what the model scores.";
+  ok("the placeholder that reached a client Doc is caught",
+     /not an answer|not written/.test(throws(() => enforceFaqAnswers([{ q: "Q?", a: "Provide a concise, practical answer with any relevant safety or measurement limitation." }])) ?? ""));
+  ok("a one-line non-answer is caught", throws(() => enforceFaqAnswers([{ q: "Q?", a: "Yes, mostly." }])) !== null);
+  ok("the same answer twice is caught", /repeats the answer/.test(throws(() => enforceFaqAnswers([{ q: "A?", a: real }, { q: "B?", a: real }])) ?? ""));
+  ok("a written answer passes", throws(() => enforceFaqAnswers([{ q: "Q?", a: real }])) === null);
+  ok("no FAQs is not a fault here", throws(() => enforceFaqAnswers([])) === null);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
