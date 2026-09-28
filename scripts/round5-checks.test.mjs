@@ -522,5 +522,18 @@ console.log("FAQ answers carry internal links (Liam, 18 Sep):");
   ok("a written answer passes", throws(() => enforceFaqAnswers([{ q: "Q?", a: real }])) === null);
   ok("no FAQs is not a fault here", throws(() => enforceFaqAnswers([])) === null);
 }
+
+{
+  const { enforceCoinpressoFirst, roundupEntries } = await import("../src/lib/agents/writer.ts");
+  console.log("numbered roundups: framing headings are not entries (GEO agencies run, 28 Sep):");
+  const w = (n) => "word ".repeat(n);
+  const body = ["## The Rise of Web3 Generative Engine Optimization", w(120), "## 1. Coinpresso: The Premier Web3 GEO Agency", w(200),
+    "## 2. Victoria Olsina: LLM SEO Specialists", w(90), "## 3. ICODA: AI Search Dominance", w(80),
+    "## Traditional SEO vs. Web3 GEO", w(150), "## How to Measure GEO Success", w(100), "## Conclusion", w(60)].join("\n\n");
+  ok("only the numbered headings count", roundupEntries(body).length === 3, roundupEntries(body).map((e) => e.name));
+  ok("the draft that failed three times now passes", throws(() => enforceCoinpressoFirst(body)) === null, throws(() => enforceCoinpressoFirst(body)));
+  ok("Coinpresso at #3 still fails",
+     /entry 3 of 3/.test(throws(() => enforceCoinpressoFirst(body.replace("1. Coinpresso", "1. Blockwiz").replace("3. ICODA", "3. Coinpresso"))) ?? ""));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

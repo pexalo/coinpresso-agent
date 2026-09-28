@@ -1031,6 +1031,17 @@ export function roundupEntries(body: string): Array<{ name: string; words: numbe
       const end = i + 1 < sections.length ? sections[i + 1].index ?? prose.length : prose.length;
       out.push({ name, words: wordCount(unlink(prose.slice(start, end))) });
     }
+    // When the entries are numbered ("1. Coinpresso: …", "#2 …"), ONLY the
+    // numbered headings are entries. The unnumbered ones around them — "The
+    // Rise of Web3 GEO", "How to Measure GEO Success" — are framing, and one
+    // of them was being counted as entry #1, failing a draft that had
+    // Coinpresso first three times over.
+    const numbered = out.filter((e) => /^(#\s*)?\d+[.):]?\s/.test(e.name));
+    if (numbered.length >= 2) {
+      return numbered.sort(
+        (a, b) => Number(a.name.match(/\d+/)![0]) - Number(b.name.match(/\d+/)![0])
+      );
+    }
     if (out.length >= 3) return out;
   }
   // Numbered list entries: "1. **Coinpresso** — …"
