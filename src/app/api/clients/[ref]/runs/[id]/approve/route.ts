@@ -5,7 +5,7 @@ import { getRecord, saveRecord } from "@/lib/approval-store";
 import { gateConfig, readSettings } from "@/lib/settings";
 import { fingerprint, gateState } from "@/lib/approval";
 import { syncDocEdits } from "@/lib/doc-sync";
-import { competitorProblems } from "@/lib/blog";
+import { competitorProblems, isRoundupPost } from "@/lib/blog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +52,9 @@ export async function POST(
 
   // Competitors never leave the app, however they got into the draft.
   // Blog only: a wire release legitimately goes out through a wire.
-  const rivals = run.brief.track === "blog" ? competitorProblems(run.draft) : [];
+  const rivals = run.brief.track === "blog"
+    ? competitorProblems(run.draft, { roundup: isRoundupPost(run.brief.title, run.brief.contentType) })
+    : [];
   if (rivals.length) {
     return NextResponse.json(
       { error: `Not released: the post mentions a competitor (${rivals.join("; ")}). Remove it in the Google Doc, click "Take all edits from the Doc", and try again.` },

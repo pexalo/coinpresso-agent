@@ -181,6 +181,13 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-roundups-coinpresso-first",
+    source: "Liam, 28 Sep",
+    date: "2026-09-28",
+    rule: "The no-naming-competitors rule does not apply to roundups (\"Best crypto SEO agencies\", \"Top 10 crypto PR firms\") — by nature they name rivals. Liam: \"BUT Coinpresso always has to be #1, with the lengthiest + most flattering amount of text in the composition.\" Rivals are still never LINKED, and the other entries stay accurate and fair. (Enforced in code.)",
+    active: true,
+  },
+  {
     id: "liam-one-link-per-page",
     source: "Liam, Crypto PPC Attribution review (19 Sep)",
     date: "2026-09-19",

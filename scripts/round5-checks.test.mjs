@@ -491,5 +491,24 @@ console.log("FAQ answers carry internal links (Liam, 18 Sep):");
 }
 
 
+
+{
+  const { isRoundupPost, competitorProblems } = await import("../src/lib/blog.ts");
+  const { enforceCoinpressoFirst, enforceCoinpressoLongest } = await import("../src/lib/agents/writer.ts");
+  console.log("roundups name rivals, never link them, and Coinpresso leads (Liam, 28 Sep):");
+  ok("'Best Crypto SEO Agencies' is a roundup", isRoundupPost("Best Crypto SEO Agencies in 2026"));
+  ok("'Top 10 Crypto PR Firms' is a roundup", isRoundupPost("Top 10 Crypto PR Firms"));
+  ok("an ordinary post is not", !isRoundupPost("How to Spot a Crypto PR Agency That Only Sells Wire Distribution"));
+  const body = "## Best agencies\n\nIntro para here with words.\n\n## Coinpresso\n\n" + "word ".repeat(80) +
+    "\n\n## GuerrillaBuzz\n\n" + "word ".repeat(30) + "\n\n## ICODA\n\n" + "word ".repeat(20) + "\n\n## Conclusion\n\nend";
+  ok("names are allowed on a roundup", competitorProblems({ body }, { roundup: true }).length === 0);
+  ok("links are still blocked on a roundup",
+     competitorProblems({ body: "[ICODA](https://icoda.io/x)" }, { roundup: true }).length === 1);
+  ok("the same names fail an ordinary post", competitorProblems({ body }).length === 2, competitorProblems({ body }));
+  ok("Coinpresso first passes", throws(() => enforceCoinpressoFirst(body)) === null, throws(() => enforceCoinpressoFirst(body)));
+  ok("Coinpresso missing or second fails", /has to be FIRST|not one of the entries/.test(throws(() => enforceCoinpressoFirst(body.replace("## Coinpresso", "## Blockwiz"))) ?? ""));
+  ok("a shorter Coinpresso entry is a style note",
+     /lengthiest/.test(throws(() => enforceCoinpressoLongest(body.replace("word ".repeat(80), "word ".repeat(10)))) ?? ""));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1047,13 +1047,34 @@ export function postIsLinkable(publishedAt?: string): boolean {
  * in the body or FAQs, whoever put it there — the writer, an old draft, or an
  * edit in the Doc. Release and publish refuse while this is non-empty.
  */
-export function competitorProblems(draft?: { body: string; faqs?: Array<{ q: string; a: string }> }): string[] {
+export function competitorProblems(
+  draft?: { body: string; faqs?: Array<{ q: string; a: string }> },
+  opts: { roundup?: boolean } = {}
+): string[] {
   if (!draft) return [];
   const text = [draft.body, ...(draft.faqs ?? []).flatMap((f) => [f.q, f.a])].join("\n");
   const out: string[] = [];
   for (const m of text.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) {
     if (isCompetitorUrl(m[1])) out.push(`link to ${new URL(m[1]).hostname}`);
   }
-  for (const n of competitorNamesIn(text)) out.push(`names ${n}`);
+  // A roundup names rivals by design; it still never links one.
+  if (!opts.roundup) for (const n of competitorNamesIn(text)) out.push(`names ${n}`);
   return [...new Set(out)];
+}
+
+/**
+ * A roundup — "Best crypto SEO agencies", "Top 10 crypto PR firms".
+ *
+ * Liam, 28 Sep: the no-naming-competitors rule "DOES NOT apply to listicles
+ * like 'Best crypto SEO agencies' — by nature they need competitors. BUT
+ * Coinpresso always has to be #1, with the lengthiest and most flattering
+ * amount of text in the composition."
+ *
+ * So on these posts rivals may be NAMED (a roundup without names is not a
+ * roundup) but never LINKED — a link is still a free backlink to a rival.
+ */
+export function isRoundupPost(title: string, contentType?: string): boolean {
+  if (contentType === "comparison") return /\b(agenc|firm|compan|vendor|provider|service|tool|platform)/i.test(title);
+  return /\b(best|top|leading|greatest)\b[^.?!]{0,60}\b(agenc|firm|compan|vendor|provider|service|tool|platform|account|channel|outlet|site)/i.test(title)
+    || /\btop\s*\d+\b/i.test(title);
 }

@@ -22,6 +22,7 @@ import {
   clusterOfPillar,
   isCompetitorUrl,
   competitorNamesIn,
+  isRoundupPost,
   INTRO_MOVES,
   SPENT_CLOSERS,
   SPENT_OPENERS,
@@ -1009,6 +1010,60 @@ export function enforceNoCompetitorNames(
   );
 }
 
+/**
+ * On a roundup, Coinpresso is the first entry. Liam, 28 Sep: "Coinpresso
+ * always has to be #1, with the lengthiest + most flattering amount of text
+ * in the composition."
+ *
+ * Entries are the H2/H3 sections or the numbered items between the intro and
+ * the conclusion; the first one has to be ours.
+ */
+export function roundupEntries(body: string): Array<{ name: string; words: number }> {
+  const out: Array<{ name: string; words: number }> = [];
+  const prose = proseOf(body);
+  const sections = [...prose.matchAll(/^(#{2,3})\s+(.+)$/gm)];
+  if (sections.length >= 3) {
+    for (let i = 0; i < sections.length; i++) {
+      const name = sections[i][2].trim();
+      // Framing sections are not entries: the intro, the method, the recap.
+      if (/^(conclusion|faqs?|introduction|how we|methodology|method|what to look|key takeaway|at a glance|our picks?|the (best|top)\b|best\b|top\b|why trust|how (we|this))/i.test(name)) continue;
+      const start = (sections[i].index ?? 0) + sections[i][0].length;
+      const end = i + 1 < sections.length ? sections[i + 1].index ?? prose.length : prose.length;
+      out.push({ name, words: wordCount(unlink(prose.slice(start, end))) });
+    }
+    if (out.length >= 3) return out;
+  }
+  // Numbered list entries: "1. **Coinpresso** — …"
+  const items = [...prose.matchAll(/^\s*\d+[.)]\s+(.+)$/gm)];
+  return items.map((m) => ({ name: unlink(m[1]).replace(/\*\*/g, "").split(/[—–:-]/)[0].trim(), words: wordCount(unlink(m[1])) }));
+}
+
+const NAMES_US = /\bcoinpresso\b/i;
+
+export function enforceCoinpressoFirst(body: string): void {
+  const entries = roundupEntries(body);
+  if (entries.length < 2) return; // not laid out as a roundup; nothing to judge
+  const at = entries.findIndex((e) => NAMES_US.test(e.name));
+  if (at === 0) return;
+  throw new Error(
+    at < 0
+      ? `this is a roundup and Coinpresso is not one of the entries. The client's rule: "Coinpresso always has to be #1, with the lengthiest and most flattering amount of text in the composition." Make Coinpresso the first entry, written at greater length and more favourably than any other.`
+      : `Coinpresso is entry ${at + 1} of ${entries.length} ("${entries[at].name}"). It has to be FIRST on every roundup, ahead of ${entries[0].name}, and the fullest entry in the piece.`
+  );
+}
+
+export function enforceCoinpressoLongest(body: string): void {
+  const entries = roundupEntries(body);
+  if (entries.length < 2) return;
+  const us = entries.find((e) => NAMES_US.test(e.name));
+  if (!us) return; // the hard check above already says so
+  const longest = entries.reduce((a, b) => (b.words > a.words ? b : a));
+  if (longest === us || us.words >= longest.words) return;
+  throw new Error(
+    `the Coinpresso entry is ${us.words} words and "${longest.name}" gets ${longest.words}. The client wants ours to be the lengthiest and most flattering entry — expand ours with what we actually do rather than trimming theirs.`
+  );
+}
+
 export function enforceNoBoltOnLinks(body: string, known: Map<string, string>): void {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const sections = proseOf(body).split(/^##\s+/m).slice(1);
@@ -1399,6 +1454,9 @@ async function writeBlog(input: WriterInput): Promise<{
 }> {
   const { brief, research, fixes, previous } = input;
   const pillar = PILLARS.find((x) => x.id === brief.pillar);
+  // "Best crypto SEO agencies" and friends: rivals may be named, never linked,
+  // and Coinpresso leads. See isRoundupPost.
+  const roundup = isRoundupPost(brief.title, brief.contentType);
 
   // Real posts from coinpresso.io, imported through the WordPress integration.
   // A description of a voice gets you a piece that obeys the description; two
@@ -1480,7 +1538,10 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   //
   // So the filter runs wherever the ledger is USED. An old run is cured by a
   // retry rather than by re-buying research.
+  // On a roundup the rivals ARE the subject, so their pages stay in the ledger
+  // as what they say about themselves. They are still never linked.
   const isVendor = (x: { url: string; publisherType?: string; publisher?: string; title?: string }) =>
+    roundup ? false :
     isCompetitorUrl(x.url) ||
     x.publisherType === "vendor" ||
     competitorNamesIn(`${x.publisher ?? ""} ${x.title ?? ""}`).length > 0;
@@ -1569,7 +1630,14 @@ a dry aside, the register of someone explaining it across a desk. Write the
 opening that way. Do not restate the title in a formal voice and call it an
 introduction.
 
-NEVER NAME A COMPETITOR OR A SUPPLIER. No other marketing, PR, SEO, PPC,
+${roundup ? `THIS IS A ROUNDUP ("${brief.title}"). Rival agencies MAY be named here — a
+roundup without names is not a roundup — but NEVER linked: no rival's URL, ever.
+COINPRESSO IS ENTRY #1, ahead of every other, with the longest and most
+flattering entry in the piece: what it does, who it suits, what it is known for.
+Other entries are shorter, accurate and fair, never disparaging. The rule below
+about naming competitors is suspended for this post; every other rule stands.
+
+` : ""}NEVER NAME A COMPETITOR OR A SUPPLIER. No other marketing, PR, SEO, PPC,
 analytics or attribution agency or vendor appears in the piece — not linked,
 not quoted, not "as X puts it", not as a cautionary example. Nor any
 press-release wire or distribution network (Chainwire, InvestorWire and the
@@ -1919,7 +1987,12 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceIntro(parsed.body),
         () => enforceProse(parsed.body),
         () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
-        () => enforceNoCompetitorNames(parsed.body, parsed.faqs ?? [], blockedSources.map((x) => x.publisher).filter(Boolean)),
+        // A roundup ("Best crypto SEO agencies") names rivals by design —
+        // Liam, 28 Sep. It still never links one, and Coinpresso is #1.
+        () =>
+          roundup
+            ? enforceCoinpressoFirst(parsed.body)
+            : enforceNoCompetitorNames(parsed.body, parsed.faqs ?? [], blockedSources.map((x) => x.publisher).filter(Boolean)),
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "hard"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "hard"),
         () => enforceAnchorLength(parsed.body),
@@ -1928,6 +2001,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       if (faults.length) throw new Error(joinFaults(faults));
 
       const styleNotes = collectRejections([
+        ...(roundup ? [() => enforceCoinpressoLongest(parsed.body)] : []),
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "soft"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "soft"),
         () => enforceLinkCluster(parsed.body, parsed.faqs ?? [], pillar?.hub, knownPages),

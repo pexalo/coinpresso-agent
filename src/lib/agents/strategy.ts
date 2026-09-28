@@ -14,7 +14,7 @@ import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
 import type { Brief, ResearchBrief } from "../types";
 import type { CallContext } from "../providers/routing";
-import { CONTENT_TYPES, PILLARS, isCompetitorUrl, competitorNamesIn } from "../blog";
+import { CONTENT_TYPES, PILLARS, isCompetitorUrl, competitorNamesIn, isRoundupPost } from "../blog";
 import { linkablePages, linkTargetsBlock } from "../link-map";
 
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
@@ -317,8 +317,14 @@ Research this and return JSON:
   // them, so a rival's blog cannot be cited even if the model ignored the
   // instruction above. The dropped ones are kept on the research record so
   // the operator can see what was excluded and why.
-  const dropped = (research.sources || []).filter((src) => isCompetitorUrl(src.url) || src.publisherType === "vendor" || competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length > 0);
-  research.sources = (research.sources || []).filter((src) => !isCompetitorUrl(src.url) && src.publisherType !== "vendor" && competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length === 0);
+  // A roundup ("Best crypto SEO agencies") is about the rivals, so their own
+  // pages stay in the ledger — the writer names them and never links them.
+  const roundup = isRoundupPost(brief.title, brief.contentType);
+  const isRival = (src: { url: string; publisherType?: string; publisher?: string; title?: string }) =>
+    !roundup &&
+    (isCompetitorUrl(src.url) || src.publisherType === "vendor" || competitorNamesIn(`${src.publisher ?? ""} ${src.title ?? ""}`).length > 0);
+  const dropped = (research.sources || []).filter(isRival);
+  research.sources = (research.sources || []).filter((src) => !isRival(src));
   if (dropped.length) {
     research.riskNotes = [
       ...(research.riskNotes || []),
