@@ -81,3 +81,16 @@ export function safeDomain(d: string): string | null {
   const h = d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
   return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h) && h.length < 100 ? h : null;
 }
+
+/** Likely homes for a company with no domain on record, most likely first. */
+export function domainCandidates(name: string): string[] {
+  const words = name.toLowerCase().replace(/\.(io|com|co|xyz|agency)$/, "").split(/[^a-z0-9]+/).filter(Boolean);
+  if (!words.length) return [];
+  // A name that already is a domain ("CryptoSEO.io") is tried as written.
+  const asWritten = safeDomain(name);
+  const joined = words.join("");
+  const dashed = words.join("-");
+  const tlds = ["com", "io", "co", "agency", "xyz"];
+  const out = [asWritten, ...tlds.map((t) => `${joined}.${t}`), ...(dashed !== joined ? [`${dashed}.com`] : [])];
+  return [...new Set(out.filter(Boolean) as string[])].slice(0, 7);
+}
