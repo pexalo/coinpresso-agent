@@ -11,6 +11,7 @@
 
 import type { Run } from "../types";
 import { callClaude } from "../providers/anthropic";
+import { isCompetitorRoundup } from "../blog";
 import { imagePrice } from "../model-registry";
 import { MODELS } from "../models";
 import { SCENE_RULES, SECTION_RULES, CHART_REQUEST, PALETTE } from "../blog-image";
@@ -112,6 +113,16 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
     `- Ground and atmosphere in deep purple, around ${PALETTE.bgCenter} falling to ${PALETTE.bgEdge}`,
     `- Rim lights in violet ${PALETTE.gradientViolet} and teal ${PALETTE.gradientTeal}`,
     "- Leave the left 45% of the frame quiet and dark: a title is placed there",
+    // Roundups get the listed companies' real logos composited on the right,
+    // so the scene there has to be a backdrop, and the model must not try to
+    // draw any company's mark itself.
+    ...(isCompetitorRoundup(run.brief.title, run.brief.contentType)
+      ? [
+          "- The right third of the frame will be covered by a column of logo cards: keep it dim, soft and uncluttered, background only",
+          "- Put the main subject in the centre of the frame, between the title and the logo column",
+          "- Draw NO company logos, brand marks, letters or wordmarks anywhere",
+        ]
+      : []),
   ].join("\n");
 
   const res = await fetch("https://api.openai.com/v1/images/generations", {

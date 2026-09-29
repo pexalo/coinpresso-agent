@@ -60,6 +60,10 @@ export default function FeaturedImage({
   const [msg, setMsg] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
+  // Roundups ("Best crypto SEO agencies") carry the listed companies' real
+  // logos on the right. Editable, because a guessed domain can be wrong.
+  const [logos, setLogos] = useState<Array<{ name: string; domain: string; ours: boolean; on: boolean }>>([]);
+  const [isRoundup, setIsRoundup] = useState(false);
 
   useEffect(() => {
     // The two faces the brand uses. Both are on Google Fonts; the canvas will
@@ -82,6 +86,16 @@ export default function FeaturedImage({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    fetch(`/api/clients/${clientRef}/runs/${runId}/image/logos`)
+      .then((r) => r.json())
+      .then((d: { roundup?: boolean; entries?: Array<{ name: string; domain: string; ours: boolean }> }) => {
+        setIsRoundup(Boolean(d.roundup));
+        setLogos((d.entries ?? []).map((e) => ({ ...e, on: Boolean(e.domain) })));
+      })
+      .catch(() => {});
+  }, [clientRef, runId]);
 
   /** Draw scene, scrim, logo and title — the template, at the measured numbers. */
   const draw = useCallback(async () => {
@@ -126,6 +140,93 @@ export default function FeaturedImage({
       // No logo asset: leave the space rather than draw a wrong mark.
     }
 
+    // 3b. On a roundup, the listed companies' real logos down the right:
+    // Coinpresso first and largest, then the rest in two columns. Each is
+    // the company's own published mark, fetched from its site — never drawn.
+    const shown = logos.filter((l) => l.on && (l.ours || l.domain));
+    if (isRoundup && shown.length) {
+      const X0 = 640, X1 = 984, GAP = 12;
+      const round = (x: number, y: number, w: number, h: number, r: number) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      };
+      const loadImg = async (src: string) => {
+        const im = new Image();
+        im.src = src;
+        try {
+          await im.decode();
+          return im;
+        } catch {
+          return null;
+        }
+      };
+      const others = shown.filter((l) => !l.ours).slice(0, 6);
+      const ours = shown.find((l) => l.ours);
+      const rows = Math.ceil(others.length / 2);
+      const topH = ours ? 96 : 0;
+      const tileH = 64;
+      const totalH = topH + (ours && rows ? GAP : 0) + rows * tileH + Math.max(0, rows - 1) * GAP;
+      let y = Math.round((CANVAS.h - totalH) / 2);
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.35)";
+      ctx.shadowBlur = 18;
+      if (ours) {
+        round(X0, y, X1 - X0, topH, 16);
+        ctx.fillStyle = PALETTE.bgCenter;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = PALETTE.accent;
+        ctx.stroke();
+        const mark = await loadImg("/brand/clients/coinpresso.png");
+        if (mark) {
+          const h = 44;
+          const w = (mark.width / mark.height) * h;
+          ctx.drawImage(mark, X0 + 24, y + (topH - h) / 2, w, h);
+        }
+        ctx.font = `700 22px ${FONTS.display}, ${FONTS.fallback}`;
+        ctx.fillStyle = PALETTE.accent;
+        ctx.textAlign = "right";
+        ctx.fillText("#1", X1 - 22, y + topH / 2 + 8);
+        ctx.textAlign = "left";
+        y += topH + GAP;
+        ctx.shadowBlur = 18;
+      }
+      const colW = (X1 - X0 - GAP) / 2;
+      for (let i = 0; i < others.length; i++) {
+        const l = others[i];
+        const x = X0 + (i % 2) * (colW + GAP);
+        const ty = y + Math.floor(i / 2) * (tileH + GAP);
+        ctx.shadowBlur = 18;
+        round(x, ty, colW, tileH, 12);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        const icon = l.domain
+          ? await loadImg(`/api/clients/${clientRef}/runs/${runId}/image/logos?domain=${encodeURIComponent(l.domain)}`)
+          : null;
+        let tx = x + 16;
+        if (icon) {
+          ctx.drawImage(icon, x + 12, ty + 12, 40, 40);
+          tx = x + 62;
+        }
+        ctx.fillStyle = "#1c1330";
+        let size = 17;
+        ctx.font = `700 ${size}px ${FONTS.display}, ${FONTS.fallback}`;
+        while (ctx.measureText(l.name).width > x + colW - tx - 10 && size > 11) {
+          size -= 1;
+          ctx.font = `700 ${size}px ${FONTS.display}, ${FONTS.fallback}`;
+        }
+        ctx.fillText(l.name, tx, ty + tileH / 2 + size / 3);
+      }
+      ctx.restore();
+    }
+
     // 4. The title, accent phrase then white, block centred on centerY.
     const { accent, rest } = splitTitle(headline);
     ctx.font = `700 ${TEMPLATE.title.size}px ${FONTS.display}, ${FONTS.fallback}`;
@@ -155,7 +256,7 @@ export default function FeaturedImage({
         consumed += word.length + 1;
       }
     });
-  }, [active, clientRef, runId, headline]);
+  }, [active, clientRef, runId, headline, logos, isRoundup]);
 
   useEffect(() => {
     if (fontsReady) void draw();
@@ -269,6 +370,47 @@ export default function FeaturedImage({
             className="w-full rounded-lg border border-[var(--line)] bg-black"
             style={{ aspectRatio: "1024 / 576" }}
           />
+
+          {isRoundup && logos.length > 0 && (
+            <div className="mt-3 rounded-lg border border-[var(--line)] p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)] mb-1">
+                Company logos on the image
+              </div>
+              <p className="text-[11px] text-[var(--ink-3)] mb-2 leading-relaxed">
+                Each company&apos;s real logo, taken from its own website. Check the
+                website for each — a wrong one shows the wrong company&apos;s logo. Untick any
+                you don&apos;t want. Coinpresso always goes first.
+              </p>
+              <div className="space-y-1.5">
+                {logos.map((l, i) => (
+                  <label key={l.name + i} className="flex items-center gap-2 text-[12px]">
+                    <input
+                      type="checkbox"
+                      checked={l.on}
+                      onChange={(e) =>
+                        setLogos((ls) => ls.map((x, j) => (j === i ? { ...x, on: e.target.checked } : x)))
+                      }
+                    />
+                    <span className="w-40 truncate font-semibold">{l.name}</span>
+                    {l.ours ? (
+                      <span className="text-[var(--ink-3)]">coinpresso.io (our logo)</span>
+                    ) : (
+                      <input
+                        value={l.domain}
+                        placeholder="company website, e.g. icoda.io"
+                        onChange={(e) =>
+                          setLogos((ls) =>
+                            ls.map((x, j) => (j === i ? { ...x, domain: e.target.value, on: Boolean(e.target.value) } : x))
+                          )
+                        }
+                        className="flex-1 min-w-0 rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1 text-[12px]"
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <input

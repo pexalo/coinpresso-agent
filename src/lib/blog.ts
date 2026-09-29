@@ -1078,3 +1078,15 @@ export function isRoundupPost(title: string, contentType?: string): boolean {
   return /\b(best|top|leading|greatest)\b[^.?!]{0,60}\b(agenc|firm|compan|vendor|provider|service|tool|platform|account|channel|outlet|site)/i.test(title)
     || /\btop\s*\d+\b/i.test(title);
 }
+
+/**
+ * A roundup of COMPETITORS — "Best crypto SEO agencies", "Top crypto PR
+ * firms". Narrower than isRoundupPost: "The 20 best crypto YouTube channels"
+ * is a roundup but names no rivals.
+ *
+ * Bernard, 29 Sep: company logos on the featured image are "only for
+ * listicles that mention competitors, otherwise no competitor logo".
+ */
+export function isCompetitorRoundup(title: string, contentType?: string): boolean {
+  return isRoundupPost(title, contentType) && /\b(agenc|firm|compan|vendor|provider|consultanc|studio|partner)/i.test(title);
+}

@@ -350,5 +350,19 @@ console.log("a gutted ledger triggers fresh research instead of more writer atte
   ok("describing a wire without a name is fine", competitorProblems({ body: "A crypto press-release wire pushes it to 100+ outlets." }).length === 0);
   ok("FAQ answers are checked too", competitorProblems({ body: "", faqs: [{ q: "Q?", a: "Per Sliced Brand, no." }] }).length === 1);
 }
+
+{
+  const { isCompetitorRoundup } = await import("../src/lib/blog.ts");
+  const { entryName, guessDomain, safeDomain } = await import("../src/lib/roundup-logos.ts");
+  console.log("featured-image logos: competitor roundups only (29 Sep):");
+  ok("agency roundup gets logos", isCompetitorRoundup("Best Crypto SEO Agencies in 2026"));
+  ok("YouTube-channel roundup does not", !isCompetitorRoundup("The 20 Best Crypto YouTube Channels"));
+  ok("news-outlet roundup does not", !isCompetitorRoundup("Best Crypto News Outlets"));
+  ok("an ordinary post does not", !isCompetitorRoundup("How to Spot a Crypto PR Agency That Only Sells Wire Distribution"));
+  ok("entry name from a numbered heading", entryName("1. Coinpresso: The Premier Web3 GEO Agency") === "Coinpresso");
+  ok("domain from the rival list", guessDomain("ICODA", []) === "icoda.io");
+  ok("domain from the research ledger", guessDomain("SeoProfy", [{ url: "https://seoprofy.com/blog/x" }]) === "seoprofy.com");
+  ok("only plain hostnames are fetched", safeDomain("https://www.icoda.io/about") === "icoda.io" && safeDomain("javascript:alert(1)") === null);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
