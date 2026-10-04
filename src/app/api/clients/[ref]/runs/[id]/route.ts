@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRun, saveRun, deleteRun } from "@/lib/store";
+import { getRun, saveRun, deleteRun, listRuns } from "@/lib/store";
 import { getRecord } from "@/lib/approval-store";
 import { listSeeds, updateTopic } from "@/lib/blog-seed";
 import type { StageRecord } from "@/lib/types";
@@ -64,7 +64,12 @@ export async function DELETE(
   // The topic goes back on the list, ready to be planned again.
   let topic: string | undefined;
   const seedId = run.brief.seedTopicId;
-  if (seedId) {
+  // …unless another post on the same topic is still in the queue — the case
+  // when one of two duplicates is removed. The topic is still being written.
+  const stillCovered = seedId
+    ? (await listRuns(ref)).some((r) => r.id !== id && r.brief.seedTopicId === seedId)
+    : false;
+  if (seedId && !stillCovered) {
     const seeds = await listSeeds(ref);
     const t = seeds.topics.find((x) => x.id === seedId);
     if (t && t.status === "used") {
