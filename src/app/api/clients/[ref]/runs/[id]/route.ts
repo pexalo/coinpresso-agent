@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRun, saveRun, deleteRun, listRuns } from "@/lib/store";
 import { getRecord } from "@/lib/approval-store";
 import { listSeeds, updateTopic } from "@/lib/blog-seed";
+import { BIN_DAYS } from "@/lib/bin";
 import type { StageRecord } from "@/lib/types";
 import { renderHtml, renderMarkdown, renderPlainText } from "@/lib/render";
 
@@ -41,12 +42,22 @@ export async function GET(
  * still being written is refused until it stops.
  */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ ref: string; id: string }> }
 ) {
   const { ref, id } = await params;
   const run = await getRun(id, ref);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+
+  // From the bin, "Delete forever" removes the record. Only from the bin: a
+  // post in the queue goes to the bin first, so nothing vanishes in one click.
+  if (new URL(req.url).searchParams.get("permanent") === "1") {
+    if (!run.removedAt) {
+      return NextResponse.json({ error: "Move it to the bin first." }, { status: 409 });
+    }
+    await deleteRun(id, ref);
+    return NextResponse.json({ deleted: true, title: run.brief.title });
+  }
   if (run.status === "running" || run.status === "queued") {
     return NextResponse.json(
       { error: "This post is still being written. Wait for it to finish, then remove it." },
@@ -67,7 +78,7 @@ export async function DELETE(
   // …unless another post on the same topic is still in the queue — the case
   // when one of two duplicates is removed. The topic is still being written.
   const stillCovered = seedId
-    ? (await listRuns(ref)).some((r) => r.id !== id && r.brief.seedTopicId === seedId)
+    ? (await listRuns(ref)).some((r) => r.id !== id && !r.removedAt && r.brief.seedTopicId === seedId)
     : false;
   if (seedId && !stillCovered) {
     const seeds = await listSeeds(ref);
@@ -78,8 +89,34 @@ export async function DELETE(
     }
   }
 
-  await deleteRun(id, ref);
-  return NextResponse.json({ removed: true, topic: topic ?? null, title: run.brief.title });
+  // To the bin, not gone: restorable for BIN_DAYS, then deleted for good.
+  run.removedAt = new Date().toISOString();
+  await saveRun(run);
+  return NextResponse.json({ removed: true, topic: topic ?? null, title: run.brief.title, binDays: BIN_DAYS });
+}
+
+/** Restore a post from the bin. Its topic is marked used again. */
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ ref: string; id: string }> }
+) {
+  const { ref, id } = await params;
+  if (new URL(req.url).searchParams.get("action") !== "restore") {
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  }
+  const run = await getRun(id, ref);
+  if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!run.removedAt) return NextResponse.json({ restored: true, title: run.brief.title });
+  run.removedAt = undefined;
+  await saveRun(run);
+  const seedId = run.brief.seedTopicId;
+  if (seedId) {
+    const seeds = await listSeeds(ref);
+    if (seeds.topics.find((x) => x.id === seedId)?.status === "queued") {
+      await updateTopic(ref, seedId, { status: "used" });
+    }
+  }
+  return NextResponse.json({ restored: true, title: run.brief.title });
 }
 
 interface PasteBody {

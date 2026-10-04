@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { executeRun, newRun } from "@/lib/pipeline";
 import { listRuns, newRunId, saveRun } from "@/lib/store";
 import { reapStalledRuns } from "@/lib/stalled";
+import { emptyExpired, binExpiresAt } from "@/lib/bin";
 import { PUBLICATIONS } from "@/lib/publications";
 import { defaultCampaign, getClient, hasModule } from "@/lib/clients";
 import { resolveCampaign } from "@/lib/campaign-store";
@@ -33,7 +34,7 @@ function gate(ref: string) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ ref: string }> }
 ) {
   const { ref } = await params;
@@ -41,9 +42,14 @@ export async function GET(
   if (g.error) return g.error;
 
   // A run left "running" by a deploy or a crash would spin in the UI forever.
-  const runs = await reapStalledRuns(await listRuns(ref));
+  const all = await emptyExpired(await reapStalledRuns(await listRuns(ref)), ref);
+  // ?bin=1 lists the bin; the queue never shows binned posts.
+  const wantBin = new URL(req.url).searchParams.get("bin") === "1";
+  const runs = all.filter((r) => Boolean(r.removedAt) === wantBin);
   return NextResponse.json(
     runs.map((r) => ({
+      removedAt: r.removedAt,
+      binExpiresAt: binExpiresAt(r),
       id: r.id,
       clientRef: r.clientRef,
       campaignId: r.campaignId,

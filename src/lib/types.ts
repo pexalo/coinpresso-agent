@@ -256,6 +256,11 @@ export interface Run {
   campaignId?: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Set when the post was removed from the queue. It sits in the bin for
+   * BIN_DAYS and can be restored; after that it is deleted for good.
+   */
+  removedAt?: string;
   status: RunStatus;
   brief: Brief;
   stages: StageRecord[];

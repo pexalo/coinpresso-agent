@@ -120,7 +120,7 @@ export async function POST(
   const skipped: string[] = [];
   if (track === "blog") {
     const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const existing = (await listRuns(ref)).filter((r) => r.brief.track === "blog");
+    const existing = (await listRuns(ref)).filter((r) => r.brief.track === "blog" && !r.removedAt);
     const seenSeeds = new Set(existing.map((r) => r.brief.seedTopicId).filter(Boolean) as string[]);
     const seenTitles = new Set(existing.map((r) => norm(r.brief.title)));
     items = items.filter((i) => {

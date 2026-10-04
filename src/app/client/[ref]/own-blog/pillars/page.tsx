@@ -24,7 +24,7 @@ export default async function PillarsPage({
   const client = getClient(ref);
   if (!client || !hasModule(client, "own-blog")) notFound();
 
-  const runs = (await listRuns(ref)).filter((r) => r.brief.track === "blog");
+  const runs = (await listRuns(ref)).filter((r) => r.brief.track === "blog" && !r.removedAt);
 
   const counts = new Map<string, number>();
   const titles = new Map<string, string[]>();

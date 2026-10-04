@@ -8,6 +8,7 @@ import type { ContentTypeId } from "@/lib/blog";
 import type { RunStatus, StageId, StageStatus } from "@/lib/types";
 import { statusView, TONE_CLASS } from "@/lib/run-status";
 import GateChip from "@/components/GateChip";
+import BlogBin from "@/components/BlogBin";
 import type { Approver, GateState } from "@/lib/approval";
 
 interface RunSummary {
@@ -47,6 +48,7 @@ export default function BlogQueuePage() {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [removeMsg, setRemoveMsg] = useState<string | null>(null);
+  const [binKey, setBinKey] = useState(0);
 
   const loadGates = useCallback(async () => {
     const res = await fetch(`/api/clients/${ref}/approvals?track=blog`);
@@ -66,10 +68,10 @@ export default function BlogQueuePage() {
       if (!res.ok) throw new Error(d.error ?? `Remove failed (${res.status})`);
       setRuns((rs) => (rs ? rs.filter((r) => r.id !== id) : rs));
       setRemoveMsg(
-        d.topic
-          ? `Removed "${d.title}" — the topic "${d.topic}" is back on the topics list.`
-          : `Removed "${d.title}".`
+        `Moved "${d.title}" to the bin — kept ${d.binDays ?? 30} days, then deleted for good.` +
+          (d.topic ? ` The topic "${d.topic}" is back on the topics list.` : "")
       );
+      setBinKey((k) => k + 1);
     } catch (e) {
       setRemoveMsg(e instanceof Error ? e.message : "Remove failed");
     } finally {
@@ -393,6 +395,7 @@ export default function BlogQueuePage() {
         </div>
         );
       })}
+      <BlogBin clientRef={ref} refreshKey={binKey} onRestored={() => setBinKey((k) => k + 1)} />
     </div>
   );
 }

@@ -102,7 +102,7 @@ export async function POST(
     // already stamped keep theirs, and this one takes the least-used move left.
     if (run.brief.track === "blog" && !run.brief.introMove) {
       const siblings = (await listRuns(ref))
-        .filter((r) => r.brief.track === "blog" && r.status !== "approved")
+        .filter((r) => r.brief.track === "blog" && r.status !== "approved" && !r.removedAt)
         .sort((a, b) => a.id.localeCompare(b.id));
       const assigned = assignMoves(
         siblings.map((r) => ({

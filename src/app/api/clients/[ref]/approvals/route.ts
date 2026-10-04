@@ -40,7 +40,7 @@ export async function GET(
     ? (
         await Promise.all(idsParam.split(",").map((id) => getRun(id.trim(), ref)))
       ).filter((r) => r !== null)
-    : (await listRuns(ref)).filter((r) => !track || r.brief.track === track);
+    : (await listRuns(ref)).filter((r) => !r.removedAt && (!track || r.brief.track === track));
 
   const settings = await readSettings(ref);
   const { approvers, required } = gateConfig(settings);

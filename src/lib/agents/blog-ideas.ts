@@ -196,7 +196,7 @@ a correct outcome.`
 async function priorBlogWork(clientRef: string): Promise<
   Array<{ title: string; pillar?: string; contentType?: string; at: string; live?: boolean }>
 > {
-  const runs = await listRuns(clientRef);
+  const runs = (await listRuns(clientRef)).filter((r) => !r.removedAt);
   const planned = runs
     .filter((r) => r.brief.track === "blog")
     .slice(0, 120)
