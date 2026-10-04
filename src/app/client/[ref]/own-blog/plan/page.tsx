@@ -60,6 +60,9 @@ export default function PlanDayPage() {
   const [seeds, setSeeds] = useState<BlogSeeds | null>(null);
   const [useSeeds, setUseSeeds] = useState<Set<string>>(new Set());
   const [missing, setMissing] = useState<string[]>([]);
+  // One click starts a day. The button was live while the request was in
+  // flight, and a second click wrote every post twice.
+  const [starting, setStarting] = useState(false);
   const [batch, setBatch] = useState<BatchWithProgress | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -166,20 +169,30 @@ export default function PlanDayPage() {
         }\n${i.rationale}`,
       };
     });
-    if (!items.length) return;
+    if (!items.length || starting) return;
 
     setError(null);
-    const res = await fetch(`/api/clients/${ref}/batches`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ track: "blog", items }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error ?? "Could not start the batch.");
-      return;
+    setStarting(true);
+    let data: { id?: string; error?: string; skipped?: string[] };
+    try {
+      const res = await fetch(`/api/clients/${ref}/batches`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ track: "blog", items }),
+      });
+      data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Could not start the batch.");
+        return;
+      }
+    } finally {
+      setStarting(false);
     }
-    setBatchId(data.id);
+    setBatchId(data.id!);
+    setChosen(new Set());
+    if (data.skipped?.length) {
+      setError(`Skipped — already in the queue: ${data.skipped.join("; ")}.`);
+    }
 
     // The topics that became posts are marked written now, at the moment the
     // batch starts — not when the planner proposed them. A proposal can be
@@ -474,10 +487,10 @@ export default function PlanDayPage() {
             </button>
             <button
               onClick={generate}
-              disabled={picked.length === 0}
+              disabled={picked.length === 0 || starting}
               className="ml-auto text-[12.5px] font-semibold px-4 py-2.5 rounded-lg bg-[var(--success)] text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
-              Write {picked.length} post{picked.length === 1 ? "" : "s"}
+              {starting ? "Starting…" : `Write ${picked.length} post${picked.length === 1 ? "" : "s"}`}
               <span className="font-normal opacity-70">
                 {" "}
                 · this is the step that costs

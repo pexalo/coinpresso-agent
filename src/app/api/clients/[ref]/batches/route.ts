@@ -14,6 +14,8 @@ import {
 import type { Brief, PublicationId } from "@/lib/types";
 import type { ContentBrief } from "@/lib/content-brief";
 import type { ContentTypeId } from "@/lib/blog";
+import { listRuns } from "@/lib/store";
+import { markUsed } from "@/lib/blog-seed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -102,9 +104,42 @@ export async function POST(
   if (g.error) return NextResponse.json({ error: g.error }, { status: 404 });
   const client = g.client!;
 
-  const items = (body.items ?? []).filter((i) => i.title?.trim());
+  let items = (body.items ?? []).filter((i) => i.title?.trim());
   if (!items.length) {
     return NextResponse.json({ error: "Nothing to generate" }, { status: 400 });
+  }
+
+  // NO POST IS WRITTEN TWICE.
+  //
+  // On 1 Oct three posts were written twice: "Running Crypto AMAs" and "PR for
+  // Anonymous Teams" five seconds apart (the Write button was clicked again
+  // while the first request was still in flight), and the presale-budget post
+  // forty seconds apart. Each duplicate is a full paid run. So the server
+  // refuses any item whose topic or title is already in the queue, and any
+  // repeat inside the same request — whatever the page did.
+  const skipped: string[] = [];
+  if (track === "blog") {
+    const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const existing = (await listRuns(ref)).filter((r) => r.brief.track === "blog");
+    const seenSeeds = new Set(existing.map((r) => r.brief.seedTopicId).filter(Boolean) as string[]);
+    const seenTitles = new Set(existing.map((r) => norm(r.brief.title)));
+    items = items.filter((i) => {
+      const t = norm(i.title);
+      const dup = (i.seedTopicId && seenSeeds.has(i.seedTopicId)) || seenTitles.has(t);
+      if (dup) {
+        skipped.push(i.title.trim());
+        return false;
+      }
+      if (i.seedTopicId) seenSeeds.add(i.seedTopicId);
+      seenTitles.add(t);
+      return true;
+    });
+    if (!items.length) {
+      return NextResponse.json(
+        { error: `Already in the queue, so nothing new was started: ${skipped.join("; ")}.`, skipped },
+        { status: 409 }
+      );
+    }
   }
   if (items.length > 20) {
     return NextResponse.json(
@@ -176,6 +211,14 @@ export async function POST(
   const batch = newBatch(newBatchId(), ref, briefs, campaignId, track);
   await saveBatch(batch);
 
+  // Topics are marked written HERE, in the same request that starts them, so a
+  // second plan made a minute later cannot pick the same topic again. (This
+  // used to be a separate call from the page, after the batch had started.)
+  if (track === "blog") {
+    const used = items.map((i) => i.seedTopicId).filter(Boolean) as string[];
+    if (used.length) await markUsed(ref, used, batch.id).catch(() => undefined);
+  }
+
   // Fire and forget — the page polls. A twenty-article batch runs for the better
   // part of half an hour and no browser should hold that request open.
   void executeBatch(batch, briefs).catch(async (e) => {
@@ -189,5 +232,5 @@ export async function POST(
     await saveBatch(batch);
   });
 
-  return NextResponse.json({ id: batch.id }, { status: 201 });
+  return NextResponse.json({ id: batch.id, skipped }, { status: 201 });
 }
