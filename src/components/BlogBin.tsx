@@ -22,13 +22,14 @@ const daysLeft = (iso: string | null) =>
  * `refreshKey` changes whenever the queue removes something, so a post that
  * was just removed appears here without a reload.
  */
-export default function BlogBin({ clientRef, refreshKey, onRestored }: {
+export default function BlogBin({ clientRef, refreshKey = 0, onRestored, startOpen = false }: {
   clientRef: string;
-  refreshKey: number;
-  onRestored: () => void;
+  refreshKey?: number;
+  onRestored?: () => void;
+  startOpen?: boolean;
 }) {
   const [items, setItems] = useState<BinItem[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export default function BlogBin({ clientRef, refreshKey, onRestored }: {
       if (!res.ok) throw new Error(d.error ?? `Restore failed (${res.status})`);
       setItems((xs) => xs.filter((x) => x.id !== id));
       setMsg(`Restored "${d.title}" to the queue.`);
-      onRestored();
+      onRestored?.();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Restore failed");
     } finally { setBusy(null); }

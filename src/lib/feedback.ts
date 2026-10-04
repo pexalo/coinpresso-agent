@@ -158,6 +158,15 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-one-page-per-anchor",
+    source: "Liam, PR for Anonymous Teams Doc comment (4 Oct)",
+    date: "2026-10-04",
+    rule: "Liam: \"Noticed this is happening sometimes on FAQs where the agent is confusing two anchor texts/pages.\" Every anchor names exactly the page it links to — never one page's words on another page's URL, and never two pages' names run together. A call to action for the contact page reads \"Contact Coinpresso to …\". (Enforced in code: an anchor that names a different page is re-pointed to that page, and an FAQ anchor that still mixes two pages is rejected.)",
+    before: "[contact us crypto PR team](https://coinpresso.io/contact)",
+    after: "[crypto PR team](https://coinpresso.io/crypto-pr)",
+    active: true,
+  },
+  {
     id: "liam-never-name-competitors",
     source: "Liam, wire-distribution post comments (21 Sep)",
     date: "2026-09-21",

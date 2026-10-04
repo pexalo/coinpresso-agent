@@ -49,6 +49,7 @@ const SECTIONS: Record<string, Section[]> = {
     { slug: "plan", label: "Plan the day", step: 2, note: "5–8 posts across pillars and formats" },
     { slug: "", label: "Blog queue", step: 3, note: "Read the day together, then approve" },
     { slug: "integration", label: "Integration", step: 4, note: "Import the style reference; push drafts to WordPress" },
+    { slug: "bin", label: "Bin", note: "Removed posts, kept 30 days — restore or delete for good" },
     { slug: "pillars", label: "Pillars", note: "Clusters and formats" },
     { slug: "style", label: "Blog style", note: "The blog voice and the framework" },
   ],

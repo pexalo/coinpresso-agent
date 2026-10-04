@@ -1231,6 +1231,8 @@ export function enforceFaqLinks(
         hard.push(`"${m[2]}" in an FAQ answer is not a page on coinpresso.io — link only what you were given`);
       } else if (!namesTopic(m[1], topic)) {
         hard.push(`the FAQ anchor "${m[1]}" points at the ${topic.split(" | ")[0]} page — the anchor text has to name where it goes`);
+      } else if (pageTheAnchorNames(m[1], m[2], known)) {
+        hard.push(`the FAQ anchor "${m[1]}" mixes two pages — it names ${known.get(pageTheAnchorNames(m[1], m[2], known)!)!.split(" | ")[0]} but points at ${topic.split(" | ")[0]}. One page per anchor, and the words name that page`);
       }
     }
   }
@@ -2583,6 +2585,62 @@ export function repairInternalLinks(
     .join("");
 }
 
+
+/**
+ * Every distinctive word of one of the page's phrases is in the anchor —
+ * "crypto earned media" fully names the earned-media page; "crisis
+ * management" does not fully name "crypto community management". Stricter
+ * than namesTopic, which is satisfied by one shared word.
+ */
+function plainTokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/isation\b/g, "ization")
+    .replace(/ise\b/g, "ize")
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 1 && !GENERIC_ANCHOR_WORDS.has(w));
+}
+
+export function fullyNames(anchor: string, topic: string): boolean {
+  const have = new Set(plainTokens(anchor));
+  return topic.split(" | ").some((alt) => {
+    const want = plainTokens(alt);
+    return want.length > 0 && want.every((w) => have.has(w));
+  });
+}
+
+/**
+ * Liam, 4 Oct, on an FAQ: "the agent is confusing two anchor texts/pages".
+ * The writer put one page's words on another page's URL — "crypto PR team"
+ * linked to the contact page — and nameAnchors then glued the right page's
+ * name on the front, so the reader got "contact us crypto PR team": two
+ * pages in one anchor. When the anchor plainly names a different page and
+ * not its own, this returns that page; the text is what the reader expects
+ * to land on, so the URL is what was wrong.
+ */
+export function pageTheAnchorNames(
+  anchor: string,
+  url: string,
+  known: Map<string, string>
+): string | null {
+  const own = known.get(normaliseUrl(url));
+  if (own && fullyNames(anchor, own)) return null;
+  let best: { url: string; score: number } | null = null;
+  for (const [u, topic] of known) {
+    if (u === normaliseUrl(url) || !/coinpresso\.io/i.test(u)) continue;
+    if (!fullyNames(anchor, topic)) continue;
+    const score = Math.max(
+      ...topic.split(" | ").map((alt) => {
+        const want = plainTokens(alt);
+        const have = new Set(plainTokens(anchor));
+        return want.every((w) => have.has(w)) ? want.length : 0;
+      })
+    );
+    if (!best || score > best.score) best = { url: u, score };
+  }
+  return best ? best.url : null;
+}
+
 export function nameAnchors(body: string, known: Map<string, string>): string {
   const fix = (prose: string) =>
     prose.replace(
@@ -2590,6 +2648,9 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
       (whole, before: string, text: string, url: string) => {
         const topic = known.get(normaliseUrl(url));
         if (!topic) return whole;
+        // The anchor names a different page: the URL was the mistake.
+        const meant = pageTheAnchorNames(text, url, known);
+        if (meant) return `${before}[${text}](${meant})`;
         if (namesTopic(text, topic)) return whole;
 
         // 1. Grow backwards over the preceding words if the topic is already
@@ -2616,6 +2677,12 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
         const first = topic.split(" | ")[0].trim();
         const joined = `${first} ${text}`;
         if (joined.split(/\s+/).length > 5) {
+          // A call to action on the contact page ("[review your crisis
+          // strategy](…/contact)") reads as "Contact Coinpresso to review
+          // your crisis strategy", not "[contact us] review your…".
+          if (/coinpresso\.io\/contact\/?$/i.test(url) && /^[A-Za-z]+\b/.test(text) && !/^(our|the|a|an|your)\b/i.test(text)) {
+            return `${before}[Contact Coinpresso](${url}) to ${text[0].toLowerCase()}${text.slice(1)}`;
+          }
           return `${before}[${first}](${url}) ${text}`;
         }
         return `${before}[${joined}](${url})`;
