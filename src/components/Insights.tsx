@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
 
 // Liam's findings and links — the data the writer uses to give a real answer.
 // See src/lib/insights.ts. Two ways in: the panel on top of Agent workflow,
@@ -159,8 +160,11 @@ export function InsightModal({ title, subtitle, onClose, children }: {
       document.body.style.overflow = prev;
     };
   }, [onClose]);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6" onClick={onClose}>
+  // Portalled to <body>: inside the sticky, blurred header (or any card with
+  // a filter) "fixed" is relative to that box, and the dialog was cut off.
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6" onClick={onClose}>
       <div
         className="card w-full max-w-3xl p-6 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -177,7 +181,8 @@ export function InsightModal({ title, subtitle, onClose, children }: {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

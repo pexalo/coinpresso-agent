@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { EntityLogo, ModeBadge, ThemeToggle } from "./Brand";
 import type { Client } from "@/lib/clients";
-import { InsightQuickAdd } from "./Insights";
 
 /**
  * The workspace bar. One row: whose workspace this is on the left, the run mode
@@ -15,7 +14,7 @@ import { InsightQuickAdd } from "./Insights";
  * own blog has no end client, and neither do costs, resources or settings. It
  * now lives in the Crypto PR layout, which is the only place campaigns exist.
  */
-export default function ClientHeader({ client, insights = false }: { client: Client; insights?: boolean }) {
+export default function ClientHeader({ client }: { client: Client }) {
   return (
     <div className="border-b border-[var(--line)] bg-[var(--bg)] sticky top-0 z-40 backdrop-blur">
       <div className="max-w-[1240px] mx-auto px-5 md:px-8 h-[88px] flex items-center gap-4">
@@ -42,7 +41,6 @@ export default function ClientHeader({ client, insights = false }: { client: Cli
         </Link>
 
         <div className="ml-auto flex items-center gap-3">
-          {insights && <InsightQuickAdd clientRef={client.ref} />}
           <ModeBadge />
           <ThemeToggle />
         </div>
