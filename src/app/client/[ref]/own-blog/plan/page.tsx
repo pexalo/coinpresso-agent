@@ -28,7 +28,8 @@ interface BlogIdea {
 // programme is built around is still 5-8, but the first thing every new
 // operator tries is one post, and a control whose minimum is five makes that
 // look impossible rather than merely unusual.
-const DAY_SIZES = [1, 3, 5, 6, 7, 8];
+// Every size from 1 to 8 — some days are 2 posts, some are 4 (Bernard, 5 Oct).
+const DAY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const CONF: Record<string, string> = {
   high: "text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10",
@@ -363,12 +364,13 @@ export default function PlanDayPage() {
               <span className="block text-[10px] uppercase tracking-wider text-[var(--ink-3)] mb-1.5">
                 Ideas to propose
               </span>
-              <div className="flex gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5 max-w-[150px]">
                 {DAY_SIZES.map((n) => (
                   <button
                     key={n}
                     onClick={() => setCount(n)}
-                    className={`w-10 py-2 rounded-lg text-[12.5px] font-semibold transition-colors ${
+                    aria-pressed={count === n}
+                    className={`py-2 rounded-lg text-[12.5px] font-semibold transition-colors ${
                       count === n
                         ? "bg-[var(--accent)] text-white"
                         : "border border-[var(--line)] text-[var(--ink-3)] hover:text-[var(--ink)]"
