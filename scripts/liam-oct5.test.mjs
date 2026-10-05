@@ -16,12 +16,10 @@ console.log("insights");
 const all = [
   mk({ title: "Presale marketing budgets", body: "Retainers run $15k-$40k a month.", tags: ["presale", "budget"] }),
   mk({ title: "GEO results", body: "AI citations up 3x in 60 days for one client.", tags: ["geo"] }),
-  mk({ title: "House rule", body: "We never guarantee listings.", always: true }),
   mk({ kind: "link", title: "Presale timeline post", body: "", url: "https://coinpresso.io/blog/presale-timeline", tags: ["presale"] }),
 ];
 const got = relevantInsights(all, "How much does crypto presale marketing cost in 2026 presale budget");
 ok("presale post gets the presale finding", got.some((x) => x.title === "Presale marketing budgets"));
-ok("…and the always-on one", got.some((x) => x.title === "House rule"));
 ok("…not the GEO one", !got.some((x) => x.title === "GEO results"));
 ok("block says the figures are allowed", /ALLOWED/.test(houseDataBlock(got)) && /\$15k-\$40k/.test(houseDataBlock(got)));
 ok("coinpresso.io link becomes linkable", insightPages(got).some((p) => p.url.endsWith("presale-timeline")));

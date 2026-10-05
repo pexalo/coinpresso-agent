@@ -32,8 +32,6 @@ export interface Insight {
   url?: string;
   /** Topics it applies to: "presale", "KOL", "PR". */
   tags: string[];
-  /** Applies to every post, whatever the topic. */
-  always?: boolean;
   /**
    * Attached to particular topics (seed topic ids) or posts (run ids).
    * Bernard, 5 Oct: "it needs to be attached to an upcoming topic or blog
@@ -78,7 +76,6 @@ export function cleanInsight(input: Partial<Insight>): Omit<Insight, "id" | "cre
   const ids = (xs?: string[]) => [...new Set((xs ?? []).map((x) => String(x).replace(/[^A-Za-z0-9_-]/g, "")).filter(Boolean))];
   return {
     kind, title, body, url, tags,
-    always: Boolean(input.always),
     author: input.author?.trim() || undefined,
     topicIds: ids(input.topicIds),
     runIds: ids(input.runIds),
@@ -120,7 +117,7 @@ const words = (t: string) =>
   t.toLowerCase().replace(/[^a-z0-9.\s-]/g, " ").split(/[\s-]+/).filter((w) => w.length > 2 && !STOP.has(w)).map((w) => w.replace(/s$/, ""));
 
 /**
- * The findings that bear on a post: every "always" one, then the rest ranked
+ * The findings that bear on a post: the ones attached to it, then the rest ranked
  * by how many of the post's distinctive words they share. A tag match counts
  * double — Liam tagged it for that topic on purpose.
  */
@@ -142,7 +139,7 @@ export function relevantInsights(
       const tagHits = x.tags.filter((t) => words(t).some((w) => want.has(w))).length;
       const textHits = new Set(words(`${x.title} ${x.body}`).filter((w) => want.has(w))).size;
       // Attached to this post or its topic: first, always.
-      return { x, score: isAttached(x, to) ? 2000 : x.always ? 1000 : tagHits * 2 + textHits };
+      return { x, score: isAttached(x, to) ? 2000 : tagHits * 2 + textHits };
     })
     .filter((s) => s.score >= 2)
     .sort((a, b) => b.score - a.score);

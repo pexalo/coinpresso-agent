@@ -15,15 +15,14 @@ export interface InsightRow {
   body: string;
   url?: string;
   tags: string[];
-  always?: boolean;
   author?: string;
   topicIds?: string[];
   runIds?: string[];
   updatedAt: string;
 }
 
-type Draft = { kind: "finding" | "link"; title: string; body: string; url: string; tags: string; always: boolean; author: string };
-const EMPTY: Draft = { kind: "finding", title: "", body: "", url: "", tags: "", always: false, author: "Liam" };
+type Draft = { kind: "finding" | "link"; title: string; body: string; url: string; tags: string; author: string };
+const EMPTY: Draft = { kind: "finding", title: "", body: "", url: "", tags: "", author: "Liam" };
 
 const field = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] focus:outline-none focus:border-[var(--accent)]";
 const label = "block text-[10px] uppercase tracking-wider text-[var(--ink-3)] mb-1";
@@ -38,7 +37,7 @@ export function InsightForm({ clientRef, initial, onSaved, onCancel, attach }: {
 }) {
   const [d, setD] = useState<Draft>(
     initial
-      ? { kind: initial.kind, title: initial.title, body: initial.body, url: initial.url ?? "", tags: initial.tags.join(", "), always: Boolean(initial.always), author: initial.author ?? "" }
+      ? { kind: initial.kind, title: initial.title, body: initial.body, url: initial.url ?? "", tags: initial.tags.join(", "), author: initial.author ?? "" }
       : EMPTY
   );
   const [busy, setBusy] = useState(false);
@@ -123,10 +122,6 @@ export function InsightForm({ clientRef, initial, onSaved, onCancel, attach }: {
           <input id="ins-author" className={field} value={d.author} onChange={(e) => set({ author: e.target.value })} />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-[12px] text-[var(--ink-2)]">
-        <input type="checkbox" checked={d.always} onChange={(e) => set({ always: e.target.checked })} />
-        Use in every post, whatever the topic
-      </label>
       {err && <div className="text-[12px] text-red-500">{err}</div>}
       <div className="flex gap-2">
         <button onClick={save} disabled={busy} className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-[12.5px] font-semibold disabled:opacity-60">
@@ -263,7 +258,6 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
                         {x.kind === "finding" ? "Finding" : "Link"}
                       </span>
                       <span className="text-[13px] font-semibold">{x.title}</span>
-                      {x.always && <span className="text-[10.5px] text-[var(--accent)]">every post</span>}
                     </div>
                     {x.url && <a href={x.url} target="_blank" rel="noreferrer" className="block text-[12px] text-[var(--accent)] break-all mt-0.5">{x.url}</a>}
                     {x.body && <p className="text-[12.5px] text-[var(--ink-2)] leading-relaxed mt-1 whitespace-pre-wrap">{x.body}</p>}
