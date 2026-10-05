@@ -161,7 +161,14 @@ export async function POST(
       items.map((i) => ({
         title: i.title.trim(),
         contentType: CONTENT_TYPES[i.contentType as ContentTypeId]?.id ?? "guide",
-      }))
+      })),
+      // The last ten posts' moves count too, so a new day does not open the
+      // way yesterday did.
+      (await listRuns(ref))
+        .filter((r) => r.brief.track === "blog" && !r.removedAt)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 10)
+        .map((r) => ({ introMove: r.brief.introMove, closeMove: r.brief.closeMove }))
     );
     briefs = items.map((i, idx) => {
       const pillar = PILLARS.find((p) => p.id === i.pillar);

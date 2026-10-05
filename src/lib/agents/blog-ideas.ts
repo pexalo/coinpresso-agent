@@ -87,6 +87,12 @@ HARD CONSTRAINTS
    post, each one is not a duplicate of.
 5. No price predictions, no token promotion, no presale figures. That is the
    wire programme; this is not.
+6. GRANULAR, NOT BROAD. Liam, 5 Oct: "We need to start being more granular
+   with guides." Never "The crypto presale marketing guide" — that is a hub
+   page. Take one question a founder actually asks and answer it fully: "How
+   much does presale marketing cost in 2026?", "Presale marketing timeline:
+   what to do week by week", "How many KOLs does a presale need?". Each
+   proposal is one question with one answer, and the title says which.
 
 BE HONEST IN confidence. "speculative" is the right answer for a post that
 depends on research that may not find anything, and it is more useful than an

@@ -77,7 +77,11 @@ HARD RULES
 4. Do NOT invent statistics, market sizes or client results. A topic is a
    subject, not a claim. If a topic would only work with a figure Coinpresso
    holds, say so in the rationale and mark it speculative.
-5. Be honest in confidence. "speculative" is the right answer for a topic that
+5. GRANULAR, NOT BROAD (Liam, 5 Oct: "more granular with guides"). Not
+   "Presale marketing guide" but the single questions inside it: the cost,
+   the timeline, the KOL budget, the community size before launch. One
+   question per topic, answerable with a number or a clear verdict.
+6. Be honest in confidence. "speculative" is the right answer for a topic that
    depends on the reader caring about something you are guessing at, and it is
    more useful than an optimistic guess.
 

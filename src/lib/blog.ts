@@ -573,7 +573,45 @@ the specific line of config — and then name what it costs them.`,
   {
     id: "belief",
     how: `Open by naming a belief this reader holds about the topic and killing it in
-a single line, then spend the rest of the paragraph on what is true instead.`,
+a single line, then spend the rest of the paragraph on what is true instead.
+State the belief directly as the reader's own ("You probably think…"), NOT as
+something overheard: no "there's a belief going round", no Slack, Discord or
+Telegram channel, no "a founder told us". Liam, 5 Oct: that device had become
+the opening of every post.`,
+  },
+  // Added 5 Oct, when Liam said the intros were "starting to get a bit
+  // same-y". Six moves across eight posts a day was not enough room.
+  {
+    id: "answer",
+    how: `Answer the title's question in the first sentence — the number, the range or
+the verdict, plainly — then say in the next what moves it up or down. The
+reader who only reads one line still leaves with the answer, and it is the
+line an AI overview lifts. Use Coinpresso's own data or a ledger figure; never
+invent one.`,
+  },
+  {
+    id: "mistake",
+    how: `Open on the single most common mistake teams make with this, named precisely
+enough to sting — what they do, in which order, and what it quietly costs —
+then turn to what the piece does about it.`,
+  },
+  {
+    id: "contrast",
+    how: `Open on a contrast: the way most teams handle this and the way that works,
+side by side in two plain sentences. No invented project names and no
+invented numbers — the contrast is between approaches, not anecdotes.`,
+  },
+  {
+    id: "question",
+    how: `Open with the exact question a founder asks about this, in a founder's own
+words and in quotation marks, and answer it straight away in the next
+sentence — no throat-clearing in between.`,
+  },
+  {
+    id: "stakes",
+    how: `Open on what is at stake in money or time — a figure from the ledger or
+Coinpresso's data about what getting this wrong costs — and then on how
+small the fix usually is by comparison.`,
   },
 ];
 
@@ -607,13 +645,13 @@ the last clause: this is the list Coinpresso works through.`,
 
 /** Moves that suit each format. The title picks within the list. */
 const INTRO_BY_TYPE: Record<string, string[]> = {
-  data: ["figure", "scoreboard"],
-  teardown: ["figure", "scene"],
-  opinion: ["verdict", "belief"],
-  guide: ["claim", "belief", "scene"],
-  comparison: ["scoreboard", "figure"],
-  "case-note": ["scene", "figure"],
-  faq: ["belief", "verdict"],
+  data: ["figure", "scoreboard", "answer", "stakes"],
+  teardown: ["figure", "scene", "mistake", "contrast"],
+  opinion: ["verdict", "belief", "contrast", "claim"],
+  guide: ["answer", "claim", "scene", "mistake", "question", "stakes", "contrast"],
+  comparison: ["scoreboard", "answer", "contrast", "figure"],
+  "case-note": ["scene", "figure", "stakes"],
+  faq: ["answer", "question", "verdict", "belief"],
 };
 
 function hashOf(text: string): number {
@@ -645,10 +683,20 @@ export function closeMoveFor(title: string): Move {
  * title hash so the choice is still stable across re-plans.
  */
 export function assignMoves(
-  posts: Array<{ title: string; contentType?: string; introMove?: string; closeMove?: string }>
+  posts: Array<{ title: string; contentType?: string; introMove?: string; closeMove?: string }>,
+  /**
+   * Moves the last few posts already used. Counted against the pool but not
+   * returned — so tomorrow's batch does not open the way today's did. Liam,
+   * 5 Oct: "each opening paragraph starting to be the same".
+   */
+  history: Array<{ introMove?: string; closeMove?: string }> = []
 ): Array<{ introMove: string; closeMove: string }> {
   const introUse = new Map<string, number>();
   const closeUse = new Map<string, number>();
+  for (const h of history) {
+    if (h.introMove) introUse.set(h.introMove, (introUse.get(h.introMove) ?? 0) + 1);
+    if (h.closeMove) closeUse.set(h.closeMove, (closeUse.get(h.closeMove) ?? 0) + 1);
+  }
   // Posts that already carry a move keep it and count against the pool, so a
   // queue rewritten one post at a time still spreads out — each retry sees
   // what its siblings were given and takes something else.
@@ -683,6 +731,11 @@ export function moveById(list: Move[], id?: string): Move | undefined {
  * slightly differently and needs to be caught rather than trusted.
  */
 export const SPENT_OPENERS: RegExp[] = [
+  // Liam, 5 Oct: "There's a belief going round xxx slack channel" had become
+  // the way in, post after post.
+  /\bthere'?s an? (belief|myth|theory|rumou?r|story|idea|assumption)\b/i,
+  /\b(belief|myth|theory|rumou?r|story|idea|line|take)\b[^.]{0,60}\b(going round|going around|doing the rounds|making the rounds|circulating|floating around)\b/i,
+  /\b(slack|discord|telegram|signal|whatsapp) (channels?|groups?|chats?|servers?|threads?)\b/i,
   /\b(ask(ed)? (chatgpt|perplexity|claude|gemini|an ai engine)|(chatgpt|perplexity|ai engines?) (doesn't|does not|never|won't|will not) (mention|say|name|cite))/i,
   /\byou (don't|do not) exist\b/i,
   /\bgot a (hedge|shrug)\b/i,

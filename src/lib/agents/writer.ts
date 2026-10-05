@@ -12,7 +12,9 @@ import { PUBLICATIONS, boilerplateFor } from "../publications";
 import { LIAM_STYLE_PROFILE, PLAYBOOK } from "../style-profile";
 import { briefToPrompt, type BriefFaq, type BriefSection } from "../content-brief";
 import { allArticles, exemplarBlock, priorWorkFromStore, styleExemplars } from "../archive-store";
+import { listRuns } from "../store";
 import { feedbackBlock, readFeedback } from "../feedback";
+import { houseDataBlock, insightPages, listInsights, relevantInsights } from "../insights";
 import { linkablePages, linkTargetsBlock, relevantPosts } from "../link-map";
 import {
   CLOSE_MOVES,
@@ -198,6 +200,59 @@ export function enforceOutline(body: string, outline: BriefSection[]): string {
  * told not to use one does it slightly differently, and slightly differently
  * is still the same opening to a reader.
  */
+/** The first two sentences of the introduction, links removed. */
+export function openingOf(body: string): string {
+  const intro = proseOf(body).split(/^##\s+/m)[0];
+  return unlink(intro).replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s+/).slice(0, 2).join(" ").slice(0, 320);
+}
+
+/** How the client's most recent blog posts opened, newest first. */
+async function recentOpenings(clientRef: string, runId?: string, n = 10): Promise<string[]> {
+  try {
+    return (await listRuns(clientRef))
+      .filter((r) => r.brief.track === "blog" && r.id !== runId && !r.removedAt && r.draft?.body)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, n)
+      .map((r) => openingOf(r.draft!.body))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+const OPENING_STOP = new Set("the a an and or of to in on for with is are be it its that this you your there s re t".split(" "));
+
+/**
+ * Soft: the opening shares its first three words, or a four-word run of
+ * real words, with one of the last posts' openings. Liam, 5 Oct: "each
+ * opening paragraph starting to be the same… same metaphor".
+ */
+export function enforceFreshOpening(body: string, recent: string[]): void {
+  if (!recent.length) return;
+  const toks = (t: string) => t.toLowerCase().replace(/[’']/g, "").split(/[^a-z0-9]+/).filter(Boolean);
+  const mine = toks(openingOf(body));
+  if (mine.length < 6) return;
+  const grams = (w: string[]) => {
+    const out = new Set<string>();
+    for (let i = 0; i + 4 <= w.length; i++) {
+      const g = w.slice(i, i + 4);
+      if (g.filter((x) => !OPENING_STOP.has(x)).length >= 3) out.add(g.join(" "));
+    }
+    return out;
+  };
+  const myGrams = grams(mine);
+  for (const r of recent) {
+    const theirs = toks(r);
+    if (theirs.slice(0, 3).join(" ") === mine.slice(0, 3).join(" ")) {
+      throw new Error(`the opening starts with the same words as a recent post ("${r.slice(0, 90)}…"). Find a different way in — the move assigned, in fresh words.`);
+    }
+    const shared = [...grams(theirs)].filter((g) => myGrams.has(g));
+    if (shared.length) {
+      throw new Error(`the opening reuses "${shared[0]}" from a recent post's opening ("${r.slice(0, 90)}…"). Same voice, different words and a different image.`);
+    }
+  }
+}
+
 export function enforceIntro(body: string): void {
   body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
@@ -213,8 +268,9 @@ export function enforceIntro(body: string): void {
   const spent = SPENT_OPENERS.find((re) => re.test(opening));
   if (spent) {
     throw new Error(
-      `The piece opens "${opening.slice(0, 120)}…" — the "an AI engine will not mention you" opening ` +
-        `that four of the first seven posts used. Open it the way the brief assigns, not this way. Retry the writer.`
+      `The piece opens "${opening.slice(0, 120)}…" — an opening device the client has already called ` +
+        `spent (the "AI engine will not mention you" line, or a belief "going round" some Slack or Telegram ` +
+        `channel). Open it the way the brief assigns, not this way. Retry the writer.`
     );
   }
 }
@@ -911,6 +967,9 @@ const UNSOURCED_SPECIFIC = /\b(within (hours|days|minutes|weeks)( or (hours|days
 export function enforceSourcedSpecifics(body: string): void {
   const hits = paragraphsOf(body)
     .filter((p) => !/\]\(https?:\/\//.test(p))
+    // A figure attributed to Coinpresso's own work comes from Liam's data
+    // (insights.ts), which has no URL by design.
+    .filter((p) => !/\b(coinpresso|our (clients?|campaigns?|work|data))\b/i.test(p))
     .map((p) => unlink(p).match(UNSOURCED_SPECIFIC)?.[0])
     .filter(Boolean) as string[];
   if (!hits.length) return;
@@ -1479,16 +1538,24 @@ marketing agency; this is their domain, and the reader is a founder deciding
 whether to hire them.
 
 THE ONE RULE THAT OVERRIDES EVERYTHING: you may not introduce any URL, publisher,
-statistic or figure that does not appear in the research brief. Inventing a
+statistic or figure that does not appear in the research brief or in
+Coinpresso's own data when that is supplied. Inventing a
 plausible-looking source is worse than omitting the claim, because this is the
 agency's own domain and a broken citation is a credibility failure they cannot
 delete from someone's memory.
 
-Second rule: if the brief gives you nothing genuinely original — no named
-example, no figure Coinpresso holds, no honest limitation, no argued position —
-then say so in the piece rather than padding it with generalities. A post that
-only reassembles what already ranks is the exact thing that gets a domain
-demoted at this publishing rate.
+Second rule: ALWAYS GIVE THE ANSWER. Liam, 5 Oct: "We always need to give an
+answer. The agent is avoiding giving answers." A founder asking "how much does
+presale marketing cost?" gets a number or a range in the first lines of the
+answer — the retainer, the spend, the timeline, the result — with what moves
+it up or down, not "it depends" and not "every project is different". The
+answer comes from Coinpresso's own data when it is supplied (below, when
+there is any), otherwise from figures in the research brief. Where neither
+has the exact number, give the tightest range the sources support and say
+what drives it. Write the answer so it can be lifted out whole: one or two
+plain sentences that make sense on their own, which is what AI overviews and
+featured snippets quote. Inventing a number is still forbidden; dodging the
+question is now a failure too.
 
 This is NOT a wire release. No dateline, no boilerplate, no investment
 disclaimer, no presale figures, no price predictions.
@@ -1560,8 +1627,19 @@ otherwise would, and do not invent house conventions it does not state.\n`;
     [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? [])].join(" "),
     15
   );
-  const recentPosts = recent
-    .map((a) => `- ${a.publishedAt.slice(0, 10)} · ${a.title} — ${a.url}`)
+  // Liam's own findings and the posts he pointed to. See insights.ts.
+  const insights = input.ctx?.clientRef
+    ? relevantInsights(
+        await listInsights(input.ctx.clientRef),
+        [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? []), brief.pillar ?? ""].join(" ")
+      )
+    : [];
+  const houseData = houseDataBlock(insights);
+  const recentOpeners = input.ctx?.clientRef ? await recentOpenings(input.ctx.clientRef, input.ctx.runId) : [];
+  const recentPosts = [
+    ...insightPages(insights).map((x) => `- (added by Liam) · ${x.topic} — ${x.url}`),
+  ].concat(recent
+    .map((a) => `- ${a.publishedAt.slice(0, 10)} · ${a.title} — ${a.url}`))
     .join("\n");
 
   // Every coinpresso.io page the writer is allowed to link, and what each one
@@ -1577,6 +1655,9 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   }
   for (const a of recent) {
     if (a.url) knownPages.set(a.url.replace(/\/+$/, "").toLowerCase(), a.title);
+  }
+  for (const x of insightPages(insights)) {
+    knownPages.set(x.url.replace(/\/+$/, "").toLowerCase(), x.topic);
   }
 
   // THE LEDGER IS FILTERED HERE, not only where it was researched.
@@ -1680,8 +1761,17 @@ serious accusation, and it comes with none of the usual 'oops-a-daisy'
 courtesies." Same facts. The second one has a person in it — a turn of phrase,
 a dry aside, the register of someone explaining it across a desk. Write the
 opening that way. Do not restate the title in a formal voice and call it an
-introduction.
-
+introduction. That example shows a REGISTER, not a template: do not borrow its
+words, its "that's a serious accusation" turn or its kind of idiom.
+${recentOpeners.length ? `
+HOW THE LAST POSTS OPENED. Liam, 5 Oct: "Blogs starting to get a bit same-y,
+especially intros… each opening paragraph starting to be the same. The style is
+correct but need to change it up — same metaphor." Yours must not resemble any
+of these: not the same first words, not the same device (an overheard belief,
+a channel, a deleted draft, a founder at a desk), not the same metaphor, image
+or idiom. Same voice, different way in:
+${recentOpeners.map((o) => `- "${o}"`).join("\n")}
+` : ""}
 ${roundup ? `THIS IS A ROUNDUP ("${brief.title}"). Rival agencies MAY be named here — a
 roundup without names is not a roundup — but NEVER linked: no rival's URL, ever.
 COINPRESSO IS ENTRY #1, ahead of every other, with the longest and most
@@ -1798,7 +1888,7 @@ ${research.moonbergAngle}
 WHAT WOULD MAKE IT ORIGINAL — use what is true, and where something is missing,
 write around the gap honestly rather than inventing it:
 ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- nothing supplied"}
-
+${houseData ? `\n${houseData}\n` : ""}
 LINKING, IN THE CLIENT'S OWN WORDS. "We want to keep users within our website
 hierarchy as much as possible as opposed to sending them elsewhere." So:
 internal links carry the piece; an external link exists only where a claim
@@ -2065,6 +2155,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceParagraphSize(parsed.body),
         () => enforceSentenceVariety(parsed.body),
         () => enforceNoRepetition(parsed.body),
+        () => enforceFreshOpening(parsed.body, recentOpeners),
         () => enforceHomepageInOpening(parsed.body),
         () => enforceEarlyInternalLink(parsed.body),
         () => enforceNoMetaCommentary(parsed.body),

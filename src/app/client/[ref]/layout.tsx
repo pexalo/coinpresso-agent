@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import ClientHeader from "@/components/ClientHeader";
 import ClientSidebar, { MobileSectionTabs } from "@/components/ClientSidebar";
 import { PoweredBy } from "@/components/Brand";
-import { clientModules, getClient } from "@/lib/clients";
+import { clientModules, getClient, hasModule } from "@/lib/clients";
+import { InsightQuickAdd } from "@/components/Insights";
 
 export default async function ClientLayout({
   children,
@@ -28,6 +29,7 @@ export default async function ClientLayout({
           {children}
         </div>
       </div>
+      {hasModule(client, "own-blog") && <InsightQuickAdd clientRef={client.ref} />}
       <PoweredBy />
     </>
   );

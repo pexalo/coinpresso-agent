@@ -103,3 +103,30 @@ export async function markComposed(
     JSON.stringify(next, null, 2)
   );
 }
+
+/**
+ * The scene briefs of the client's most recent featured images, newest
+ * first, other than this run's. The designer is shown them so it stops
+ * reaching for the same props — Liam, 5 Oct: "A lot of magnifying glasses
+ * being used etc, more originality required."
+ */
+export async function recentScenePrompts(clientRef: string, excludeRunId?: string, n = 12): Promise<string[]> {
+  const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, "");
+  let runs: string[] = [];
+  try {
+    runs = await fs.readdir(path.join(DIR, safe(clientRef)));
+  } catch {
+    return [];
+  }
+  const all: ImageVersion[] = [];
+  for (const r of runs) {
+    if (r === excludeRunId) continue;
+    const vs = await listImages(clientRef, r);
+    const hero = vs.filter((v) => !v.section).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    if (hero?.prompt) all.push(hero);
+  }
+  return all
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, n)
+    .map((v) => v.prompt.replace(/\s+/g, " ").slice(0, 220));
+}

@@ -10,6 +10,7 @@
 // back is not being reviewed.
 // ---------------------------------------------------------------------------
 
+import { houseDataBlock, listInsights, relevantInsights } from "../insights";
 import { callGpt } from "../providers/openai";
 import { MODELS } from "../models";
 import { PUBLICATIONS } from "../publications";
@@ -273,6 +274,16 @@ async function reviewBlog(input: ReviewerInput): Promise<{
   const feedback = input.ctx?.clientRef
     ? feedbackBlock(await readFeedback(input.ctx.clientRef), "reviewer")
     : "";
+  // Liam's own figures were given to the writer as allowed. The editor has to
+  // see them too, or it flags a true Coinpresso number as invented.
+  const houseData = input.ctx?.clientRef
+    ? houseDataBlock(
+        relevantInsights(
+          await listInsights(input.ctx.clientRef),
+          [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? []), brief.pillar ?? ""].join(" ")
+        )
+      )
+    : "";
 
   const user = `${BLOG_STYLE}
 
@@ -289,6 +300,12 @@ THE READER'S QUESTION: ${research.buyerQuestion ?? "not supplied"}
 ORIGINALITY — the draft must contain at least one of these, and you must name
 which one it contains or report that it contains none:
 ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- the brief supplied none, so the writer was told to write around the gap honestly. Check that it did rather than inventing."}
+${houseData ? `\nThe writer was also given the following. Figures from it are NOT invented — they are\nCoinpresso's own, and a post that uses them to answer the question is doing its job:\n${houseData}\n` : ""}
+THE ANSWER. Liam, 5 Oct: "We always need to give an answer." If the reader's
+question has a number in it — a cost, a budget, a retainer, a timeline, a
+result — and the draft never gives one (a figure or a range, from the
+ledger or Coinpresso's data), that is a MAJOR finding: "the direct answer is
+missing". "It depends" with no range is a dodge, not an answer.
 
 THE ONLY URLS THIS POST MAY CITE:
 ${research.sources.map((x) => `${x.id}: ${x.url}`).join("\n") || "(none)"}

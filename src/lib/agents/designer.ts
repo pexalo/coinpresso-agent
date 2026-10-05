@@ -14,7 +14,8 @@ import { callClaude } from "../providers/anthropic";
 import { isCompetitorRoundup } from "../blog";
 import { imagePrice } from "../model-registry";
 import { MODELS } from "../models";
-import { SCENE_RULES, SECTION_RULES, CHART_REQUEST, PALETTE } from "../blog-image";
+import { SCENE_RULES, SECTION_RULES, CHART_REQUEST, PALETTE, ROUNDUP_SCENE_RULES, SCENE_APPROACHES, CLICHE_PROPS } from "../blog-image";
+import { listImages, recentScenePrompts } from "../image-store";
 
 /** gpt-image-1 is deprecated on 23 Oct 2026; do not fall back to it. */
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2";
@@ -56,6 +57,15 @@ async function sceneBrief(
   run: Run,
   nudge?: string
 ): Promise<{ scene: string; usage: BriefUsage }> {
+  const roundup = isCompetitorRoundup(run.brief.title, run.brief.contentType);
+  // A different approach per post, and a different one again on each
+  // regenerate — Liam, 5 Oct: "Image agent also needs to mix things up a bit.
+  // A lot of magnifying glasses being used etc, more originality required."
+  const tries = (await listImages(run.clientRef, run.id)).filter((v) => !v.section).length;
+  let h = 0;
+  for (const ch of run.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const approach = SCENE_APPROACHES[(h + tries) % SCENE_APPROACHES.length];
+  const recent = await recentScenePrompts(run.clientRef, run.id).catch(() => [] as string[]);
   const headings = (run.draft?.body.match(/^## (.+)$/gm) ?? [])
     .map((h) => h.slice(3))
     .filter((h) => h.toLowerCase() !== "faqs")
@@ -67,12 +77,26 @@ POST: ${run.draft?.headline ?? run.brief.title}
 SECTIONS:
 ${headings.map((h) => `- ${h}`).join("\n")}
 
-Describe ONE scene of 3D-rendered objects that carries the post's central
+${roundup
+    ? `This post ranks agencies. Its image is UNBRANDED and organic: one central
+object or small group that stands for the topic itself (a presale, a launch,
+a community), lit like a real photographed set, with open dark space around
+it where round glass orbs carrying the agencies' logos will be placed later.
+Describe only the central subject and its surface/atmosphere.`
+    : `Describe ONE scene of 3D-rendered objects that carries the post's central
 argument. Name physical objects a 3D artist could model. Abstractions like
-"trust" or "visibility" render as nothing — give me the vault, the ledger, the
-bridge, the magnifying glass, the stack of documents.
+"trust" or "visibility" render as nothing — name the specific thing this
+post is about, as an object.
 
-Three to five objects, no more. Say how they are arranged.
+ART DIRECTION FOR THIS ONE: ${approach}
+
+Three to five objects, no more. Say how they are arranged.`}
+
+ORIGINALITY. Never use these stock props: ${CLICHE_PROPS.join(", ")}.
+Find the object that belongs to THIS topic and no other.${recent.length ? `
+The last images on this blog were these. Use none of their objects or
+compositions:
+${recent.map((r) => `- ${r}`).join("\n")}` : ""}
 ${nudge ? `\nThe operator asked for this change, and it takes priority: "${nudge}"` : ""}
 
 Answer with the scene only, 40 words at most. No preamble, no title, no text
@@ -105,25 +129,22 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
   if (!run.draft) throw new Error("This run has no draft to illustrate yet.");
 
   const { scene, usage: brief } = await sceneBrief(run, nudge);
-  const prompt = [
-    scene,
-    "",
-    "STYLE, which matters more than the subject:",
-    ...SCENE_RULES.map((r) => `- ${r}`),
-    `- Ground and atmosphere in deep purple, around ${PALETTE.bgCenter} falling to ${PALETTE.bgEdge}`,
-    `- Rim lights in violet ${PALETTE.gradientViolet} and teal ${PALETTE.gradientTeal}`,
-    "- Leave the left 45% of the frame quiet and dark: a title is placed there",
-    // Roundups get the listed companies' real logos composited on the right,
-    // so the scene there has to be a backdrop, and the model must not try to
-    // draw any company's mark itself.
-    ...(isCompetitorRoundup(run.brief.title, run.brief.contentType)
-      ? [
-          "- The right third of the frame will be covered by a column of logo cards: keep it dim, soft and uncluttered, background only",
-          "- Put the main subject in the centre of the frame, between the title and the logo column",
-          "- Draw NO company logos, brand marks, letters or wordmarks anywhere",
-        ]
-      : []),
-  ].join("\n");
+  // Liam, 5 Oct: "for all listicles, the creatives need to be non-branded,
+  // organic feel… Only this topic featured image needs to be non-branded."
+  // So a competitor roundup drops the Coinpresso purple and the house scene
+  // rules for a neutral, photographic set; the logos are composited later.
+  const roundup = isCompetitorRoundup(run.brief.title, run.brief.contentType);
+  const prompt = roundup
+    ? [scene, "", "STYLE, which matters more than the subject:", ...ROUNDUP_SCENE_RULES.map((r) => `- ${r}`)].join("\n")
+    : [
+        scene,
+        "",
+        "STYLE, which matters more than the subject:",
+        ...SCENE_RULES.map((r) => `- ${r}`),
+        `- Ground and atmosphere in deep purple, around ${PALETTE.bgCenter} falling to ${PALETTE.bgEdge}`,
+        `- Rim lights in violet ${PALETTE.gradientViolet} and teal ${PALETTE.gradientTeal}`,
+        "- Leave the left 45% of the frame quiet and dark: a title is placed there",
+      ].join("\n");
 
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",

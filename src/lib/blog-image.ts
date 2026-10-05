@@ -98,6 +98,50 @@ export const SCENE_RULES = [
   "NO people, faces or hands",
 ] as const;
 
+/**
+ * One art direction per featured image, rotated by run (and by regenerate),
+ * so the blog stops looking like one picture with the props moved. Liam,
+ * 5 Oct: "Image agent also needs to mix things up a bit."
+ */
+export const SCENE_APPROACHES = [
+  "a miniature diorama: a tiny working world on a plinth, seen from three-quarter view",
+  "a cutaway: one object sliced open to show the mechanism inside it",
+  "a tactile still life: three objects on a single surface, close up, rich materials",
+  "a sculptural abstraction: the idea as one bold architectural form",
+  "a landscape at miniature scale: the argument as terrain — paths, bridges, drops, gates",
+  "a machine in motion: interlocking parts or a conveyor carrying the process from left to right",
+  "a single hero object in macro close-up, extreme material detail, shallow depth of field",
+  "a split scene: the same object in two states, before and after, side by side",
+  "an unexpected material: the subject built from paper, glass, stone, cloth or circuitry",
+] as const;
+
+/** Props the designer had worn out. Never in a featured image again. */
+export const CLICHE_PROPS = [
+  "magnifying glass", "shield", "padlock", "lightbulb", "rocket", "trophy", "megaphone",
+  "puzzle pieces", "chess pieces", "dartboard or target", "hourglass", "compass", "key",
+  "clipboard or checklist", "a lone generic coin or a stack of coins as the centrepiece",
+] as const;
+
+/**
+ * Competitor roundups only: an unbranded, organic set. No Coinpresso purple,
+ * no house template — a roundup that looks like Coinpresso's own advert reads
+ * as one. The listed agencies' logos go on afterwards in glass orbs.
+ */
+export const ROUNDUP_SCENE_RULES = [
+  "Photographic-quality 3D render, like a real studio set: natural materials, soft cinematic light, gentle reflections, subtle haze",
+  "Neutral dark ground — charcoal and deep slate, around #121417 falling to #08090b — with warm amber and cool cyan practical light. NOT purple, NOT a brand palette",
+  "The central subject sits at about 68% across the frame and mid-height, filling no more than a third of the frame",
+  "Leave open, dark, uncluttered space all around the subject: round glass orbs carrying logos are placed there later",
+  "Leave the left 40% of the frame dark and quiet: a title is placed there",
+  "NO text, letters, numbers, logos, brand marks or wordmarks anywhere",
+  "NO people, faces or hands",
+] as const;
+
+/** Title block on a competitor roundup: left, narrower, no logo above it. */
+export const ROUNDUP_TITLE = { x: 72, centerY: 290, size: 40, lineHeight: 48, maxWidth: 360, maxLines: 8 } as const;
+/** A warm, non-Coinpresso accent for roundup titles (Liam's example, 5 Oct). */
+export const ROUNDUP_ACCENT = "#E2673F";
+
 /** Split a headline into the accent-coloured opening and the white remainder. */
 /**
  * The baseline of the first title line, for a block of `lines`.

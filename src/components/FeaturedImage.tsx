@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CANVAS, TEMPLATE,
-  titleTop, PALETTE, FONTS, splitTitle } from "@/lib/blog-image";
+  titleTop, PALETTE, FONTS, splitTitle, ROUNDUP_TITLE, ROUNDUP_ACCENT } from "@/lib/blog-image";
 
 interface Version {
   id: string;
@@ -121,136 +121,147 @@ export default function FeaturedImage({
     }
 
     // 2. A scrim across the left, so the title reads whatever the scene did.
+    // Neutral on a roundup — those images carry no Coinpresso colour.
+    const tint = isRoundup ? "8,9,11" : "14,1,26";
     const scrim = ctx.createLinearGradient(0, 0, CANVAS.w * TEMPLATE.scrim.to, 0);
-    scrim.addColorStop(0, `rgba(14,1,26,${TEMPLATE.scrim.strength})`);
-    scrim.addColorStop(0.55, `rgba(14,1,26,${TEMPLATE.scrim.strength * 0.7})`);
-    scrim.addColorStop(1, "rgba(14,1,26,0)");
+    scrim.addColorStop(0, `rgba(${tint},${TEMPLATE.scrim.strength})`);
+    scrim.addColorStop(0.55, `rgba(${tint},${TEMPLATE.scrim.strength * 0.7})`);
+    scrim.addColorStop(1, `rgba(${tint},0)`);
     ctx.fillStyle = scrim;
     ctx.fillRect(0, 0, CANVAS.w * TEMPLATE.scrim.to, CANVAS.h);
 
-    // 3. The logo, at its own aspect ratio. Never stretched to fit a box.
-    const logo = new Image();
-    logo.src = "/brand/clients/coinpresso.png";
-    try {
-      await logo.decode();
-      const h = TEMPLATE.logo.h;
-      const w = (logo.width / logo.height) * h;
-      ctx.drawImage(logo, TEMPLATE.logo.x, TEMPLATE.logo.y, w, h);
-    } catch {
-      // No logo asset: leave the space rather than draw a wrong mark.
+    const loadImg = async (src: string) => {
+      const im = new Image();
+      im.src = src;
+      try {
+        await im.decode();
+        return im;
+      } catch {
+        return null;
+      }
+    };
+
+    // 3. The Coinpresso logo, at its own aspect ratio — except on a
+    // competitor roundup. Liam, 5 Oct: "for all listicles, the creatives need
+    // to be non-branded, organic feel."
+    if (!isRoundup) {
+      const logo = await loadImg("/brand/clients/coinpresso.png");
+      if (logo) {
+        const h = TEMPLATE.logo.h;
+        const w = (logo.width / logo.height) * h;
+        ctx.drawImage(logo, TEMPLATE.logo.x, TEMPLATE.logo.y, w, h);
+      }
     }
 
-    // 3b. On a roundup, the listed companies' real logos down the right:
-    // Coinpresso first and largest, then the rest in two columns. Each is
-    // the company's own published mark, fetched from its site — never drawn.
+    // 3b. On a roundup, the listed companies' real logos in glass orbs ringed
+    // around the scene's subject, Coinpresso at the top. Each is the
+    // company's own published mark, fetched from its site — never drawn.
     const shown = logos.filter((l) => l.on && (l.ours || l.domain));
     if (isRoundup && shown.length) {
-      const X0 = 640, X1 = 984, GAP = 12;
-      const round = (x: number, y: number, w: number, h: number, r: number) => {
+      const list = [...shown.filter((l) => l.ours), ...shown.filter((l) => !l.ours)].slice(0, 8);
+      const n = list.length;
+      const R = n <= 5 ? 66 : n <= 6 ? 60 : 52;
+      const CX = 705, CY = 292, RX = 190, RY = 200;
+      for (let i = 0; i < n; i++) {
+        const l = list[i];
+        const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+        const x = Math.round(CX + RX * Math.cos(a));
+        const y = Math.round(CY + RY * Math.sin(a));
+        ctx.save();
+        // Glass body.
+        ctx.shadowColor = "rgba(0,0,0,0.45)";
+        ctx.shadowBlur = 24;
         ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.arcTo(x + w, y, x + w, y + h, r);
-        ctx.arcTo(x + w, y + h, x, y + h, r);
-        ctx.arcTo(x, y + h, x, y, r);
-        ctx.arcTo(x, y, x + w, y, r);
-        ctx.closePath();
-      };
-      const loadImg = async (src: string) => {
-        const im = new Image();
-        im.src = src;
-        try {
-          await im.decode();
-          return im;
-        } catch {
-          return null;
-        }
-      };
-      const others = shown.filter((l) => !l.ours).slice(0, 6);
-      const ours = shown.find((l) => l.ours);
-      const rows = Math.ceil(others.length / 2);
-      const topH = ours ? 96 : 0;
-      const tileH = 64;
-      const totalH = topH + (ours && rows ? GAP : 0) + rows * tileH + Math.max(0, rows - 1) * GAP;
-      let y = Math.round((CANVAS.h - totalH) / 2);
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.35)";
-      ctx.shadowBlur = 18;
-      if (ours) {
-        round(X0, y, X1 - X0, topH, 16);
-        ctx.fillStyle = PALETTE.bgCenter;
+        ctx.arc(x, y, R, 0, Math.PI * 2);
+        const body = ctx.createRadialGradient(x - R * 0.3, y - R * 0.35, R * 0.1, x, y, R);
+        body.addColorStop(0, "rgba(255,255,255,0.10)");
+        body.addColorStop(0.7, "rgba(20,24,30,0.55)");
+        body.addColorStop(1, "rgba(10,12,16,0.75)");
+        ctx.fillStyle = body;
         ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = PALETTE.accent;
-        ctx.stroke();
-        const mark = await loadImg("/brand/clients/coinpresso.png");
-        if (mark) {
-          const h = 44;
-          const w = (mark.width / mark.height) * h;
-          ctx.drawImage(mark, X0 + 24, y + (topH - h) / 2, w, h);
-        }
-        ctx.font = `700 22px ${FONTS.display}, ${FONTS.fallback}`;
-        ctx.fillStyle = PALETTE.accent;
-        ctx.textAlign = "right";
-        ctx.fillText("#1", X1 - 22, y + topH / 2 + 8);
-        ctx.textAlign = "left";
-        y += topH + GAP;
-        ctx.shadowBlur = 18;
-      }
-      const colW = (X1 - X0 - GAP) / 2;
-      for (let i = 0; i < others.length; i++) {
-        const l = others[i];
-        const x = X0 + (i % 2) * (colW + GAP);
-        const ty = y + Math.floor(i / 2) * (tileH + GAP);
-        ctx.shadowBlur = 18;
-        round(x, ty, colW, tileH, 12);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        const icon = l.domain
-          ? await loadImg(`/api/clients/${clientRef}/runs/${runId}/image/logos?domain=${encodeURIComponent(l.domain)}`)
-          : null;
-        let tx = x + 16;
+        // The mark.
+        const icon = l.ours
+          ? await loadImg("/brand/clients/coinpresso.png")
+          : l.domain
+            ? await loadImg(`/api/clients/${clientRef}/runs/${runId}/image/logos?domain=${encodeURIComponent(l.domain)}`)
+            : null;
         if (icon) {
-          ctx.drawImage(icon, x + 12, ty + 12, 40, 40);
-          tx = x + 62;
-        }
-        ctx.fillStyle = "#1c1330";
-        let size = 17;
-        ctx.font = `700 ${size}px ${FONTS.display}, ${FONTS.fallback}`;
-        while (ctx.measureText(l.name).width > x + colW - tx - 10 && size > 11) {
-          size -= 1;
+          const ratio = icon.width / icon.height;
+          if (ratio > 1.3) {
+            // A wordmark: fit across the orb.
+            const w = R * 1.4;
+            const h = w / ratio;
+            ctx.drawImage(icon, x - w / 2, y - h / 2, w, h);
+          } else {
+            // A square icon: a disc inside the glass.
+            const d = R * 1.25;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, d / 2, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(icon, x - d / 2, y - d / 2, d, d);
+            ctx.restore();
+          }
+        } else {
+          ctx.fillStyle = "#FFFFFF";
+          let size = 16;
           ctx.font = `700 ${size}px ${FONTS.display}, ${FONTS.fallback}`;
+          while (ctx.measureText(l.name).width > R * 1.6 && size > 10) {
+            size -= 1;
+            ctx.font = `700 ${size}px ${FONTS.display}, ${FONTS.fallback}`;
+          }
+          ctx.textAlign = "center";
+          ctx.fillText(l.name, x, y + size / 3);
+          ctx.textAlign = "left";
         }
-        ctx.fillText(l.name, tx, ty + tileH / 2 + size / 3);
+        // Rim and highlight, warm one side and cool the other.
+        ctx.beginPath();
+        ctx.arc(x, y, R, 0, Math.PI * 2);
+        const rim = ctx.createLinearGradient(x - R, y - R, x + R, y + R);
+        rim.addColorStop(0, "rgba(120,220,235,0.85)");
+        rim.addColorStop(1, "rgba(240,160,80,0.85)");
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = rim;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, R * 0.86, Math.PI * 1.1, Math.PI * 1.45);
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.stroke();
+        ctx.restore();
       }
-      ctx.restore();
     }
 
-    // 4. The title, accent phrase then white, block centred on centerY.
+    // 4. The title, accent phrase then white. On a roundup the block moves
+    // left and narrows to clear the orbs, with no logo above it to avoid.
+    const T = isRoundup ? ROUNDUP_TITLE : TEMPLATE.title;
     const { accent, rest } = splitTitle(headline);
-    ctx.font = `700 ${TEMPLATE.title.size}px ${FONTS.display}, ${FONTS.fallback}`;
+    ctx.font = `700 ${T.size}px ${FONTS.display}, ${FONTS.fallback}`;
     ctx.textBaseline = "alphabetic";
     const all = wrap(
       ctx,
       `${accent} ${rest}`.split(" "),
-      TEMPLATE.title.maxWidth
-    ).slice(0, TEMPLATE.title.maxLines);
+      T.maxWidth
+    ).slice(0, T.maxLines);
 
     // Which characters are still inside the accent phrase, so a colour change
     // can land mid-line exactly as it does in their own images.
     const accentChars = accent.length;
     let consumed = 0;
     // Centred on centerY, then pushed clear of the logo if a long title would
-    // climb into it — see titleTop.
-    const top = titleTop(all.length);
+    // climb into it — see titleTop. A roundup has no logo, so it just centres.
+    const top = isRoundup
+      ? Math.max(T.size, T.centerY - ((all.length - 1) * T.lineHeight) / 2)
+      : titleTop(all.length);
 
     all.forEach((line, i) => {
-      const y = top + i * TEMPLATE.title.lineHeight;
-      let x = TEMPLATE.title.x;
+      const y = top + i * T.lineHeight;
+      let x = T.x;
       for (const word of line.split(" ")) {
         const isAccent = consumed < accentChars;
-        ctx.fillStyle = isAccent ? PALETTE.accent : PALETTE.ink;
+        ctx.fillStyle = isAccent ? (isRoundup ? ROUNDUP_ACCENT : PALETTE.accent) : PALETTE.ink;
         ctx.fillText(word, x, y);
         x += ctx.measureText(`${word} `).width;
         consumed += word.length + 1;

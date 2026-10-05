@@ -57,6 +57,7 @@ const SECTIONS: Record<string, Section[]> = {
 
 /** Cross-module pages. They describe the whole workspace, not one product. */
 const WORKSPACE = [
+  { slug: "workflow#insights", label: "Liam's insights & data" },
   { slug: "workflow", label: "Agent workflow" },
   { slug: "costs", label: "API costs" },
   { slug: "resources", label: "Resources" },
