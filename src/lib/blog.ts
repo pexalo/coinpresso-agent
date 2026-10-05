@@ -574,10 +574,10 @@ the specific line of config — and then name what it costs them.`,
     id: "belief",
     how: `Open by naming a belief this reader holds about the topic and killing it in
 a single line, then spend the rest of the paragraph on what is true instead.
-State the belief directly as the reader's own ("You probably think…"), NOT as
-something overheard: no "there's a belief going round", no Slack, Discord or
-Telegram channel, no "a founder told us". Liam, 5 Oct: that device had become
-the opening of every post.`,
+The belief can be the reader's own or one doing the rounds, but if a recent
+post placed it somewhere (a Slack channel, a Telegram group), put this one
+somewhere else or nowhere. Liam, 5 Oct: the same framing had opened post after
+post — the move is fine, the repetition is not.`,
   },
   // Added 5 Oct, when Liam said the intros were "starting to get a bit
   // same-y". Six moves across eight posts a day was not enough room.
@@ -606,6 +606,84 @@ invented numbers — the contrast is between approaches, not anecdotes.`,
     how: `Open with the exact question a founder asks about this, in a founder's own
 words and in quotation marks, and answer it straight away in the next
 sentence — no throat-clearing in between.`,
+  },
+  // A second widening, 5 Oct evening. Bernard: "use other ways of opening
+  // but sticking to how we have been doing the opening… should be more than
+  // 11 ways." Every one below is still the house register — two paragraphs,
+  // talking to the reader, a person's turn of phrase — only the way in changes.
+  {
+    id: "moment",
+    how: `Open on the exact moment in a project's life when this problem bites — "three
+weeks before the presale opens", "the morning after the listing" — and what
+the team is looking at when it does.`,
+  },
+  {
+    id: "definition",
+    how: `Open by defining the term in the reader's own words, not a textbook's, in one
+sentence — then the twist: the part of that definition most teams get wrong.`,
+  },
+  {
+    id: "analogy",
+    how: `Open with one analogy from outside crypto that makes the idea obvious — a
+restaurant, a shop window, a football transfer — kept to two sentences, then
+bring it straight back to the reader's project. One analogy only; do not reuse
+an image a recent post used.`,
+  },
+  {
+    id: "objection",
+    how: `Open with the reader's strongest objection to doing this at all, stated
+fairly and in their voice, then concede the part that is true before saying
+why it still does not hold.`,
+  },
+  {
+    id: "changed",
+    how: `Open on what changed recently — the dated event or shift from the research's
+news catalyst — and what it means for the reader this quarter. No "in today's
+fast-moving landscape"; name the change.`,
+  },
+  {
+    id: "rule",
+    how: `Open with a rule of thumb stated plainly, the kind an experienced marketer
+would scribble on a whiteboard, then qualify it at once: where it holds and
+where it breaks.`,
+  },
+  {
+    id: "reversal",
+    how: `Open with the standard advice on this topic, then explain in a line why it
+backfires for crypto projects specifically — what about tokens, communities or
+platform rules flips it.`,
+  },
+  {
+    id: "message",
+    how: `Open on the message the reader actually receives about this — the DM, the
+pitch email, the dashboard alert — described precisely (not quoted from a real
+person), and what it is really telling them.`,
+  },
+  {
+    id: "detail",
+    how: `Open on one small, specific detail — a line in a report, a field in a form,
+a setting nobody changes — and zoom out from it to the whole problem.`,
+  },
+  {
+    id: "who",
+    how: `Open by saying plainly who this piece is for and who can stop reading — the
+stage, the budget, the situation — so the right reader leans in.`,
+  },
+  {
+    id: "hidden-cost",
+    how: `Open on the cost nobody budgets for here — the time, the reputation, the
+second campaign — and why it is bigger than the line item everyone argues about.`,
+  },
+  {
+    id: "tradeoff",
+    how: `Open on the trade-off at the heart of the topic — speed against safety, reach
+against trust — and say which side most teams pick by accident.`,
+  },
+  {
+    id: "first-step",
+    how: `Open with the single first thing to do, stated as an instruction, then pull
+back to explain why that step comes first and what the rest of the piece
+builds on it.`,
   },
   {
     id: "stakes",
@@ -645,13 +723,17 @@ the last clause: this is the list Coinpresso works through.`,
 
 /** Moves that suit each format. The title picks within the list. */
 const INTRO_BY_TYPE: Record<string, string[]> = {
-  data: ["figure", "scoreboard", "answer", "stakes"],
-  teardown: ["figure", "scene", "mistake", "contrast"],
-  opinion: ["verdict", "belief", "contrast", "claim"],
-  guide: ["answer", "claim", "scene", "mistake", "question", "stakes", "contrast"],
-  comparison: ["scoreboard", "answer", "contrast", "figure"],
-  "case-note": ["scene", "figure", "stakes"],
-  faq: ["answer", "question", "verdict", "belief"],
+  data: ["figure", "scoreboard", "answer", "stakes", "changed", "detail", "hidden-cost", "rule", "reversal"],
+  teardown: ["figure", "scene", "mistake", "contrast", "detail", "moment", "message", "hidden-cost", "reversal"],
+  opinion: ["verdict", "belief", "contrast", "claim", "objection", "reversal", "tradeoff", "analogy", "rule", "changed"],
+  guide: [
+    "answer", "claim", "scene", "mistake", "question", "stakes", "contrast", "belief", "moment",
+    "definition", "analogy", "objection", "rule", "reversal", "message", "detail", "who",
+    "hidden-cost", "tradeoff", "first-step", "changed",
+  ],
+  comparison: ["scoreboard", "answer", "contrast", "figure", "tradeoff", "who", "rule", "objection"],
+  "case-note": ["scene", "figure", "stakes", "moment", "detail", "message", "hidden-cost"],
+  faq: ["answer", "question", "verdict", "belief", "definition", "objection", "who", "first-step"],
 };
 
 function hashOf(text: string): number {
@@ -720,6 +802,20 @@ export function assignMoves(
   }));
 }
 
+/**
+ * Opening devices. Not banned — Bernard, 5 Oct: "it's not so much banned…
+ * the opening needs to not be too similar" — but one that a recent post
+ * already used is flagged for the revision pass to change.
+ */
+export const OPENING_DEVICES: Array<{ name: string; re: RegExp }> = [
+  { name: "a belief or theory doing the rounds", re: /\b(belief|myth|theory|rumou?r|story|idea|assumption|take)\b[^.]{0,60}\b(going round|going around|doing the rounds|making the rounds|circulating|floating around)\b|\bthere[’']?s an? (belief|myth|theory|rumou?r|story|idea|assumption)\b/i },
+  { name: "a Slack/Discord/Telegram channel", re: /\b(slack|discord|telegram|signal|whatsapp) (channels?|groups?|chats?|servers?|threads?)\b/i },
+  { name: "a deleted or rewritten draft", re: /\b(drafted|written|rewritten)\b[^.]{0,40}\b(three|four|five|several) times\b|\bdeleted it\b/i },
+  { name: "a board deck or pitch deck", re: /\b(board|pitch) deck\b/i },
+  { name: "a screenshot", re: /\bscreenshot\b/i },
+  { name: "\"you know how that reads\"", re: /\byou know how (that|it) (reads|sounds|looks)\b/i },
+];
+
 export function moveById(list: Move[], id?: string): Move | undefined {
   return id ? list.find((m) => m.id === id) : undefined;
 }
@@ -731,11 +827,7 @@ export function moveById(list: Move[], id?: string): Move | undefined {
  * slightly differently and needs to be caught rather than trusted.
  */
 export const SPENT_OPENERS: RegExp[] = [
-  // Liam, 5 Oct: "There's a belief going round xxx slack channel" had become
-  // the way in, post after post.
-  /\bthere'?s an? (belief|myth|theory|rumou?r|story|idea|assumption)\b/i,
-  /\b(belief|myth|theory|rumou?r|story|idea|line|take)\b[^.]{0,60}\b(going round|going around|doing the rounds|making the rounds|circulating|floating around)\b/i,
-  /\b(slack|discord|telegram|signal|whatsapp) (channels?|groups?|chats?|servers?|threads?)\b/i,
+
   /\b(ask(ed)? (chatgpt|perplexity|claude|gemini|an ai engine)|(chatgpt|perplexity|ai engines?) (doesn't|does not|never|won't|will not) (mention|say|name|cite))/i,
   /\byou (don't|do not) exist\b/i,
   /\bgot a (hedge|shrug)\b/i,

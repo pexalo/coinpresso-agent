@@ -28,6 +28,7 @@ import {
   INTRO_MOVES,
   SPENT_CLOSERS,
   SPENT_OPENERS,
+  OPENING_DEVICES,
   closeMoveFor,
   introMoveFor,
   moveById,
@@ -229,6 +230,16 @@ const OPENING_STOP = new Set("the a an and or of to in on for with is are be it 
  */
 export function enforceFreshOpening(body: string, recent: string[]): void {
   if (!recent.length) return;
+  // The same device as a recent post — a belief "going round", a Slack
+  // channel, a deck — even in different words.
+  const open = openingOf(body);
+  for (const d of OPENING_DEVICES) {
+    if (!d.re.test(open)) continue;
+    const prior = recent.find((r) => d.re.test(r));
+    if (prior) {
+      throw new Error(`the opening uses ${d.name}, which a recent post also opened with ("${prior.slice(0, 90)}…"). Keep the house voice, but find a different way in.`);
+    }
+  }
   const toks = (t: string) => t.toLowerCase().replace(/[’']/g, "").split(/[^a-z0-9]+/).filter(Boolean);
   const mine = toks(openingOf(body));
   if (mine.length < 6) return;

@@ -161,7 +161,7 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     id: "liam-fresh-openings",
     source: "Liam, feedback on the queue (5 Oct)",
     date: "2026-10-05",
-    rule: "Liam: \"Blogs starting to get a bit same-y, especially intros. 'There's a belief going round xxx slack channel'… each opening paragraph starting to be the same. The style is correct but need to change it up — same metaphor.\" Keep the voice, change the way in: no overheard belief, no Slack/Discord/Telegram channel, no metaphor or idiom a recent post already used. (Enforced in code: openings are assigned from a wider set of moves, recent posts' moves count against reuse, the writer sees how the last ten posts opened, and spent devices are rejected.)",
+    rule: "Liam: \"Blogs starting to get a bit same-y, especially intros. 'There's a belief going round xxx slack channel'… each opening paragraph starting to be the same. The style is correct but need to change it up — same metaphor.\" Keep the voice, change the way in. Nothing is banned outright — Bernard: \"it's not so much banned, but the opening needs to not be too similar\" — but no device, metaphor or idiom a recent post already opened with. (Enforced in code: 24 opening moves, recent posts' moves count against reuse, the writer sees how the last ten posts opened, and an opening that repeats a recent post's device or wording gets a revision note.)",
     before: "There's a belief going round a lot of founder Slack channels that…",
     after: "Presale marketing for a $2M raise usually costs $40k–$80k over six weeks; what moves it is how many KOLs you need.",
     active: true,

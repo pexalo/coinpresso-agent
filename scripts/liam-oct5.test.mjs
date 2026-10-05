@@ -33,14 +33,15 @@ ok("run ids are kept clean", cleanInsight({ kind: "finding", body: "A long enoug
 
 console.log("openings");
 const spent = (s) => SPENT_OPENERS.some((re) => re.test(s));
-ok("Slack-channel belief is spent", spent("There's a belief going round a lot of founder Slack channels that presales sell themselves."));
+ok("Slack-channel belief is not banned outright", !spent("There's a belief going round a lot of founder Slack channels that presales sell themselves."));
+ok("…but repeating a recent post's device is flagged", /recent post also opened/.test(throws(() => enforceFreshOpening("There's a belief going round every growth team that budgets scale linearly. They don't. And it costs.\n\n## One\n", ["There's a belief going round every crypto marketing Slack channel right now that AI visibility is one number."]))));
 ok("plain opening is not", !spent("Presale marketing for a $2M raise usually costs more than founders budget."));
-ok("more moves to choose from", INTRO_MOVES.length >= 11);
+ok("more than 11 ways in", INTRO_MOVES.length >= 20, INTRO_MOVES.length);
 const m = assignMoves([{ title: "A", contentType: "guide" }], [{ introMove: "answer" }, { introMove: "claim" }, { introMove: "scene" }]);
 ok("history pushes a new post off recent moves", !["answer", "claim", "scene"].includes(m[0].introMove), m[0].introMove);
 const body = "You've drafted the pitch email three times and deleted it three times, because the founder prefers not to share a name. Most go in the bin.\n\n## One\n";
 ok("opening extracted", openingOf(body).startsWith("You've drafted"));
-ok("same words as a recent opening flagged", /same words|reuses/.test(throws(() => enforceFreshOpening(body, ["You've drafted the launch thread four times and binned it."]))));
+ok("same words as a recent opening flagged", /same words|reuses|also opened/.test(throws(() => enforceFreshOpening(body, ["You've drafted the launch thread four times and binned it."]))));
 ok("different opening passes", throws(() => enforceFreshOpening(body, ["Presale budgets run higher than most teams plan for."])) === "");
 
 console.log("images");
