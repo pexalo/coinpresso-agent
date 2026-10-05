@@ -101,7 +101,8 @@ export function InsightForm({ clientRef, initial, onSaved, onCancel, attach }: {
         <label className={label} htmlFor="ins-body">{d.kind === "finding" ? "The finding — figures, retainers, spends, results" : "Notes (optional)"}</label>
         <textarea
           id="ins-body"
-          className={`${field} min-h-[130px] leading-relaxed`}
+          className={`${field} min-h-[300px] text-[14px] leading-relaxed resize-y`}
+          autoFocus={!initial}
           placeholder={
             d.kind === "finding"
               ? "e.g. Presale marketing retainers we see run $15k–$40k a month; most raises we've run spent 60% on KOLs and PR in the 6 weeks before launch. One 2025 client raised $4.2M in 5 weeks on a $90k budget."
@@ -133,6 +134,48 @@ export function InsightForm({ clientRef, initial, onSaved, onCancel, attach }: {
         {onCancel && (
           <button onClick={onCancel} className="px-3 py-2 text-[12.5px] text-[var(--ink-3)]">Cancel</button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A large writing dialog. Bernard, 5 Oct: "can this pop out to make it
+ * bigger and easier to write" — the side panel was a phone-width box.
+ */
+export function InsightModal({ title, subtitle, onClose, children }: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", k);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", k);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6" onClick={onClose}>
+      <div
+        className="card w-full max-w-3xl p-6 max-h-[92vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-bold text-[16px]">{title}</h2>
+            {subtitle && <p className="text-[12px] text-[var(--ink-3)] mt-1 max-w-xl">{subtitle}</p>}
+          </div>
+          <button onClick={onClose} className="text-[var(--ink-3)] hover:text-[var(--ink)] text-[15px] w-8 h-8 grid place-items-center rounded-lg" aria-label="Close">✕</button>
+        </div>
+        {children}
       </div>
     </div>
   );
@@ -181,13 +224,13 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
         )}
       </div>
       {adding && (
-        <div className="rounded-lg border border-[var(--line)] p-4">
+        <InsightModal title="Add an insight" subtitle="Used by every post whose topic it matches. To tie it to one post, add it from that post's page or its topic." onClose={() => setAdding(false)}>
           <InsightForm
             clientRef={clientRef}
             onSaved={(x) => { setItems((xs) => [x, ...(xs ?? [])]); setAdding(false); }}
             onCancel={() => setAdding(false)}
           />
-        </div>
+        </InsightModal>
       )}
       {items === null ? (
         <div className="text-[12px] text-[var(--ink-3)]">Loading…</div>
@@ -197,14 +240,17 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
         <ul className="divide-y divide-[var(--line)]">
           {items.map((x) => (
             <li key={x.id} className="py-3">
-              {editing === x.id ? (
-                <InsightForm
-                  clientRef={clientRef}
-                  initial={x}
-                  onSaved={(y) => { setItems((xs) => (xs ?? []).map((z) => (z.id === y.id ? y : z))); setEditing(null); }}
-                  onCancel={() => setEditing(null)}
-                />
-              ) : (
+              {editing === x.id && (
+                <InsightModal title="Edit insight" onClose={() => setEditing(null)}>
+                  <InsightForm
+                    clientRef={clientRef}
+                    initial={x}
+                    onSaved={(y) => { setItems((xs) => (xs ?? []).map((z) => (z.id === y.id ? y : z))); setEditing(null); }}
+                    onCancel={() => setEditing(null)}
+                  />
+                </InsightModal>
+              )}
+              {(
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 max-w-3xl">
                     <div className="flex flex-wrap items-center gap-2">
@@ -273,28 +319,23 @@ export function InsightQuickAdd({ clientRef }: { clientRef: string }) {
         {runId ? "Add data to this post" : "Add insight"}
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setOpen(false)}>
-          <div className="card w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add an insight">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <h2 className="font-bold text-sm">Add an insight</h2>
-                <p className="text-[11.5px] text-[var(--ink-3)] mt-0.5">
-                  {runId
-                    ? "Attached to this post and its topic. If the post is already written, use Rewrite from research to put it in."
-                    : "Used by the writer in every post on this topic from now on. To attach it to one post, add it from that post's page or topic."}
-                </p>
-              </div>
-              <button onClick={() => setOpen(false)} className="text-[var(--ink-3)] text-[13px]" aria-label="Close">✕</button>
-            </div>
-            {done && <div className="text-[12px] text-[var(--ink-2)] mb-3">Saved. Add another, or close.</div>}
-            <InsightForm
-              clientRef={clientRef}
-              attach={runId ? { runIds: [runId] } : undefined}
-              onSaved={() => { setDone(true); window.dispatchEvent(new Event("insight-added")); }}
-              onCancel={() => setOpen(false)}
-            />
-          </div>
-        </div>
+        <InsightModal
+          title={runId ? "Add data to this post" : "Add an insight"}
+          subtitle={
+            runId
+              ? "Attached to this post and its topic. If the post is already written, use Rewrite from research to put it in."
+              : "Used by the writer in every post on this topic from now on. To attach it to one post, add it from that post's page or topic."
+          }
+          onClose={() => setOpen(false)}
+        >
+          {done && <div className="text-[12px] text-[var(--success)] mb-3">Saved. Add another, or close.</div>}
+          <InsightForm
+            clientRef={clientRef}
+            attach={runId ? { runIds: [runId] } : undefined}
+            onSaved={() => { setDone(true); window.dispatchEvent(new Event("insight-added")); }}
+            onCancel={() => setOpen(false)}
+          />
+        </InsightModal>
       )}
     </>
   );
@@ -385,16 +426,21 @@ export function PostInsights({ clientRef, runId, topicId, written }: {
               Also picked up from the library by topic: {alsoUsed.map((x) => x.title).join(" · ")}
             </div>
           )}
-          {adding ? (
-            <div className="rounded-lg border border-[var(--line)] p-3">
+          {adding && (
+            <InsightModal
+              title={runId ? "Add data to this post" : "Add data to this topic"}
+              subtitle={written ? "After saving, use Rewrite from research to put it into the post." : "The writer uses it when this post is written."}
+              onClose={() => setAdding(false)}
+            >
               <InsightForm
                 clientRef={clientRef}
                 attach={{ runIds: runId ? [runId] : [], topicIds: topicId ? [topicId] : [] }}
-                onSaved={() => { setAdding(false); load(); }}
+                onSaved={() => { setAdding(false); load(); window.dispatchEvent(new Event("insight-added")); }}
                 onCancel={() => setAdding(false)}
               />
-            </div>
-          ) : (
+            </InsightModal>
+          )}
+          {(
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => setAdding(true)} className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-[12px] font-semibold">
                 + Add data
