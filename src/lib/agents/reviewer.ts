@@ -280,7 +280,9 @@ async function reviewBlog(input: ReviewerInput): Promise<{
     ? houseDataBlock(
         relevantInsights(
           await listInsights(input.ctx.clientRef),
-          [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? []), brief.pillar ?? ""].join(" ")
+          [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? []), brief.pillar ?? ""].join(" "),
+          10,
+          { topicId: brief.seedTopicId, runId: input.ctx?.runId }
         )
       )
     : "";

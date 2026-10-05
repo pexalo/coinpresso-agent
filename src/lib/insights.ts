@@ -34,6 +34,14 @@ export interface Insight {
   tags: string[];
   /** Applies to every post, whatever the topic. */
   always?: boolean;
+  /**
+   * Attached to particular topics (seed topic ids) or posts (run ids).
+   * Bernard, 5 Oct: "it needs to be attached to an upcoming topic or blog
+   * post already written". An attached finding always reaches that post,
+   * whatever words it shares with it.
+   */
+  topicIds?: string[];
+  runIds?: string[];
   author?: string;
   createdAt: string;
   updatedAt: string;
@@ -67,7 +75,14 @@ export function cleanInsight(input: Partial<Insight>): Omit<Insight, "id" | "cre
   if (kind === "finding" && body.length < 10) throw new Error("Write the finding — a sentence or two at least.");
   const title = (input.title ?? "").trim() || body.split(/[.\n]/)[0].slice(0, 80) || url || "Untitled";
   const tags = [...new Set((input.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 12);
-  return { kind, title, body, url, tags, always: Boolean(input.always), author: input.author?.trim() || undefined };
+  const ids = (xs?: string[]) => [...new Set((xs ?? []).map((x) => String(x).replace(/[^A-Za-z0-9_-]/g, "")).filter(Boolean))];
+  return {
+    kind, title, body, url, tags,
+    always: Boolean(input.always),
+    author: input.author?.trim() || undefined,
+    topicIds: ids(input.topicIds),
+    runIds: ids(input.runIds),
+  };
 }
 
 export async function addInsight(ref: string, input: Partial<Insight>): Promise<Insight> {
@@ -109,13 +124,25 @@ const words = (t: string) =>
  * by how many of the post's distinctive words they share. A tag match counts
  * double — Liam tagged it for that topic on purpose.
  */
-export function relevantInsights(all: Insight[], subject: string, limit = 10): Insight[] {
+export function isAttached(x: Insight, to: { topicId?: string; runId?: string }): boolean {
+  return Boolean(
+    (to.topicId && x.topicIds?.includes(to.topicId)) || (to.runId && x.runIds?.includes(to.runId))
+  );
+}
+
+export function relevantInsights(
+  all: Insight[],
+  subject: string,
+  limit = 10,
+  to: { topicId?: string; runId?: string } = {}
+): Insight[] {
   const want = new Set(words(subject));
   const scored = all
     .map((x) => {
       const tagHits = x.tags.filter((t) => words(t).some((w) => want.has(w))).length;
       const textHits = new Set(words(`${x.title} ${x.body}`).filter((w) => want.has(w))).size;
-      return { x, score: x.always ? 1000 : tagHits * 2 + textHits };
+      // Attached to this post or its topic: first, always.
+      return { x, score: isAttached(x, to) ? 2000 : x.always ? 1000 : tagHits * 2 + textHits };
     })
     .filter((s) => s.score >= 2)
     .sort((a, b) => b.score - a.score);

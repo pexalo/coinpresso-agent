@@ -28,6 +28,11 @@ ok("coinpresso.io link becomes linkable", insightPages(got).some((p) => p.url.en
 ok("empty finding refused", /finding/.test(throws(() => cleanInsight({ kind: "finding", body: "x" }))));
 ok("link without url refused", /link/.test(throws(() => cleanInsight({ kind: "link", body: "" }))));
 
+const pinned = [...all, mk({ title: "Odd one", body: "Unrelated words entirely here.", topicIds: ["seed_42"] })];
+ok("attached to the topic reaches the post whatever its words", relevantInsights(pinned, "presale budget", 10, { topicId: "seed_42" })[0].title === "Odd one");
+ok("…and not other posts", !relevantInsights(pinned, "presale budget", 10, { topicId: "seed_7" }).some((x) => x.title === "Odd one"));
+ok("run ids are kept clean", cleanInsight({ kind: "finding", body: "A long enough finding.", runIds: ["run_1", "../x", "run_1"] }).runIds.join() === "run_1,x");
+
 console.log("openings");
 const spent = (s) => SPENT_OPENERS.some((re) => re.test(s));
 ok("Slack-channel belief is spent", spent("There's a belief going round a lot of founder Slack channels that presales sell themselves."));

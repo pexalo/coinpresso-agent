@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 // Liam's findings and links — the data the writer uses to give a real answer.
 // See src/lib/insights.ts. Two ways in: the panel on top of Agent workflow,
@@ -15,6 +16,8 @@ export interface InsightRow {
   tags: string[];
   always?: boolean;
   author?: string;
+  topicIds?: string[];
+  runIds?: string[];
   updatedAt: string;
 }
 
@@ -24,11 +27,13 @@ const EMPTY: Draft = { kind: "finding", title: "", body: "", url: "", tags: "", 
 const field = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] focus:outline-none focus:border-[var(--accent)]";
 const label = "block text-[10px] uppercase tracking-wider text-[var(--ink-3)] mb-1";
 
-export function InsightForm({ clientRef, initial, onSaved, onCancel }: {
+export function InsightForm({ clientRef, initial, onSaved, onCancel, attach }: {
   clientRef: string;
   initial?: InsightRow;
   onSaved: (x: InsightRow) => void;
   onCancel?: () => void;
+  /** Attach a new insight to this topic or post. */
+  attach?: { topicIds?: string[]; runIds?: string[] };
 }) {
   const [d, setD] = useState<Draft>(
     initial
@@ -46,7 +51,7 @@ export function InsightForm({ clientRef, initial, onSaved, onCancel }: {
       const res = await fetch(`/api/clients/${clientRef}/insights${initial ? `?id=${initial.id}` : ""}`, {
         method: initial ? "PATCH" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...d, tags: d.tags.split(",") }),
+        body: JSON.stringify({ ...d, tags: d.tags.split(","), ...(initial ? {} : attach ?? {}) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? `Save failed (${res.status})`);
@@ -212,6 +217,9 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
                     {x.url && <a href={x.url} target="_blank" rel="noreferrer" className="block text-[12px] text-[var(--accent)] break-all mt-0.5">{x.url}</a>}
                     {x.body && <p className="text-[12.5px] text-[var(--ink-2)] leading-relaxed mt-1 whitespace-pre-wrap">{x.body}</p>}
                     <div className="text-[11px] text-[var(--ink-4)] mt-1">
+                      {(x.topicIds?.length || x.runIds?.length)
+                        ? `attached to ${[x.topicIds?.length ? `${x.topicIds.length} topic${x.topicIds.length > 1 ? "s" : ""}` : "", x.runIds?.length ? `${x.runIds.length} post${x.runIds.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" & ")} · `
+                        : ""}
                       {x.tags.length ? `${x.tags.join(", ")} · ` : ""}
                       {x.author ? `${x.author} · ` : ""}
                       {new Date(x.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
@@ -240,6 +248,9 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
 
 /** The pop-up: a floating button on every client page. */
 export function InsightQuickAdd({ clientRef }: { clientRef: string }) {
+  const pathname = usePathname();
+  // On a post's page, the pop-up attaches to that post (and, server-side, its topic).
+  const runId = pathname.match(/\/own-blog\/runs\/([^/]+)/)?.[1];
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -263,13 +274,18 @@ export function InsightQuickAdd({ clientRef }: { clientRef: string }) {
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <h2 className="font-bold text-sm">Add an insight</h2>
-                <p className="text-[11.5px] text-[var(--ink-3)] mt-0.5">Used by the writer in every post on this topic from now on.</p>
+                <p className="text-[11.5px] text-[var(--ink-3)] mt-0.5">
+                  {runId
+                    ? "Attached to this post and its topic. If the post is already written, use Rewrite from research to put it in."
+                    : "Used by the writer in every post on this topic from now on. To attach it to one post, add it from that post's page or topic."}
+                </p>
               </div>
               <button onClick={() => setOpen(false)} className="text-[var(--ink-3)] text-[13px]" aria-label="Close">✕</button>
             </div>
             {done && <div className="text-[12px] text-[var(--ink-2)] mb-3">Saved. Add another, or close.</div>}
             <InsightForm
               clientRef={clientRef}
+              attach={runId ? { runIds: [runId] } : undefined}
               onSaved={() => { setDone(true); window.dispatchEvent(new Event("insight-added")); }}
               onCancel={() => setOpen(false)}
             />
@@ -277,5 +293,126 @@ export function InsightQuickAdd({ clientRef }: { clientRef: string }) {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * The data for ONE post: on its page, and in its topic's drawer. Shows what
+ * is attached to it, what the writer will also pick up from the library by
+ * topic words, and lets you add new data or attach something already in the
+ * library. Bernard, 5 Oct: "it needs to be attached to an upcoming topic or
+ * blog post already written".
+ */
+export function PostInsights({ clientRef, runId, topicId, written }: {
+  clientRef: string;
+  runId?: string;
+  topicId?: string;
+  /** The post already has a draft: say how to get new data into it. */
+  written?: boolean;
+}) {
+  const [all, setAll] = useState<InsightRow[]>([]);
+  const [attached, setAttached] = useState<string[]>([]);
+  const [used, setUsed] = useState<string[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [pick, setPick] = useState("");
+  const [open, setOpen] = useState(true);
+
+  const q = runId ? `runId=${runId}` : `topicId=${topicId}`;
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/clients/${clientRef}/insights?${q}`);
+    if (!r.ok) return;
+    const j = await r.json();
+    setAll(j.insights ?? []);
+    setAttached(j.attached ?? []);
+    setUsed(j.used ?? []);
+  }, [clientRef, q]);
+  useEffect(() => {
+    load();
+    const on = () => load();
+    window.addEventListener("insight-added", on);
+    return () => window.removeEventListener("insight-added", on);
+  }, [load]);
+
+  async function setAttach(x: InsightRow, on: boolean) {
+    const runIds = new Set(x.runIds ?? []);
+    const topicIds = new Set(x.topicIds ?? []);
+    if (runId) (on ? runIds.add(runId) : runIds.delete(runId));
+    if (topicId) (on ? topicIds.add(topicId) : topicIds.delete(topicId));
+    await fetch(`/api/clients/${clientRef}/insights?id=${x.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ runIds: [...runIds], topicIds: [...topicIds] }),
+    });
+    setPick("");
+    load();
+  }
+
+  const mine = all.filter((x) => attached.includes(x.id));
+  const alsoUsed = all.filter((x) => used.includes(x.id) && !attached.includes(x.id));
+  const rest = all.filter((x) => !attached.includes(x.id));
+
+  return (
+    <div className="card p-4 space-y-3">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+        <span className="text-[13px] font-bold">Data for this post{mine.length ? ` (${mine.length})` : ""}</span>
+        <span className="text-[11px] text-[var(--ink-3)]">{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && (
+        <>
+          <p className="text-[11.5px] text-[var(--ink-3)] leading-relaxed">
+            Liam&apos;s figures for this {runId ? "post" : "topic"} — the writer uses them to give a direct answer.
+            {written ? " This post is already written: after adding data, use Rewrite from research to put it in." : ""}
+          </p>
+          {mine.length === 0 && alsoUsed.length === 0 && (
+            <div className="text-[12px] text-[var(--ink-3)]">Nothing yet.</div>
+          )}
+          {mine.map((x) => (
+            <div key={x.id} className="rounded-lg border border-[var(--line)] p-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-[12.5px] font-semibold">{x.title}</div>
+                <button onClick={() => setAttach(x, false)} className="shrink-0 text-[11px] text-[var(--ink-3)] hover:text-red-500">Detach</button>
+              </div>
+              {x.url && <div className="text-[11.5px] text-[var(--accent)] break-all">{x.url}</div>}
+              {x.body && <p className="text-[12px] text-[var(--ink-2)] leading-relaxed mt-0.5 whitespace-pre-wrap">{x.body}</p>}
+            </div>
+          ))}
+          {alsoUsed.length > 0 && (
+            <div className="text-[11.5px] text-[var(--ink-3)]">
+              Also picked up from the library by topic: {alsoUsed.map((x) => x.title).join(" · ")}
+            </div>
+          )}
+          {adding ? (
+            <div className="rounded-lg border border-[var(--line)] p-3">
+              <InsightForm
+                clientRef={clientRef}
+                attach={{ runIds: runId ? [runId] : [], topicIds: topicId ? [topicId] : [] }}
+                onSaved={() => { setAdding(false); load(); }}
+                onCancel={() => setAdding(false)}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setAdding(true)} className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-[12px] font-semibold">
+                + Add data
+              </button>
+              {rest.length > 0 && (
+                <select
+                  aria-label="Attach from library"
+                  value={pick}
+                  onChange={(e) => {
+                    const x = rest.find((y) => y.id === e.target.value);
+                    if (x) setAttach(x, true);
+                  }}
+                  className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12px] max-w-[220px]"
+                >
+                  <option value="">Attach from library…</option>
+                  {rest.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+                </select>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

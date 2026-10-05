@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { clientModules, getClient, hasModule } from "@/lib/clients";
-import { InsightsPanel } from "@/components/Insights";
+import { clientModules, getClient } from "@/lib/clients";
 import { workflowsFor } from "@/lib/workflow";
 import { modelledUnitCost } from "@/lib/costs";
 import WorkflowFlow from "@/components/WorkflowFlow";
@@ -43,8 +42,6 @@ export default async function WorkflowPage({
           mode it exists to prevent.
         </p>
       </div>
-
-      {hasModule(client, "own-blog") && <InsightsPanel clientRef={client.ref} />}
 
       <WorkflowFlow workflows={workflows} unitCosts={unitCosts} />
 

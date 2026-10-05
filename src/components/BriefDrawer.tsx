@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { PostInsights } from "@/components/Insights";
 import { briefToPrompt } from "@/lib/content-brief";
 import type { SeedTopic } from "@/lib/blog-seed";
 import { PILLARS } from "@/lib/blog";
@@ -39,6 +41,7 @@ export default function BriefDrawer({
   onRequeue?: (id: string) => void;
 }) {
   const [tab, setTab] = useState<"brief" | "prompt">("brief");
+  const { ref } = useParams<{ ref: string }>();
 
   // Esc closes, and the body does not scroll behind the panel. Both are the
   // things people try first without thinking about them.
@@ -173,6 +176,10 @@ export default function BriefDrawer({
 
         {/* ---- body -------------------------------------------------------- */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
+          {/* Liam's figures for this topic — attached here, used when it is written. */}
+          <div className="mb-5">
+            <PostInsights key={topic.id} clientRef={ref} topicId={topic.id} written={topic.status === "used"} />
+          </div>
           {!b ? (
             <NoBrief topic={topic} />
           ) : tab === "prompt" ? (

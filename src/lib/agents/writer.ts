@@ -1631,7 +1631,9 @@ otherwise would, and do not invent house conventions it does not state.\n`;
   const insights = input.ctx?.clientRef
     ? relevantInsights(
         await listInsights(input.ctx.clientRef),
-        [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? []), brief.pillar ?? ""].join(" ")
+        [brief.title, research.primaryKeyword, ...(research.secondaryKeywords ?? []), brief.pillar ?? ""].join(" "),
+          10,
+          { topicId: brief.seedTopicId, runId: input.ctx?.runId }
       )
     : [];
   const houseData = houseDataBlock(insights);

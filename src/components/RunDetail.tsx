@@ -14,6 +14,7 @@ import SectionImages from "@/components/SectionImages";
 import EditDraft from "@/components/EditDraft";
 import FixAndRetry from "@/components/FixAndRetry";
 import DocEdits from "@/components/DocEdits";
+import { PostInsights } from "@/components/Insights";
 import { PUBLICATIONS } from "@/lib/publications";
 import { PILLARS, CONTENT_TYPES, COINPRESSO_PAGES } from "@/lib/blog";
 import type { Run } from "@/lib/types";
@@ -521,6 +522,9 @@ export default function RunDetail({
           {run.draft && (
             <ApprovalGate clientRef={ref} runId={id} onGate={onGate} />
           )}
+          {/* Liam's figures for this post. Bernard, 5 Oct: attached to the
+              post itself, not only a library page. */}
+          {isBlog && <PostInsights clientRef={ref} runId={id} written={Boolean(run.draft)} />}
           {/* Blog only for now. The agent is general, but a wire release has
               no featured image to attach one to. */}
           {isBlog && (
