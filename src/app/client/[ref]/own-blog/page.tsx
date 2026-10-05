@@ -20,6 +20,7 @@ interface RunSummary {
     keywords: string[];
     pillar?: string;
     contentType?: string;
+    seedTopicId?: string;
   };
   revisions: number;
   mock: boolean;
@@ -47,6 +48,22 @@ export default function BlogQueuePage() {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [removeMsg, setRemoveMsg] = useState<string | null>(null);
+  // Liam's data per post, so a post with none is visible from the queue.
+  const [insightRows, setInsightRows] = useState<Array<{ runIds?: string[]; topicIds?: string[] }>>([]);
+  useEffect(() => {
+    const load = () =>
+      fetch(`/api/clients/${ref}/insights`)
+        .then((r) => r.json())
+        .then((d) => setInsightRows(d.insights ?? []))
+        .catch(() => {});
+    load();
+    window.addEventListener("insight-added", load);
+    return () => window.removeEventListener("insight-added", load);
+  }, [ref]);
+  const dataCount = (r: RunSummary) =>
+    insightRows.filter(
+      (x) => x.runIds?.includes(r.id) || (r.brief.seedTopicId && x.topicIds?.includes(r.brief.seedTopicId))
+    ).length;
 
   const loadGates = useCallback(async () => {
     const res = await fetch(`/api/clients/${ref}/approvals?track=blog`);
@@ -340,6 +357,21 @@ export default function BlogQueuePage() {
                         </span>
                       )}
                       <GateChip gate={gates[r.id]} />
+                      {(() => {
+                        const n = dataCount(r);
+                        return (
+                          <span
+                            title={n ? "Liam's data attached to this post" : "No data from Liam attached yet — open the post to add some"}
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                              n
+                                ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                                : "border-[var(--line)] text-[var(--ink-4)]"
+                            }`}
+                          >
+                            {n ? `${n} data` : "no data"}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="font-semibold text-sm mt-1.5 truncate">
                       {r.brief.title}

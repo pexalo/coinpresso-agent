@@ -3,7 +3,6 @@ import ClientHeader from "@/components/ClientHeader";
 import ClientSidebar, { MobileSectionTabs } from "@/components/ClientSidebar";
 import { PoweredBy } from "@/components/Brand";
 import { clientModules, getClient, hasModule } from "@/lib/clients";
-import { InsightQuickAdd } from "@/components/Insights";
 
 export default async function ClientLayout({
   children,
@@ -18,7 +17,7 @@ export default async function ClientLayout({
 
   return (
     <>
-      <ClientHeader client={client} />
+      <ClientHeader client={client} insights={hasModule(client, "own-blog")} />
       <div
         className="max-w-[1240px] mx-auto px-5 md:px-8 pb-12 lg:flex lg:gap-8"
         style={{ paddingTop: "var(--top-gap)" }}
@@ -29,7 +28,6 @@ export default async function ClientLayout({
           {children}
         </div>
       </div>
-      {hasModule(client, "own-blog") && <InsightQuickAdd clientRef={client.ref} />}
       <PoweredBy />
     </>
   );

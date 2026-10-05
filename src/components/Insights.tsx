@@ -261,12 +261,16 @@ export function InsightQuickAdd({ clientRef }: { clientRef: string }) {
   }, [open]);
   return (
     <>
+      {/* In the workspace bar, beside the theme toggle — not a floating
+          bubble. Bernard, 5 Oct: "pretty random as a blue button on the side
+          like a WhatsApp chat bubble." */}
       <button
         onClick={() => { setOpen(true); setDone(false); }}
-        className="fixed bottom-5 right-5 z-40 rounded-full bg-[var(--accent)] text-white px-4 py-2.5 text-[12.5px] font-semibold shadow-lg"
-        title="Add a finding, figure or link for the writer"
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+        title={runId ? "Add Liam's data to this post" : "Add a finding, figure or link for the writer"}
       >
-        + Insight
+        <span aria-hidden className="text-[15px] leading-none">+</span>
+        {runId ? "Add data to this post" : "Add insight"}
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setOpen(false)}>
