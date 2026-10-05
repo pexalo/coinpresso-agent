@@ -100,7 +100,11 @@ export async function POST(
     // post at a time cannot spread them out unless each rewrite looks at its
     // siblings. So: every unpublished blog run is laid out together, the ones
     // already stamped keep theirs, and this one takes the least-used move left.
-    if (run.brief.track === "blog" && !run.brief.introMove) {
+    // And a REWRITE always gets a fresh opening: the old one is what made it
+    // read like its neighbours (Share of Model Voice kept "belief" through a
+    // rewrite, 5 Oct). Its old move counts against it so it is not re-drawn.
+    if (run.brief.track === "blog") {
+      const previousIntro = run.brief.introMove;
       const siblings = (await listRuns(ref))
         .filter((r) => r.brief.track === "blog" && r.status !== "approved" && !r.removedAt)
         .sort((a, b) => a.id.localeCompare(b.id));
@@ -109,8 +113,9 @@ export async function POST(
           title: r.brief.title,
           contentType: r.brief.contentType,
           introMove: r.id === run.id ? undefined : r.brief.introMove,
-          closeMove: r.id === run.id ? undefined : r.brief.closeMove,
-        }))
+          closeMove: r.brief.closeMove,
+        })),
+        previousIntro ? [{ introMove: previousIntro }, { introMove: previousIntro }, { introMove: previousIntro }] : []
       );
       const mine = assigned[siblings.findIndex((r) => r.id === run.id)];
       if (mine) {

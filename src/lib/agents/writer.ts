@@ -2001,8 +2001,16 @@ tags, no keywords list — the post belongs to its category and that is all.`;
   // anything stops it. Two and a half tokens per target word covers markdown,
   // escaping and the FAQ block with room to spare; the 3000 floor covers the
   // wrapper and the short formats.
-  const targetWords = type?.words?.[1] ?? 2200;
-  const ceiling = Math.round(3000 + targetWords * 2.5);
+  //
+  // 5 Oct: the "Argued opinion" target is 700-1,200 words, which gave a
+  // 6,000-token ceiling — but the house structure (two-paragraph intro, 7-9
+  // sections, five FAQs, 6-10 long coinpresso.io URLs) runs 2,000-2,900 words
+  // whatever the format says. Share of Model Voice was cut off mid-FAQ at
+  // 2,892 words, and the run failed on dashes and an anchor that were only
+  // wrong because the draft never reached the clean-up. So the ceiling is
+  // sized for what the structure actually produces, and grows on a cut-off.
+  const targetWords = Math.max(type?.words?.[1] ?? 2200, 2600);
+  let ceiling = Math.round(3000 + targetWords * 3);
 
   // BOUNDED RETRY, WITH THE REJECTION HANDED BACK.
   //
@@ -2029,7 +2037,9 @@ tags, no keywords list — the post belongs to its category and that is all.`;
   // message alone because the draft it described had been thrown away.
   let lastBody: string | undefined;
 
+  let attemptsMade = 0;
   for (let attempt = 1; attempt <= MAX_WRITER_ATTEMPTS; attempt++) {
+    attemptsMade = attempt;
     const r = await callClaude({
       model: MODELS.writer,
       system: BLOG_SYSTEM,
@@ -2201,9 +2211,14 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
     } catch (e) {
       lastError = e;
       rejection = e instanceof Error ? e.message : String(e);
-      // A reply that was cut off mid-article is not a rule the model broke;
-      // asking it to "fix that" wastes an attempt. Fail now and say so.
-      if (r.stopReason === "max_tokens") break;
+      // A reply cut off mid-article is not a rule the model broke. It used to
+      // end the run there — reporting "3 attempts" after one, and listing
+      // faults the clean-up would have fixed. Now: more room, and a word cap,
+      // on the next attempt.
+      if (r.stopReason === "max_tokens") {
+        ceiling = Math.min(Math.round(ceiling * 1.5), 20000);
+        rejection = `Your previous reply was CUT OFF before it finished (it ran past the length limit, mid-way through the FAQs). Write the whole piece again and keep it under 2,400 words in total, FAQs included: tighten sections rather than dropping any.`;
+      }
     }
   }
 
@@ -2212,7 +2227,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // Everything still wrong with the FINAL attempt, not a union across all
       // of them: faults the writer fixed on the way are fixed, and listing
       // them would send the operator after work already done.
-      `The writer could not produce a publishable draft in ${MAX_WRITER_ATTEMPTS} attempts. Still wrong after the last one: ${
+      `The writer could not produce a publishable draft in ${attemptsMade} attempt${attemptsMade === 1 ? "" : "s"}. Still wrong after the last one: ${
         lastError instanceof Error ? lastError.message : String(lastError)
       }`
     ),
@@ -2729,6 +2744,9 @@ export function pageTheAnchorNames(
 ): string | null {
   const own = known.get(normaliseUrl(url));
   if (own && fullyNames(anchor, own)) return null;
+  // A post title is too long to be named in full; one distinctive word in
+  // common ("the top GEO agencies" → the GEO agencies roundup) is enough.
+  if (own && /\/blog\//i.test(url) && namesTopic(anchor, own)) return null;
   let best: { url: string; score: number } | null = null;
   for (const [u, topic] of known) {
     if (u === normaliseUrl(url) || !/coinpresso\.io/i.test(u)) continue;
@@ -2744,6 +2762,8 @@ export function pageTheAnchorNames(
   }
   return best ? best.url : null;
 }
+
+const ANCHOR_STOP = new Set(["and", "the", "for", "with", "from", "into", "our", "your", "its", "their", "this", "that", "how", "why", "what", "when", "who", "you", "are", "was", "not", "but", "all", "any", "top", "best", "new", "2024", "2025", "2026", "2027"]);
 
 export function nameAnchors(body: string, known: Map<string, string>): string {
   const fix = (prose: string) =>
@@ -2762,7 +2782,13 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
         //    included, so "crypto PPC" is taken in whole rather than leaving
         //    "crypto" stranded outside the bracket. Never across punctuation:
         //    "crypto PPC. Our [partner]" is two sentences, not one phrase.
-        const topicWords = new Set(topic.split(" | ")[0].toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+        // Distinctive words only. "and" is in "Best Web3 GEO Agencies … for AI
+        // Search and LLM Visibility", and growing back over it turned a link
+        // into "[and our breakdown]" (Share of Model Voice, 5 Oct).
+        const topicWords = new Set(
+          topic.split(" | ")[0].toLowerCase().split(/[^a-z0-9]+/)
+            .filter((w) => w.length > 2 && !ANCHOR_STOP.has(w))
+        );
         const words = before.split(/\s+/).filter(Boolean);
         for (let i = 0; i < words.length; i++) {
           const bare = words[i].toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -2771,6 +2797,14 @@ export function nameAnchors(body: string, known: Map<string, string>): string {
           const pulled = before.slice(keepIdx).trim();
           if (/[.!?:;,()"\u2018\u201c\u2019\u201d]/.test(pulled)) break;
           return `${before.slice(0, keepIdx)}[${pulled} ${text}](${url})`;
+        }
+
+        // 1b. A blog post whose title shares nothing with the link text: the
+        //     writer put the wrong post's URL on a description of a post that
+        //     does not exist ("why ChatGPT and Perplexity don't cite crypto
+        //     brands" → the GEO agencies roundup). Keep the words, drop the link.
+        if (/coinpresso\.io\/blog\//i.test(url) && !namesTopic(text, topic)) {
+          return `${before}${text}`;
         }
 
         // 2. Prepend the topic — the first phrase, when the map gives several.

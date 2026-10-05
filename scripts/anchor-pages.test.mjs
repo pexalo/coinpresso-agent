@@ -24,5 +24,15 @@ try { enforceFaqLinks([{ q: "q", a: "Start with [crypto SEO link audit](https://
 catch (err) { threw = String(err); }
 ok("FAQ check rejects an anchor that names another page and only half-names its own", /mixes two pages/.test(threw), threw);
 
+console.log("Share of Model Voice, 5 Oct");
+{
+  const k = new Map([...known, ["https://coinpresso.io/blog/best-web3-geo-agencies-in-2026-top-firms-for-ai-search-and-llm-visibility", "Best Web3 GEO Agencies in 2026: Top Firms for AI Search and LLM Visibility"]]);
+  const out = nameAnchors("see our guide and our breakdown of [why ChatGPT and Perplexity don't cite crypto brands](https://coinpresso.io/blog/best-web3-geo-agencies-in-2026-top-firms-for-ai-search-and-llm-visibility).", k);
+  ok("no '[and our breakdown]' anchor grown over a stopword", !/\[and our/.test(out), out);
+  ok("a blog link whose words name nothing about the post is unlinked", !out.includes("](https://coinpresso.io/blog/best-web3"), out);
+  const ok2 = nameAnchors("our ranking of [the top GEO agencies](https://coinpresso.io/blog/best-web3-geo-agencies-in-2026-top-firms-for-ai-search-and-llm-visibility).", k);
+  ok("a blog link that does name the post stays", ok2.includes("[the top GEO agencies](https://coinpresso.io/blog/best-web3"), ok2);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
