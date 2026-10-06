@@ -176,9 +176,9 @@ needs to be its own heading and structured content."
    - then the breakdown as STRUCTURE — a table (line item | amount | what it
      buys) or a short list, one figure per row, with labels a reader can scan;
    - then how it scales: where to start, what to add as results come in.
-   With a fixed outline from the brief, put this block at the top of the
-   outline section that covers cost or the question, rather than adding a
-   heading.
+   With a fixed outline from the brief, this is the ONE heading you may add:
+   put it immediately before the brief's first section, then the brief's
+   sections exactly as given.
 TWO REGISTERS. Liam, 6 Oct: "my writing style should be used for intros and
 to string the article together, but when we need to provide a proper answer"
 it is plain and structured. The house voice — asides, turns of phrase,

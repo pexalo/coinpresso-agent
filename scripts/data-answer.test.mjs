@@ -1,4 +1,4 @@
-import { enforceDataAnswer } from "../src/lib/agents/writer.ts";
+import { enforceDataAnswer, enforceOutline } from "../src/lib/agents/writer.ts";
 let pass = 0, fail = 0;
 const ok = (n, c, x = "") => { if (c) { pass++; console.log("  ok  ", n); } else { fail++; console.log("  FAIL", n, x); } };
 const err = (f) => { try { f(); return ""; } catch (e) { return String(e); } };
@@ -13,5 +13,9 @@ ok("one-line answer up top + early table passes", err(() => enforceDataAnswer(go
 const late = "Short answer: $50,000.\n\n## A\nx\n\n## B\nx\n\n## C\nx\n\n## Numbers\n- PR: $30k\n- Meta: $20k\n- PPC: $1k a day\n";
 ok("answer section buried in section 4 is flagged", /move it to the first or second/.test(err(() => enforceDataAnswer(late, liam))));
 ok("no data, no check", err(() => enforceDataAnswer(stuffed, [])) === "");
+const outline = [{ n: 1, title: "Why there is no universal presale budget" }, { n: 2, title: "Conclusion and FAQ" }];
+const withLead = "Intro.\n\n## Crypto Presale Marketing Budget in 2026: The Numbers\nx\n\n## Why There Is No Universal\ny\n\n## Conclusion\nz\n";
+ok("outline + one answer section passes when data is attached", enforceOutline(withLead, outline, { answerLead: true }).includes("## Crypto Presale Marketing Budget in 2026: The Numbers\nx\n\n## Why there is no universal presale budget"));
+ok("…the extra section still fails without data", /8 H2|3 H2/.test(err(() => enforceOutline(withLead, outline))));
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

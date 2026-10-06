@@ -157,7 +157,17 @@ function parseDraftSections(
  * followed the brief, and that is thrown as an error naming the gap, so the
  * stage fails loudly and the retry re-runs only the writer.
  */
-export function enforceOutline(body: string, outline: BriefSection[]): string {
+export function enforceOutline(
+  body: string,
+  outline: BriefSection[],
+  /**
+   * Coinpresso's data was attached, so ONE answer section may sit before the
+   * brief's first section. Liam, 6 Oct: the figures need "its own heading and
+   * structured content" — and the presale budget post then failed three times
+   * because the outline would not allow the heading he asked for.
+   */
+  opts: { answerLead?: boolean } = {}
+): string {
   // Code is hidden first. A post about schema markup shows the reader what a
   // heading looks like, and a "## " line inside a fence was being counted as a
   // real section — which failed the outline check on a correct draft, and, when
@@ -168,6 +178,9 @@ export function enforceOutline(body: string, outline: BriefSection[]): string {
     .map((l, i) => ({ i, text: l.match(/^##\s+(.+?)\s*$/)?.[1] }))
     .filter((x): x is { i: number; text: string } => Boolean(x.text));
 
+  // The answer section leads; the brief's headings follow, in order.
+  const lead = opts.answerLead && h2.length === outline.length + 1 ? h2.shift() : undefined;
+  void lead;
   if (h2.length !== outline.length) {
     const have = h2.map((h) => `"${h.text}"`).join(", ") || "none";
     throw new Error(
@@ -1884,7 +1897,12 @@ conversation worth having before you spend". Four of seven posts did.`;
 
 STRUCTURE — FIXED BY THE CLIENT'S BRIEF. Use these H2 headings EXACTLY as
 written, in this order, one section each. Do not rephrase them, do not turn
-them into questions, do not merge or split sections, do not add sections.
+them into questions, do not merge or split sections, do not add sections${
+  insights.some((x) => x.kind === "finding")
+    ? ` — with ONE exception: the answer section for Coinpresso's own data (see
+below) goes immediately before section 1, under its own Title Case heading.`
+    : "."
+}
 ${outline
   .map(
     (sct) =>
@@ -2225,7 +2243,9 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       ]).map((f) => f.replace(/\s*Retry the writer\.\s*$/, "").trim());
 
       if (fixedStructure) {
-        parsed.body = enforceOutline(parsed.body, outline);
+        parsed.body = enforceOutline(parsed.body, outline, {
+          answerLead: insights.some((x) => x.kind === "finding"),
+        });
         if (brief.contentBrief?.faqs?.length) {
           parsed.faqs = enforceFaqs(parsed.faqs, brief.contentBrief.faqs);
         }
