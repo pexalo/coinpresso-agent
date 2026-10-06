@@ -13,6 +13,7 @@
 // can show the pipeline advancing rather than a spinner.
 // ---------------------------------------------------------------------------
 
+import { liveRuns } from "./stalled";
 import { MODELS, estimateCost, mockMode } from "./models";
 import { searchCost } from "./model-registry";
 import { usageOf, lastDraftOf } from "./providers/anthropic";
@@ -219,7 +220,21 @@ async function fail(run: Run, id: StageId, err: unknown): Promise<void> {
   await saveRun(run);
 }
 
+/**
+ * Runs register while this process is executing them, so a run that says
+ * "running" but is not here was orphaned by a deploy or restart — see
+ * stalled.ts. Every push to Railway restarts the server mid-run.
+ */
 export async function executeRun(run: Run): Promise<Run> {
+  liveRuns().add(run.id);
+  try {
+    return await executeRunInner(run);
+  } finally {
+    liveRuns().delete(run.id);
+  }
+}
+
+async function executeRunInner(run: Run): Promise<Run> {
   const mock = run.mock;
   run.status = "running";
   await saveRun(run);

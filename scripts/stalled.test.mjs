@@ -1,0 +1,16 @@
+import { reapStalledRuns, liveRuns } from "../src/lib/stalled.ts";
+let pass = 0, fail = 0;
+const ok = (n, c, x = "") => { if (c) { pass++; console.log("  ok  ", n); } else { fail++; console.log("  FAIL", n, x); } };
+process.env.DATA_DIR = process.env.DATA_DIR || "/tmp/stalled-test-data";
+const now = Date.parse("2026-10-06T08:00:00Z");
+const mk = (id, status, mins) => ({ id, clientRef: "t", status, createdAt: "2026-10-06T06:00:00Z", updatedAt: new Date(now - mins * 60000).toISOString(), stages: [{ id: "revision", status: "running" }], brief: { title: id } });
+console.log("orphaned runs after a deploy");
+liveRuns().add("live");
+const runs = [mk("orphan", "running", 10), mk("live", "running", 10), mk("fresh", "running", 1), mk("queued", "queued", 10)];
+await reapStalledRuns(runs, now);
+ok("a running run nothing is executing is freed after a few minutes", runs[0].status === "failed" && /server restarted/.test(runs[0].stages[0].error));
+ok("a run this server is executing is left alone", runs[1].status === "running");
+ok("a run saved a moment ago is left alone", runs[2].status === "running");
+ok("a queued run waits for the 45-minute rule", runs[3].status === "queued");
+console.log(`\n${pass} passed, ${fail} failed`);
+if (fail) process.exit(1);
