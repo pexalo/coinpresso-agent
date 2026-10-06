@@ -176,6 +176,15 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-answer-section",
+    source: "Liam, presale budget post (6 Oct)",
+    date: "2026-10-06",
+    rule: "Liam: \"It's sort of stuffed what I said in the first para as opposed to providing a proper answer… This won't get lifted by AIs, needs to be its own heading and structured content.\" And: \"my writing style should be used for intros and to string the article together\" — the answer itself is plain. The opening gives the headline answer in one sentence; the figures get their own early H2 with a 40-60 word stand-alone answer, then a table or list, one figure per row, then how to scale. No metaphor or aside in that section. (Checked in code: figures stuffed into the opening, or no structured answer section in the first two, get a revision note.)",
+    before: "Here's what that floor actually buys: across the presale campaigns Coinpresso has run, a realistic month-one split is roughly $30,000 on PR and $20,000 on Facebook crypto advertising media spend…",
+    after: "## Crypto Presale Marketing Budget in 2026: The Numbers\nA crypto presale needs at least $50,000 in month one… | PR | $30,000 | … | Meta Ads media | $20,000 | … |",
+    active: true,
+  },
+  {
     id: "liam-one-page-per-anchor",
     source: "Liam, PR for Anonymous Teams Doc comment (4 Oct)",
     date: "2026-10-04",

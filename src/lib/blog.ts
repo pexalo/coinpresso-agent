@@ -504,7 +504,7 @@ export const BLOG_DEFAULT_STRUCTURE = `STRUCTURE — house pattern (this post ar
 Measured from 74 of Coinpresso's own briefs:
 - 7 or 9 H2 sections, never another number
 - Section 1 sets the scene — a statement about the reader's current reality
-- Every heading is a statement or noun phrase; none is a question
+- Every heading is a statement or noun phrase; none is a question (the FAQ questions are the only questions)
 - The last section is titled "Conclusion"; the FAQs come after it under their own "FAQs" heading, exactly 5 of them`;
 
 /**

@@ -154,12 +154,40 @@ export function houseDataBlock(xs: Insight[]): string {
   const out: string[] = [
     `COINPRESSO'S OWN DATA — from Liam, from Coinpresso's client work. Not public, and
 not in the research ledger, but TRUE and ALLOWED: you may state these figures.
-Use them to give the reader a direct answer — the number, the range, the
-retainer, the spend, the result — instead of "it depends". Attribute them to
-Coinpresso in plain words ("across the presale campaigns Coinpresso has run",
-"in Coinpresso's experience"), never to a URL, and never stretch them: a range
-stays a range, a single case stays a single case. Do not name a client unless
-the finding names it.`,
+Attribute them to Coinpresso in plain words ("across the presale campaigns
+Coinpresso has run"), never to a URL, and never stretch them: a range stays a
+range, a single case stays a single case. Do not name a client unless the
+finding names it. These are Liam's NOTES TO YOU, not copy: lines addressed to
+the writer ("make sure we…", "we need to answer…") are instructions to follow,
+never sentences to paraphrase into the post.
+
+HOW TO USE THEM — Liam, 6 Oct: "it's sort of stuffed what I said in the first
+paragraph as opposed to providing a proper answer… This won't get lifted by AIs,
+needs to be its own heading and structured content."
+1. THE OPENING gives the headline answer in ONE plain sentence (the floor, the
+   range, the verdict) — not a summary of every figure below. One or two
+   numbers at most.
+2. THE ANSWER SECTION. Give the figures their own H2, early (the first or
+   second section), headed with the reader's question in Title Case as a noun
+   phrase: "Crypto Presale Marketing Budget in 2026: The Numbers", "What a
+   Month-One Presale Budget Covers". Under it:
+   - first, a 40-60 word answer paragraph that stands on its own if quoted
+     alone: the number, what it covers, the condition;
+   - then the breakdown as STRUCTURE — a table (line item | amount | what it
+     buys) or a short list, one figure per row, with labels a reader can scan;
+   - then how it scales: where to start, what to add as results come in.
+   With a fixed outline from the brief, put this block at the top of the
+   outline section that covers cost or the question, rather than adding a
+   heading.
+TWO REGISTERS. Liam, 6 Oct: "my writing style should be used for intros and
+to string the article together, but when we need to provide a proper answer"
+it is plain and structured. The house voice — asides, turns of phrase,
+analogies — belongs to the opening and the connective sections. The answer
+section has none of it: no metaphor, no wind-up, no aside. The answer, the
+table, the condition, in short declarative sentences.
+3. ELSEWHERE, use a figure only where that section's point needs it, in a
+   sentence that explains it — never re-list the breakdown, never repeat a
+   figure the answer section already gave.`,
   ];
   for (const f of findings) out.push(`- ${f.title}: ${f.body.replace(/\s+/g, " ").slice(0, 900)}`);
   if (links.length) {

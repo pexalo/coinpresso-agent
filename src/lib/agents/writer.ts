@@ -264,6 +264,42 @@ export function enforceFreshOpening(body: string, recent: string[]): void {
   }
 }
 
+/** Money, percentages and counts — the figures a finding is made of. */
+const FIGURE = /\$\s?\d[\d,.]*\s?(?:k|m|million|thousand)?\b|\b\d[\d,.]*\s?%|\b\d[\d,.]*\s?(?:articles|posts|days|weeks|months|kols?)\b/gi;
+const figuresIn = (t: string) =>
+  new Set((t.match(FIGURE) ?? []).map((f) => f.toLowerCase().replace(/[\s,]/g, "").replace(/thousand$/, "k").replace(/000$/, "k")));
+
+/**
+ * Liam's data has to ANSWER, not be stuffed into the opening. Liam, 6 Oct:
+ * "it's sort of stuffed what I said in the first para as opposed to
+ * providing a proper answer… needs to be its own heading and structured
+ * content." Soft: a revision note, because where the answer sits is a
+ * judgement the reviser can make.
+ */
+export function enforceDataAnswer(body: string, findings: string[]): void {
+  const wanted = new Set(findings.flatMap((f) => [...figuresIn(f)]));
+  if (wanted.size < 2) return;
+  const prose = proseOf(body);
+  const intro = prose.split(/^##\s+/m)[0];
+  const problems: string[] = [];
+  const inIntro = [...figuresIn(intro)].filter((f) => wanted.has(f));
+  if (inIntro.length > 2) {
+    problems.push(`the opening carries ${inIntro.length} of Coinpresso's figures (${inIntro.join(", ")}). Give the headline answer in one sentence there and move the breakdown into its own section`);
+  }
+  const sections = prose.split(/^##\s+/m).slice(1);
+  const answer = sections.findIndex((sec) => {
+    const used = [...figuresIn(sec)].filter((f) => wanted.has(f)).length;
+    const structured = /^\s*\|.+\|\s*$/m.test(sec) || (sec.match(/^\s*[-*]\s+/gm) ?? []).length >= 3;
+    return used >= 2 && structured;
+  });
+  if (answer === -1) {
+    problems.push(`no section gives Coinpresso's figures as structured content. Add an early H2 (Title Case, the reader's question as a noun phrase) opening with a 40-60 word answer that stands alone, then a table or list with one figure per row`);
+  } else if (answer > 2) {
+    problems.push(`the section with Coinpresso's figures is section ${answer + 1}; move it to the first or second section, where readers and AI overviews look for the answer`);
+  }
+  if (problems.length) throw new Error(`Coinpresso's data: ${problems.join("; ")}.`);
+}
+
 export function enforceIntro(body: string): void {
   body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
@@ -2179,6 +2215,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceSentenceVariety(parsed.body),
         () => enforceNoRepetition(parsed.body),
         () => enforceFreshOpening(parsed.body, recentOpeners),
+        () => enforceDataAnswer(parsed.body, insights.filter((x) => x.kind === "finding").map((x) => x.body)),
         () => enforceHomepageInOpening(parsed.body),
         () => enforceEarlyInternalLink(parsed.body),
         () => enforceNoMetaCommentary(parsed.body),
