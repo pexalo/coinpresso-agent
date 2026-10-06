@@ -45,6 +45,15 @@ export interface SyncResult {
    *  "the FAQ block was not recognised". */
   faq?: { ours: number; theirs: number };
   error?: string;
+  /** The draft changed after this Doc was uploaded; upload a new one. */
+  stale?: boolean;
+}
+
+/** Cheap, stable fingerprint of rendered text. */
+export function textHash(text: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return h.toString(36) + ":" + text.length.toString(36);
 }
 
 export async function syncDocEdits(
@@ -53,6 +62,23 @@ export async function syncDocEdits(
   opts: { reviewer?: string; moment: "sign" | "release" | "publish" | "manual" }
 ): Promise<SyncResult> {
   if (!run.docUrl || !run.draft) return { read: false, applied: 0, rules: 0, missed: [] };
+
+  // The Doc was made from an older draft — the writer, the reviser or a
+  // rewrite has changed it since. Every difference would read as "Liam
+  // edited this" and undo the newer work. Stop and say: upload a new Doc.
+  if (run.docExportedHash && run.docExportedHash !== textHash(renderMarkdown(run))) {
+    return {
+      read: false,
+      applied: 0,
+      rules: 0,
+      missed: [],
+      stale: true,
+      error:
+        "The draft has changed since this Google Doc was made (a revision or rewrite ran after the upload). " +
+        "Press Upload to Drive to make a fresh Doc from the current draft, and send Liam that one. " +
+        "Taking edits from the old Doc would undo the newer changes.",
+    };
+  }
 
   let current: string;
   try {
@@ -164,6 +190,8 @@ export async function syncDocEdits(
   if (applied) {
     const now = new Date().toISOString();
     run.draft = { ...run.draft, ...draft };
+    // The draft now carries the Doc's text, so the Doc is current again.
+    run.docExportedHash = textHash(renderMarkdown(run));
     run.updatedAt = now;
     run.stages = [
       ...run.stages,

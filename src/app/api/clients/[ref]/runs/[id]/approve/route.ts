@@ -41,6 +41,9 @@ export async function POST(
   // were given on different text, and releasing would publish words nobody
   // signed — so stop and say exactly why. See lib/doc-sync.ts.
   const sync = await syncDocEdits(run, ref, { moment: "release" });
+  if (sync.stale) {
+    return NextResponse.json({ error: sync.error }, { status: 409 });
+  }
   if (sync.error) {
     return NextResponse.json(
       {

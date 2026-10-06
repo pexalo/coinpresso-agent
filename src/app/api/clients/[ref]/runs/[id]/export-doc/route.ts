@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getRun, saveRun } from "@/lib/store";
 import { exportBlogRun } from "@/lib/google";
+import { renderMarkdown } from "@/lib/render";
+import { textHash } from "@/lib/doc-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +35,7 @@ export async function POST(
     const result = await exportBlogRun(run);
     if (result.docUrl) {
       run.docUrl = result.docUrl;
+      run.docExportedHash = textHash(renderMarkdown(run));
       run.updatedAt = new Date().toISOString();
       await saveRun(run);
     }

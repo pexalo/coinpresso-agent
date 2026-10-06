@@ -57,6 +57,9 @@ export async function POST(
   // release, and these are the approver's own changes in the approval Doc.
   // One not yet released stops, because the signatures were on older text.
   const sync = await syncDocEdits(run, ref, { moment: "publish" });
+  if (sync.stale) {
+    return NextResponse.json({ error: sync.error }, { status: 409 });
+  }
   if (sync.error) {
     return NextResponse.json(
       {

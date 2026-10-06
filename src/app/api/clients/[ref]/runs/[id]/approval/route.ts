@@ -78,6 +78,9 @@ export async function POST(
     const pre = await getRun(id, ref);
     if (pre?.docUrl && pre.draft) {
       const sync = await syncDocEdits(pre, ref, { moment: "sign" });
+      if (sync.stale) {
+        return NextResponse.json({ error: sync.error }, { status: 409 });
+      }
       if (sync.error) {
         return NextResponse.json(
           {

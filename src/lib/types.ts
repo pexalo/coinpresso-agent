@@ -271,6 +271,12 @@ export interface Run {
   revisions: number;
   /** Set once exported. */
   docUrl?: string;
+  /**
+   * Fingerprint of the text uploaded to that Doc. If the draft changes after
+   * the upload (a revision, a rewrite), the Doc is stale and its "edits" are
+   * really the old draft — taking them would undo the newer work.
+   */
+  docExportedHash?: string;
   approvedAt?: string;
   approvedBy?: string;
   mock: boolean;

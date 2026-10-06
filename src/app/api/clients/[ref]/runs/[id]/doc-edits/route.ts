@@ -6,7 +6,7 @@ import { readDocText } from "@/lib/google";
 import { renderMarkdown } from "@/lib/render";
 import { diffEdits, applyEdits } from "@/lib/doc-edits";
 import { addFeedback } from "@/lib/feedback";
-import { syncDocEdits } from "@/lib/doc-sync";
+import { syncDocEdits, textHash } from "@/lib/doc-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,6 +95,7 @@ export async function POST(
     applied = out.applied;
     if (applied) {
       run.draft = { ...run.draft, ...out.draft };
+      if (run.docExportedHash) run.docExportedHash = textHash(renderMarkdown(run));
       run.review = undefined;
       run.updatedAt = new Date().toISOString();
       run.stages = [
