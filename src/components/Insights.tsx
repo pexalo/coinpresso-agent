@@ -347,13 +347,17 @@ export function InsightQuickAdd({ clientRef }: { clientRef: string }) {
  * library. Bernard, 5 Oct: "it needs to be attached to an upcoming topic or
  * blog post already written".
  */
-export function PostInsights({ clientRef, runId, topicId, written }: {
+export function PostInsights({ clientRef, runId, topicId, written, onRewrite, rewriting }: {
   clientRef: string;
   runId?: string;
   topicId?: string;
   /** The post already has a draft: say how to get new data into it. */
   written?: boolean;
+  /** Rewrite from research, offered beside "+ Add data" (Bernard, 6 Oct). */
+  onRewrite?: () => void;
+  rewriting?: boolean;
 }) {
+  const [justAdded, setJustAdded] = useState(false);
   const [all, setAll] = useState<InsightRow[]>([]);
   const [attached, setAttached] = useState<string[]>([]);
   const [used, setUsed] = useState<string[]>([]);
@@ -405,7 +409,7 @@ export function PostInsights({ clientRef, runId, topicId, written }: {
         <>
           <p className="text-[11.5px] text-[var(--ink-3)] leading-relaxed">
             Liam&apos;s figures for this {runId ? "post" : "topic"} — the writer uses them to give a direct answer.
-            {written ? " This post is already written: after adding data, use Rewrite from research to put it in." : ""}
+            {written ? (onRewrite ? " Already written: add the data, then Rewrite from research to put it in." : " This post is already written: after adding data, use Rewrite from research to put it in.") : ""}
           </p>
           {mine.length === 0 && alsoUsed.length === 0 && (
             <div className="text-[12px] text-[var(--ink-3)]">Nothing yet.</div>
@@ -434,7 +438,7 @@ export function PostInsights({ clientRef, runId, topicId, written }: {
               <InsightForm
                 clientRef={clientRef}
                 attach={{ runIds: runId ? [runId] : [], topicIds: topicId ? [topicId] : [] }}
-                onSaved={() => { setAdding(false); load(); window.dispatchEvent(new Event("insight-added")); }}
+                onSaved={() => { setAdding(false); setJustAdded(true); load(); window.dispatchEvent(new Event("insight-added")); }}
                 onCancel={() => setAdding(false)}
               />
             </InsightModal>
@@ -444,6 +448,20 @@ export function PostInsights({ clientRef, runId, topicId, written }: {
               <button onClick={() => setAdding(true)} className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-[12px] font-semibold">
                 + Add data
               </button>
+              {onRewrite && (
+                <button
+                  onClick={() => { setJustAdded(false); onRewrite(); }}
+                  disabled={rewriting}
+                  title="Keeps the research and re-runs only the writer, with the data above — about a seventh of the cost of a fresh run. Signatures already given go stale."
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-colors disabled:opacity-40 ${
+                    justAdded
+                      ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10"
+                      : "border-[var(--line)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--accent)]"
+                  }`}
+                >
+                  {rewriting ? "Rewriting…" : "Rewrite from research"}
+                </button>
+              )}
               {rest.length > 0 && (
                 <select
                   aria-label="Attach from library"

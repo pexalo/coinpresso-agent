@@ -524,7 +524,19 @@ export default function RunDetail({
           )}
           {/* Liam's figures for this post. Bernard, 5 Oct: attached to the
               post itself, not only a library page. */}
-          {isBlog && <PostInsights clientRef={ref} runId={id} written={Boolean(run.draft)} />}
+          {isBlog && (
+            <PostInsights
+              clientRef={ref}
+              runId={id}
+              written={Boolean(run.draft)}
+              onRewrite={
+                run.draft && (run.status === "failed" || run.status === "needs_review")
+                  ? () => retry("writer")
+                  : undefined
+              }
+              rewriting={retrying}
+            />
+          )}
           {/* Blog only for now. The agent is general, but a wire release has
               no featured image to attach one to. */}
           {isBlog && (
