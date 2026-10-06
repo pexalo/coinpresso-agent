@@ -2,6 +2,7 @@ import { relevantInsights, houseDataBlock, insightPages, cleanInsight } from "..
 import { assignMoves, SPENT_OPENERS, INTRO_MOVES } from "../src/lib/blog.ts";
 import { enforceFreshOpening, openingOf } from "../src/lib/agents/writer.ts";
 import { SCENE_APPROACHES, CLICHE_PROPS } from "../src/lib/blog-image.ts";
+import { platformLogos } from "../src/lib/platform-logos.ts";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = "") => {
@@ -48,5 +49,11 @@ console.log("images");
 ok("magnifying glass is banned", CLICHE_PROPS.includes("magnifying glass"));
 ok("several art directions", SCENE_APPROACHES.length >= 8);
 
+ok("tombstones and masks are banned", CLICHE_PROPS.includes("tombstone") && CLICHE_PROPS.includes("mask"));
+const names = (t) => platformLogos(t).map((p) => p.name).join(",");
+ok("AI in general gets the four engines", names("Why AI Models Are Skeptical of Crypto Projects (and How to Pass the Trust Gate)") === "ChatGPT,Gemini,Perplexity,Claude");
+ok("named platforms only", names("Share of Model Voice: The New KPI for Crypto Brands in ChatGPT, Gemini & Claude") === "ChatGPT,Gemini,Claude");
+ok("a post about Meta ads gets Meta", names("Facebook Crypto Ads in 2026: What Meta Allows") === "Meta");
+ok("a post about presale budgets gets none", names("How Much Does It Cost to Market a Crypto Presale in 2026?") === "");
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

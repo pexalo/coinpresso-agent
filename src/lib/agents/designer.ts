@@ -16,6 +16,7 @@ import { imagePrice } from "../model-registry";
 import { MODELS } from "../models";
 import { SCENE_RULES, SECTION_RULES, CHART_REQUEST, PALETTE, ROUNDUP_SCENE_RULES, SCENE_APPROACHES, CLICHE_PROPS } from "../blog-image";
 import { listImages, recentScenePrompts } from "../image-store";
+import { platformLogos } from "../platform-logos";
 
 /** gpt-image-1 is deprecated on 23 Oct 2026; do not fall back to it. */
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2";
@@ -66,6 +67,7 @@ async function sceneBrief(
   for (const ch of run.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const approach = SCENE_APPROACHES[(h + tries) % SCENE_APPROACHES.length];
   const recent = await recentScenePrompts(run.clientRef, run.id).catch(() => [] as string[]);
+  const platforms = roundup ? [] : platformLogos(run.draft?.headline ?? run.brief.title);
   const headings = (run.draft?.body.match(/^## (.+)$/gm) ?? [])
     .map((h) => h.slice(3))
     .filter((h) => h.toLowerCase() !== "faqs")
@@ -83,10 +85,19 @@ object or small group that stands for the topic itself (a presale, a launch,
 a community), lit like a real photographed set, with open dark space around
 it where round glass orbs carrying the agencies' logos will be placed later.
 Describe only the central subject and its surface/atmosphere.`
-    : `Describe ONE scene of 3D-rendered objects that carries the post's central
-argument. Name physical objects a 3D artist could model. Abstractions like
-"trust" or "visibility" render as nothing — name the specific thing this
-post is about, as an object.
+    : `Describe ONE scene of 3D-rendered objects that shows WHAT THIS POST IS ABOUT,
+literally — the real things in it, recognisable at a glance by a crypto
+founder: an AI chat window answering a question, a token-sale dashboard, a
+phone showing an ad being rejected, a Telegram group, a press release on a
+news site, a wallet, a chart of a launch (no numbers). Bernard, 6 Oct: "would
+like them to be more relevant… doesn't always have to be standard issue — no
+images like tombstones, scary masks". No allegory or symbolism: no stone
+tablets, scales of justice, wax seals, tombstones, masks, skulls, ghosts.${
+      platforms.length
+        ? `
+The post is about ${platforms.map((p) => p.name).join(", ")}: show their kind of product (chat interfaces, answer panels, feeds) as generic objects. Their real logos are added afterwards — draw none.`
+        : ""
+    }
 
 ART DIRECTION FOR THIS ONE: ${approach}
 
@@ -144,6 +155,12 @@ export async function generateScene(run: Run, nudge?: string): Promise<SceneResu
         `- Ground and atmosphere in deep purple, around ${PALETTE.bgCenter} falling to ${PALETTE.bgEdge}`,
         `- Rim lights in violet ${PALETTE.gradientViolet} and teal ${PALETTE.gradientTeal}`,
         "- Leave the left 45% of the frame quiet and dark: a title is placed there",
+        ...(platformLogos(run.draft?.headline ?? run.brief.title).length
+          ? [
+              "- Keep the right-most 15% of the frame dim and empty: a column of small logo badges is placed there",
+              "- Draw NO company logos, brand marks, letters or wordmarks anywhere",
+            ]
+          : []),
       ].join("\n");
 
   const res = await fetch("https://api.openai.com/v1/images/generations", {

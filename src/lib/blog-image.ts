@@ -107,7 +107,7 @@ export const SCENE_APPROACHES = [
   "a miniature diorama: a tiny working world on a plinth, seen from three-quarter view",
   "a cutaway: one object sliced open to show the mechanism inside it",
   "a tactile still life: three objects on a single surface, close up, rich materials",
-  "a sculptural abstraction: the idea as one bold architectural form",
+  "the product itself: the interface, dashboard or feed the post is about, rendered as a glossy 3D object floating at an angle",
   "a landscape at miniature scale: the argument as terrain — paths, bridges, drops, gates",
   "a machine in motion: interlocking parts or a conveyor carrying the process from left to right",
   "a single hero object in macro close-up, extreme material detail, shallow depth of field",
@@ -120,6 +120,8 @@ export const CLICHE_PROPS = [
   "magnifying glass", "shield", "padlock", "lightbulb", "rocket", "trophy", "megaphone",
   "puzzle pieces", "chess pieces", "dartboard or target", "hourglass", "compass", "key",
   "clipboard or checklist", "a lone generic coin or a stack of coins as the centrepiece",
+  // Bernard, 6 Oct: "no images like tombstones, scary masks etc".
+  "tombstone", "mask", "skull", "ghost", "stone tablet", "scales of justice", "wax seal", "gavel",
 ] as const;
 
 /**

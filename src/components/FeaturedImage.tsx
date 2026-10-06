@@ -90,9 +90,18 @@ export default function FeaturedImage({
   useEffect(() => {
     fetch(`/api/clients/${clientRef}/runs/${runId}/image/logos`)
       .then((r) => r.json())
-      .then((d: { roundup?: boolean; entries?: Array<{ name: string; domain: string; ours: boolean }> }) => {
+      .then((d: {
+        roundup?: boolean;
+        entries?: Array<{ name: string; domain: string; ours: boolean }>;
+        platforms?: Array<{ name: string; domain: string }>;
+      }) => {
         setIsRoundup(Boolean(d.roundup));
-        setLogos((d.entries ?? []).map((e) => ({ ...e, on: Boolean(e.domain) })));
+        // A roundup's companies, or — any other post — the platforms it is
+        // about (ChatGPT, Gemini…), drawn small down the right edge.
+        const rows = d.roundup
+          ? (d.entries ?? [])
+          : (d.platforms ?? []).map((p) => ({ ...p, ours: false }));
+        setLogos(rows.map((e) => ({ ...e, on: Boolean(e.domain) })));
       })
       .catch(() => {});
   }, [clientRef, runId]);
@@ -229,6 +238,54 @@ export default function FeaturedImage({
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // 3c. Any other post that is about named platforms: their own icons in
+    // small glass orbs down the right edge, clear of the title. Bernard,
+    // 6 Oct: "we can use logos for OpenAI, Gemini, Perplexity etc when we
+    // are talking about AIs."
+    if (!isRoundup && shown.length) {
+      const list = shown.slice(0, 5);
+      const n = list.length;
+      const R = 40;
+      const top = 90, bottom = CANVAS.h - 90;
+      for (let i = 0; i < n; i++) {
+        const l = list[i];
+        const y = n === 1 ? CANVAS.h / 2 : Math.round(top + ((bottom - top) * i) / (n - 1));
+        const x = CANVAS.w - 70 - (i % 2 ? 46 : 0);
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.45)";
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(x, y, R, 0, Math.PI * 2);
+        const body = ctx.createRadialGradient(x - R * 0.3, y - R * 0.35, R * 0.1, x, y, R);
+        body.addColorStop(0, "rgba(255,255,255,0.12)");
+        body.addColorStop(1, "rgba(24,1,43,0.80)");
+        ctx.fillStyle = body;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        const icon = l.domain
+          ? await loadImg(`/api/clients/${clientRef}/runs/${runId}/image/logos?domain=${encodeURIComponent(l.domain)}`)
+          : null;
+        if (icon) {
+          const d = R * 1.2;
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, d / 2, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(icon, x - d / 2, y - d / 2, d, d);
+          ctx.restore();
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, R, 0, Math.PI * 2);
+        const rim = ctx.createLinearGradient(x - R, y - R, x + R, y + R);
+        rim.addColorStop(0, PALETTE.gradientTeal);
+        rim.addColorStop(1, PALETTE.gradientViolet);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = rim;
         ctx.stroke();
         ctx.restore();
       }
@@ -382,15 +439,15 @@ export default function FeaturedImage({
             style={{ aspectRatio: "1024 / 576" }}
           />
 
-          {isRoundup && logos.length > 0 && (
+          {logos.length > 0 && (
             <div className="mt-3 rounded-lg border border-[var(--line)] p-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)] mb-1">
-                Company logos on the image
+                {isRoundup ? "Company logos on the image" : "Platform logos on the image"}
               </div>
               <p className="text-[11px] text-[var(--ink-3)] mb-2 leading-relaxed">
-                Each company&apos;s real logo, taken from its own website. Check the
-                website for each — a wrong one shows the wrong company&apos;s logo. Untick any
-                you don&apos;t want. Coinpresso always goes first.
+                {isRoundup
+                  ? "Each company's real logo, taken from its own website. Check the website for each — a wrong one shows the wrong company's logo. Untick any you don't want. Coinpresso always goes first."
+                  : "The platforms this post is about, with their real icons from their own websites, down the right edge. Untick any you don't want, or change the website to swap one."}
               </p>
               <div className="space-y-1.5">
                 {logos.map((l, i) => (

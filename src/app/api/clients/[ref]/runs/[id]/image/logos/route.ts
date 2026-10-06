@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRun } from "@/lib/store";
 import { roundupLogos, safeDomain, domainCandidates } from "@/lib/roundup-logos";
+import { platformLogos } from "@/lib/platform-logos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ ref: str
     // the first that answers. Only four of the seven GEO-roundup entries had
     // a domain the first time, so only one logo reached the image.
     const out = roundupLogos(run);
+    // Not a roundup: the platforms the post is about (ChatGPT, Gemini…),
+    // composited the same way. Bernard, 6 Oct.
+    if (!out.roundup) {
+      return NextResponse.json({ ...out, platforms: platformLogos(run.draft?.headline ?? run.brief.title) });
+    }
     await Promise.all(
       out.entries.map(async (e) => {
         if (e.ours || e.domain) return;
