@@ -17,6 +17,16 @@ import type { CallContext } from "../providers/routing";
 import { CONTENT_TYPES, PILLARS, isCompetitorUrl, competitorNamesIn, isRoundupPost } from "../blog";
 import { linkablePages, linkTargetsBlock } from "../link-map";
 
+/**
+ * The research reply's ceiling. 8,000 was set as "double the longest brief",
+ * but with web search on, the output count also carries the model's notes
+ * between searches: "How Coinbase & Kraken Dominate AI Citations" (12 Oct)
+ * wrote 2,662 characters of them before the JSON started and was cut off at
+ * 9,026 tokens, losing the searches it had paid for. Only tokens actually
+ * written are billed, so the higher ceiling costs nothing on a normal reply.
+ */
+const RESEARCH_MAX_TOKENS = 16000;
+
 const SYSTEM = `You are the strategy and research agent for Coinpresso's Moonberg
 crypto PR programme. You do not write articles. You produce the research brief a
 writer will work from.
@@ -45,7 +55,10 @@ RULES
    a riskNote. Never carry a figure over from an older article.
 7. Flag anything that would make a claim unsafe to publish in riskNotes.
 
-Return ONLY a JSON object matching the schema given. No prose around it.`;
+Return ONLY a JSON object matching the schema given. No prose around it, and
+no commentary between searches — every word of it counts against the reply's
+length limit, and a reply cut off before its closing brace is thrown away
+with all its searches.`;
 
 function schemaBlock(): string {
   return `{
@@ -138,7 +151,10 @@ RULES
    anything else. If one of them is worth citing, search for it and retrieve it
    yourself first.
 
-Return ONLY a JSON object matching the schema given.`;
+Return ONLY a JSON object matching the schema given. Between searches, write
+nothing — no "let me look for…", no notes on what you found. Every word of
+commentary counts against the reply's length limit, and a reply that runs out
+before its closing brace is thrown away with all its searches.`;
 
 export async function runStrategyBlog(
   brief: Brief,
@@ -299,7 +315,7 @@ Research this and return JSON:
     // 16000 here bought no research and only set how far a runaway reply could
     // run before being cut off and billed. 8000 is still roughly double the
     // longest brief this stage has produced.
-    maxTokens: needsBrief ? 10000 : 8000,
+    maxTokens: needsBrief ? RESEARCH_MAX_TOKENS + 2000 : RESEARCH_MAX_TOKENS,
     webSearch: true,
     context: { ...ctx, stage: "strategy" },
   });
@@ -307,7 +323,7 @@ Research this and return JSON:
   let research: ResearchBrief;
   try {
     research = extractJson<ResearchBrief>(r.text, { stage: "research", stopReason: r.stopReason, blockTypes: r.blockTypes,
-      tokensOut: r.tokensOut, maxTokens: needsBrief ? 10000 : 8000 });
+      tokensOut: r.tokensOut, maxTokens: needsBrief ? RESEARCH_MAX_TOKENS + 2000 : RESEARCH_MAX_TOKENS });
   } catch (e) {
     // Searches and tokens were billed even though the parse failed. The
     // pipeline's fail() reads this off the error and records it on the run.
@@ -399,7 +415,7 @@ ${schemaBlock()}`;
     // 16000 here bought no research and only set how far a runaway reply could
     // run before being cut off and billed. 8000 is still roughly double the
     // longest brief this stage has produced.
-    maxTokens: 8000,
+    maxTokens: RESEARCH_MAX_TOKENS,
     webSearch: true,
     context: { ...ctx, stage: "strategy" },
   });
@@ -407,7 +423,7 @@ ${schemaBlock()}`;
   let research: ResearchBrief;
   try {
     research = extractJson<ResearchBrief>(r.text, { stage: "research", stopReason: r.stopReason, blockTypes: r.blockTypes,
-      tokensOut: r.tokensOut, maxTokens: 8000 });
+      tokensOut: r.tokensOut, maxTokens: RESEARCH_MAX_TOKENS });
   } catch (e) {
     // Searches and tokens were billed even though the parse failed. The
     // pipeline's fail() reads this off the error and records it on the run.
