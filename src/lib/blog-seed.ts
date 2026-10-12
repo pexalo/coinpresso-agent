@@ -254,3 +254,35 @@ export async function setStandingKeywords(
 export function queuedTopics(seeds: BlogSeeds): SeedTopic[] {
   return seeds.topics.filter((t) => t.status === "queued");
 }
+
+
+/**
+ * Same subject? Titles drift a little between the topic list and the post
+ * ("Does AI Ever Recommend a Token to Buy?" planned from an idea rather than
+ * picked from the list), so: the same words, mostly.
+ */
+export function sameSubject(a: string, b: string): boolean {
+  const toks = (t: string) =>
+    new Set(t.toLowerCase().split(" · ")[0].replace(/[^a-z0-9]+/g, " ").split(" ").filter((w) => w.length > 2));
+  const x = toks(a), y = toks(b);
+  if (!x.size || !y.size) return false;
+  const shared = [...x].filter((w) => y.has(w)).length;
+  return shared / Math.min(x.size, y.size) >= 0.85 && shared / Math.max(x.size, y.size) >= 0.6;
+}
+
+/**
+ * Queued topics that a post already covers, by id or by title. Bernard,
+ * 12 Oct: "this has already been written also but still in list". A post
+ * planned from an AI-proposed idea carries no topic id, so the topic it
+ * answered was never marked used.
+ */
+export function coveredTopicIds(
+  topics: Array<{ id: string; topic: string; status: string }>,
+  runs: Array<{ title: string; seedTopicId?: string }>
+): string[] {
+  const seedIds = new Set(runs.map((r) => r.seedTopicId).filter(Boolean));
+  return topics
+    .filter((t) => t.status === "queued")
+    .filter((t) => seedIds.has(t.id) || runs.some((r) => sameSubject(t.topic, r.title)))
+    .map((t) => t.id);
+}

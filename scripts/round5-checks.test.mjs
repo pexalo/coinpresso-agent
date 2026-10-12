@@ -394,7 +394,10 @@ console.log("taste checks cannot fail a run — a guard on the writer's own sour
   for (const taste of ["enforceCloser", "enforceLinkSpacing", "enforceParagraphSize", "enforceSentenceVariety"]) {
     ok(`${taste} is a style note, not a rejection`, soft.includes(taste) && !hard.includes(taste));
   }
-  for (const must of ["enforceIntro", "enforceNoLedgerMarkers", "enforcePromisedStructures"]) {
+  // enforceIntro also rides as a style note (its 110-word floor on the last
+  // attempt, 12 Oct); it must still be in the hard list.
+  ok("enforceIntro still rejects", hard.includes("enforceIntro"));
+  for (const must of ["enforceNoLedgerMarkers", "enforcePromisedStructures"]) {
     ok(`${must} still rejects`, hard.includes(must) && !soft.includes(must));
   }
   ok("enforceLinks is hard for targets and soft for counts",

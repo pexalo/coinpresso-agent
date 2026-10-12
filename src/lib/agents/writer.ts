@@ -313,14 +313,14 @@ export function enforceDataAnswer(body: string, findings: string[]): void {
   if (problems.length) throw new Error(`Coinpresso's data: ${problems.join("; ")}.`);
 }
 
-export function enforceIntro(body: string): void {
+export function enforceIntro(body: string, floor = 110): void {
   body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
   const intro = firstH2 === -1 ? body : body.slice(0, firstH2);
   const words = wordCount(intro);
-  if (words < 110) {
+  if (words < floor) {
     throw new Error(
-      `The introduction is ${words} words; the house runs about 190 and the floor is 110. ` +
+      `The introduction is ${words} words; the house runs about 190 and the floor is ${floor}. ` +
         `Two paragraphs before the first H2 that talk to the reader and set the scene — retry the writer.`
     );
   }
@@ -2203,7 +2203,10 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // gets them as findings, and if it cannot clear them the reviewer sees
       // them beside an article instead of a failure beside nothing.
       const faults = collectRejections([
-        () => enforceIntro(parsed.body),
+        // On the last attempt a slightly short intro is a note for the
+        // reviser, not a reason to bin the article: "Crypto PPC Agency Red
+        // Flags" (12 Oct) failed three times at 104 words against 110.
+        () => enforceIntro(parsed.body, attempt === MAX_WRITER_ATTEMPTS ? 70 : 110),
         () => enforceProse(parsed.body),
         () => enforceNoLedgerMarkers(parsed.body, parsed.faqs ?? []),
         // A roundup ("Best crypto SEO agencies") names rivals by design —
@@ -2233,6 +2236,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceSentenceVariety(parsed.body),
         () => enforceNoRepetition(parsed.body),
         () => enforceFreshOpening(parsed.body, recentOpeners),
+        () => enforceIntro(parsed.body, 110),
         () => enforceDataAnswer(parsed.body, insights.filter((x) => x.kind === "finding").map((x) => x.body)),
         () => enforceHomepageInOpening(parsed.body),
         () => enforceEarlyInternalLink(parsed.body),

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getClient, hasModule } from "@/lib/clients";
+import { listRuns } from "@/lib/store";
 import {
   addTopics,
+  coveredTopicIds,
   listSeeds,
   markUsed,
   removeTopic,
@@ -34,7 +36,14 @@ export async function GET(
   if (!(await guard(ref))) {
     return NextResponse.json({ error: "Unknown client" }, { status: 404 });
   }
-  return NextResponse.json(await listSeeds(ref));
+  // Self-healing: a queued topic that a live post already covers is marked
+  // used here, so it stops being offered for planning.
+  const seeds = await listSeeds(ref);
+  const runs = (await listRuns(ref))
+    .filter((r) => r.brief.track === "blog" && !r.removedAt)
+    .map((r) => ({ title: r.brief.title, seedTopicId: r.brief.seedTopicId }));
+  const covered = coveredTopicIds(seeds.topics, runs);
+  return NextResponse.json(covered.length ? await markUsed(ref, covered, "already-written") : seeds);
 }
 
 interface PostBody {
