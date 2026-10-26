@@ -112,6 +112,11 @@ function stage(run: Run, id: StageId): StageRecord {
 
 async function begin(run: Run, id: StageId, inputSummary: string): Promise<void> {
   const s = stage(run, id);
+  // About to re-date the stage: pin what it already cost to when it cost it,
+  // so the monthly statement does not move it to this month.
+  if (!s.ledger && ((s.costUsd ?? 0) > 0 || (s.searchCostUsd ?? 0) > 0)) {
+    s.ledger = [{ at: s.startedAt ?? run.createdAt, usd: s.costUsd ?? 0, searchUsd: s.searchCostUsd ?? 0 }];
+  }
   s.status = "running";
   s.startedAt = new Date().toISOString();
   s.inputSummary = inputSummary;
@@ -172,6 +177,7 @@ async function finish(
       run.totalSearchCostUsd = (run.totalSearchCostUsd ?? 0) + sc;
       run.totalCostUsd += sc;
     }
+    (s.ledger ??= []).push({ at: s.endedAt!, usd: cost, searchUsd: searches > 0 ? searchCost(searches) : 0 });
   }
   await saveRun(run);
 }
@@ -214,6 +220,7 @@ async function fail(run: Run, id: StageId, err: unknown): Promise<void> {
       run.totalSearchCostUsd = (run.totalSearchCostUsd ?? 0) + sc;
       run.totalCostUsd += sc;
     }
+    (s.ledger ??= []).push({ at: s.endedAt!, usd: cost, searchUsd: u.searchRequests > 0 ? searchCost(u.searchRequests) : 0 });
   }
 
   run.status = "failed";

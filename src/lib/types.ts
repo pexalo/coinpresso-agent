@@ -234,6 +234,13 @@ export interface StageRecord {
   /** Generated images on this stage, and their flat per-image fees. Kept apart like search. */
   images?: number;
   imageCostUsd?: number;
+  /**
+   * Every charge on this stage, dated. A retried stage gets a new startedAt,
+   * and the monthly statement used to date ALL its cost by that — so a post
+   * researched in September and rewritten in October billed its September
+   * cost again in October. The statement now dates each charge on its own.
+   */
+  ledger?: Array<{ at: string; usd: number; searchUsd?: number; imageUsd?: number }>;
   attempt?: number;
 }
 

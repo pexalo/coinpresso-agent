@@ -45,10 +45,13 @@ export async function learnFromEdits(input: {
         c.replies.length ? ` (replies: ${c.replies.join(" / ")})` : ""
       }`
   );
-  if (!edits.length && !comments.length) return { lessons: [], tokensIn: 0, tokensOut: 0, model: MODELS.reviewer };
+  if (!edits.length && !comments.length) return { lessons: [], tokensIn: 0, tokensOut: 0, model: MODELS.strategy };
 
+  // callClaude needs a Claude model. This was MODELS.reviewer — gpt-4.1 —
+  // so Anthropic refused every call and the "why" behind Liam's edits was
+  // never learned; the failure was only logged (found 26 Oct).
   const r = await callClaude({
-    model: MODELS.reviewer,
+    model: MODELS.strategy,
     system:
       "You maintain the house style rules for a crypto marketing agency's blog. The client's editor has edited and commented on a draft. " +
       "You turn his changes into general rules a writer can follow on the NEXT post. You answer in JSON only.",
@@ -90,5 +93,5 @@ export async function learnFromEdits(input: {
       after: e && (e.op ?? "edit") === "edit" ? e.after : undefined,
     });
   }
-  return { lessons, tokensIn: r.tokensIn, tokensOut: r.tokensOut, model: MODELS.reviewer };
+  return { lessons, tokensIn: r.tokensIn, tokensOut: r.tokensOut, model: MODELS.strategy };
 }

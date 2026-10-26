@@ -6,6 +6,8 @@
 // — get, list, save — so swapping the backing store touches only this file.
 // ---------------------------------------------------------------------------
 
+import { archiveRunSpend } from "./spend-log";
+import { runChargesByMonth } from "./costs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { dataDir } from "./data-dir";
@@ -84,6 +86,8 @@ export async function listRuns(clientRef: string): Promise<Run[]> {
 export async function deleteRun(id: string, clientRef: string): Promise<boolean> {
   const run = await getRun(id, clientRef);
   if (!run) return false;
+  // Its spend is what Coinpresso is invoiced for: keep it before the record goes.
+  await archiveRunSpend(clientRef, run, runChargesByMonth(run));
   await fs.rm(path.join(DIR, `${id}.json`), { force: true });
   return true;
 }

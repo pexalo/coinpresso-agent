@@ -358,6 +358,12 @@ export function recordImageSpend(
     run.stages.push(s);
   }
   s.endedAt = now;
+  // Images made in different months are billed in their own months.
+  if (!s.ledger) {
+    const legacy = (s.costUsd ?? 0) + (s.imageCostUsd ?? 0);
+    s.ledger = legacy > 0 ? [{ at: s.startedAt ?? now, usd: s.costUsd ?? 0, imageUsd: s.imageCostUsd ?? 0 }] : [];
+  }
+  let briefUsd = 0;
 
   s.images = (s.images ?? 0) + 1;
   s.imageCostUsd = (s.imageCostUsd ?? 0) + imageFeeUsd;
@@ -377,7 +383,9 @@ export function recordImageSpend(
     s.cacheReadTokens = (s.cacheReadTokens ?? 0) + (brief.cacheReadTokens ?? 0);
     s.costUsd = (s.costUsd ?? 0) + c;
     run.totalCostUsd += c;
+    briefUsd = c;
   }
+  s.ledger.push({ at: now, usd: briefUsd, imageUsd: imageFeeUsd });
   run.updatedAt = now;
   return s;
 }
@@ -584,22 +592,62 @@ export function previousMonth(now = new Date()): string {
   return d.toISOString().slice(0, 7);
 }
 
+/**
+ * A stage's charges by month. Stages costed before the ledger existed carry
+ * one undated lump, dated by when the stage started — the old rule.
+ */
+export function stageChargesByMonth(s: {
+  startedAt?: string;
+  costUsd?: number;
+  searchCostUsd?: number;
+  imageCostUsd?: number;
+  ledger?: Array<{ at: string; usd: number; searchUsd?: number; imageUsd?: number }>;
+}, fallbackAt: string): Map<string, { tok: number; srch: number; img: number; at: string }> {
+  const out = new Map<string, { tok: number; srch: number; img: number; at: string }>();
+  const add = (at: string, tok: number, srch: number, img: number) => {
+    const m = at.slice(0, 7);
+    const row = out.get(m) ?? { tok: 0, srch: 0, img: 0, at };
+    row.tok += tok;
+    row.srch += srch;
+    row.img += img;
+    out.set(m, row);
+  };
+  const L = s.ledger ?? [];
+  const lt = L.reduce((a, e) => a + e.usd, 0);
+  const ls = L.reduce((a, e) => a + (e.searchUsd ?? 0), 0);
+  const li = L.reduce((a, e) => a + (e.imageUsd ?? 0), 0);
+  for (const e of L) add(e.at, e.usd, e.searchUsd ?? 0, e.imageUsd ?? 0);
+  // Whatever the ledger does not account for predates it.
+  const rest = [Math.max(0, (s.costUsd ?? 0) - lt), Math.max(0, (s.searchCostUsd ?? 0) - ls), Math.max(0, (s.imageCostUsd ?? 0) - li)];
+  if (rest.some((x) => x > 1e-9)) add(s.startedAt ?? fallbackAt, rest[0], rest[1], rest[2]);
+  return out;
+}
+
+/** A run's charges by month, across all its stages. */
+export function runChargesByMonth(run: Run): Map<string, { tok: number; srch: number; img: number; at: string }> {
+  const out = new Map<string, { tok: number; srch: number; img: number; at: string }>();
+  for (const s of run.stages) {
+    for (const [m, c] of stageChargesByMonth(s, run.createdAt)) {
+      const row = out.get(m) ?? { tok: 0, srch: 0, img: 0, at: c.at };
+      row.tok += c.tok;
+      row.srch += c.srch;
+      row.img += c.img;
+      out.set(m, row);
+    }
+  }
+  return out;
+}
+
 export function monthlyStatement(
   runs: Run[],
-  offRun: Array<{ at: string; kind: string; tokenCostUsd: number; searchCostUsd: number; totalUsd: number }>,
+  offRun: Array<{ at: string; kind: string; tokenCostUsd: number; searchCostUsd: number; imageCostUsd?: number; totalUsd: number }>,
   month: string,
   offRunLabels: Record<string, string> = {}
 ): MonthlyStatement {
   const lines: StatementLine[] = [];
   for (const run of runs.filter((r) => !r.mock)) {
-    let tok = 0, srch = 0, img = 0;
-    for (const s of run.stages) {
-      const when = (s.startedAt ?? run.createdAt).slice(0, 7);
-      if (when !== month) continue;
-      tok += s.costUsd ?? 0;
-      srch += s.searchCostUsd ?? 0;
-      img += s.imageCostUsd ?? 0;
-    }
+    const c = runChargesByMonth(run).get(month);
+    const tok = c?.tok ?? 0, srch = c?.srch ?? 0, img = c?.img ?? 0;
     const total = tok + srch + img;
     if (total <= 0) continue;
     lines.push({ runId: run.id, title: run.brief.title, track: trackOf(run), tokenCostUsd: tok, searchCostUsd: srch, imageCostUsd: img, totalUsd: total });
@@ -610,6 +658,7 @@ export function monthlyStatement(
     const l = byKind.get(e.kind) ?? { title: offRunLabels[e.kind] ?? e.kind, track: "other" as const, tokenCostUsd: 0, searchCostUsd: 0, imageCostUsd: 0, totalUsd: 0 };
     l.tokenCostUsd += e.tokenCostUsd;
     l.searchCostUsd += e.searchCostUsd;
+    l.imageCostUsd += e.imageCostUsd ?? 0;
     l.totalUsd += e.totalUsd;
     byKind.set(e.kind, l);
   }

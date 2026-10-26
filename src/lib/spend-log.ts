@@ -22,12 +22,14 @@ import { searchCost } from "./model-registry";
 
 const DIR = dataDir("spend-log");
 
-export type SpendKind = "ideas-scan" | "blog-plan" | "topic-suggest";
+export type SpendKind = "ideas-scan" | "blog-plan" | "topic-suggest" | "doc-lessons" | "removed-posts";
 
 export const SPEND_LABELS: Record<SpendKind, string> = {
   "ideas-scan": "Ideation scans — topics & titles",
   "blog-plan": "Blog day planning",
   "topic-suggest": "Topic suggestions for the blog queue",
+  "doc-lessons": "Learning house rules from Liam's Doc edits",
+  "removed-posts": "Posts deleted from the bin (their spend is kept)",
 };
 
 export interface SpendEntry {
@@ -43,7 +45,47 @@ export interface SpendEntry {
   searchRequests: number;
   tokenCostUsd: number;
   searchCostUsd: number;
+  /** Only on a removed-post entry, which carries a deleted run's images. */
+  imageCostUsd?: number;
+  /** Only on a removed-post entry: which post it was. */
+  note?: string;
   totalUsd: number;
+}
+
+/**
+ * A post deleted for good takes its record with it — and the monthly
+ * statement is built from the records, so its spend would vanish from the
+ * invoice although the providers billed it. Before deletion, its charges are
+ * written here, one line per month.
+ */
+export async function archiveRunSpend(
+  clientRef: string,
+  run: { id: string; brief: { title: string }; mock?: boolean },
+  byMonth: Map<string, { tok: number; srch: number; img: number; at: string }>
+): Promise<void> {
+  if (run.mock) return;
+  const lines: string[] = [];
+  for (const c of byMonth.values()) {
+    const total = c.tok + c.srch + c.img;
+    if (total <= 0) continue;
+    const entry: SpendEntry = {
+      at: c.at,
+      kind: "removed-posts",
+      model: "various",
+      tokensIn: 0,
+      tokensOut: 0,
+      searchRequests: 0,
+      tokenCostUsd: c.tok,
+      searchCostUsd: c.srch,
+      imageCostUsd: c.img,
+      note: `${run.brief.title} (${run.id})`,
+      totalUsd: total,
+    };
+    lines.push(JSON.stringify(entry));
+  }
+  if (!lines.length) return;
+  await fs.mkdir(DIR, { recursive: true });
+  await fs.appendFile(fileFor(clientRef), lines.join("\n") + "\n", "utf8");
 }
 
 function fileFor(clientRef: string): string {

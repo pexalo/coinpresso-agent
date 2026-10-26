@@ -31,6 +31,7 @@ import { renderMarkdown } from "./render";
 import { diffEdits, applyEdits, faqPairs, RULE_WORTHY_DISTANCE, type EditPair } from "./doc-edits";
 import { addFeedback, readFeedback } from "./feedback";
 import { saveRun } from "./store";
+import { recordSpend } from "./spend-log";
 
 export interface SyncResult {
   /** False when there is no Doc to read — nothing to do, not a failure. */
@@ -115,6 +116,7 @@ export async function syncDocEdits(
           comments,
           existing: log.entries.filter((e) => e.active).map((e) => e.rule),
         });
+        if (out.tokensIn) await recordSpend(clientRef, { kind: "doc-lessons", model: out.model, tokensIn: out.tokensIn, tokensOut: out.tokensOut }).catch(() => undefined);
         for (const l of out.lessons) {
           await addFeedback(clientRef, {
             source: `${opts.reviewer?.trim() || "Liam"}, comments in the Doc for "${run.brief.title}"`,
@@ -155,6 +157,7 @@ export async function syncDocEdits(
       comments,
       existing: log.entries.filter((e) => e.active).map((e) => e.rule),
     });
+    if (out.tokensIn) await recordSpend(clientRef, { kind: "doc-lessons", model: out.model, tokensIn: out.tokensIn, tokensOut: out.tokensOut }).catch(() => undefined);
     for (const l of out.lessons) {
       await addFeedback(clientRef, {
         source,
