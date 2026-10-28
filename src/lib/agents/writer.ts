@@ -373,6 +373,48 @@ export function enforceOnlyPublishedPosts(
   }
 }
 
+/**
+ * The writer is not the designer. Bernard, 28 Oct: the exchanges-vs-DeFi
+ * post carried "![A hand-drawn diagram…](…)" image placeholders with
+ * captions; the link shortener then cut their alt text to five words and the
+ * Doc showed "!A world map… [fee schedule table](about:blank)". Section
+ * images are briefed by a person in the app. Placeholders and their caption
+ * lines come out.
+ */
+export function stripImagePlaceholders(body: string): string {
+  return body
+    .replace(/^[ \t]*!\[[^\n]*?\]\([^)\n]*\)[^\n]*\n?(?:[ \t]*\*[^*\n][^\n]*\*[ \t]*\n?)?/gm, "")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+/**
+ * A comparison ("Exchanges vs DeFi vs Memecoins") is read side by side.
+ * Bernard, 28 Oct: "it should be a comparison piece but it's sort of all
+ * combined". Soft: the table belongs in the first two sections, and the
+ * per-option sections should share their sub-headings so a reader can
+ * compare like with like.
+ */
+export const isComparisonTitle = (title: string, contentType?: string) =>
+  contentType === "comparison" || /\bvs\.?(?=\s)|\bversus\b/i.test(title);
+
+export function enforceComparisonShape(body: string): void {
+  const sections = proseOf(body).split(/^##\s+/m).slice(1);
+  const problems: string[] = [];
+  const tableAt = sections.findIndex((s) => /^\s*\|.+\|\s*$/m.test(s));
+  if (tableAt === -1 || tableAt > 1) {
+    problems.push(
+      tableAt === -1
+        ? "no comparison table. Put one in the first or second section: the options as columns, the axes that matter as rows"
+        : `the comparison table is in section ${tableAt + 1}; move it to the first or second section so the comparison comes before the detail`
+    );
+  }
+  const withH3 = sections.filter((s) => (s.match(/^###\s+/gm) ?? []).length >= 2);
+  if (withH3.length < 2) {
+    problems.push("the options are not broken down the same way. Give each option's section the same H3 sub-headings in the same order (e.g. What to Prove · Story Formats · Crisis · What to Avoid)");
+  }
+  if (problems.length) throw new Error(`This is a comparison: ${problems.join("; ")}.`);
+}
+
 export function enforceIntro(body: string, floor = 110): void {
   body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
@@ -1902,7 +1944,18 @@ flattering entry in the piece: what it does, who it suits, what it is known for.
 Other entries are shorter, accurate and fair, never disparaging. The rule below
 about naming competitors is suspended for this post; every other rule stands.
 
-` : ""}NEVER NAME A COMPETITOR OR A SUPPLIER. No other marketing, PR, SEO, PPC,
+` : ""}${isComparisonTitle(brief.title, brief.contentType) ? `THIS IS A COMPARISON ("${brief.title}"). Bernard, 28 Oct: a comparison must read
+as one, not as three essays in a row. The comparison table — options as
+columns, the axes that matter as rows (what to prove, story formats, crisis,
+disclosure risk…) — sits at the top of the first or second section, before
+the detail. Each option's section then uses the SAME H3 sub-headings in the
+same order, so a reader can compare like with like. End with a plain
+recommendation: who each option is for, and who it is wrong for.
+
+` : ""}NO IMAGE PLACEHOLDERS. Never write "![…](…)" image lines or image
+captions — section images are chosen by a person in the app.
+
+NEVER NAME A COMPETITOR OR A SUPPLIER. No other marketing, PR, SEO, PPC,
 analytics or attribution agency or vendor appears in the piece — not linked,
 not quoted, not "as X puts it", not as a cautionary example. Nor any
 press-release wire or distribution network (Chainwire, InvestorWire and the
@@ -2220,6 +2273,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       // trims from the end and the topic goes on the front.
       // An invented coinpresso.io slug is corrected to the real page or
       // unlinked, before the anchor work — see repairInternalLinks.
+      parsed.body = stripImagePlaceholders(parsed.body);
       parsed.body = repairInternalLinks(parsed.body, knownPages);
       parsed.body = cryptoAnchors(nameAnchors(parsed.body, knownPages), knownPages);
       parsed.body = shortenAnchors(parsed.body);
@@ -2308,6 +2362,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceSentenceVariety(parsed.body),
         () => enforceNoRepetition(parsed.body),
         () => enforceFreshOpening(parsed.body, recentOpeners),
+        ...(isComparisonTitle(brief.title, brief.contentType) ? [() => enforceComparisonShape(parsed.body)] : []),
         () => enforceIntro(parsed.body, 110),
         () => enforceDataAnswer(parsed.body, insights.filter((x) => x.kind === "finding").map((x) => x.body)),
         () => enforceHomepageInOpening(parsed.body),

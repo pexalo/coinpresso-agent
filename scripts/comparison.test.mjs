@@ -1,0 +1,17 @@
+import { stripImagePlaceholders, enforceComparisonShape, isComparisonTitle } from "../src/lib/agents/writer.ts";
+let pass = 0, fail = 0;
+const ok = (n, c, x = "") => { if (c) { pass++; console.log("  ok  ", n); } else { fail++; console.log("  FAIL", n, x); } };
+const err = (f) => { try { f(); return ""; } catch (e) { return String(e); } };
+console.log("exchanges vs DeFi vs memecoins (28 Oct)");
+const body = "Para one.\n\n![A world map with jurisdiction markers next to a fee schedule table](image)\n*Exchange crypto PR playbooks live or die on the jurisdiction map.*\n\nPara two.\n";
+const out = stripImagePlaceholders(body);
+ok("image placeholder and its caption are removed", !/!\[|world map|live or die/.test(out), out);
+ok("the prose around it stays", /Para one\.\n\nPara two\./.test(out), out);
+ok("'X vs Y vs Z' is a comparison", isComparisonTitle("Crypto PR for Exchanges vs DeFi Protocols vs Memecoins: Different Playbooks Explained"));
+ok("an ordinary title is not", !isComparisonTitle("How Much Does It Cost to Market a Crypto Presale in 2026?"));
+const late = "Intro.\n\n## Why\nx\n\n## Exchange\ny\n\n## DeFi\nz\n\n## Match\n| a | b |\n|---|---|\n| 1 | 2 |\n";
+ok("a table in section 4 is flagged", /section 4/.test(err(() => enforceComparisonShape(late))));
+const good = "Intro.\n\n## At a Glance\n| | Exchange | DeFi |\n|---|---|---|\n| Prove | x | y |\n\n## Exchange\n### What to Prove\na\n### Crisis\nb\n\n## DeFi\n### What to Prove\nc\n### Crisis\nd\n";
+ok("early table + parallel H3s passes", err(() => enforceComparisonShape(good)) === "", err(() => enforceComparisonShape(good)));
+console.log(`\n${pass} passed, ${fail} failed`);
+if (fail) process.exit(1);

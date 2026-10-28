@@ -128,6 +128,11 @@ RULES
    circumstances. Gives them a free backlink. Gives them clout for the intent
    we are looking to capture." If the only source for a claim is a rival's
    blog, the claim goes unmade.
+   A claim about what a company does — where an exchange operates, what its
+   terms say, when it left a market — cites that company's own page or the
+   regulator, never a third-party blog summarising it. Bernard, 28 Oct: the
+   exchanges-vs-DeFi-vs-memecoins post rested Binance's restricted countries
+   and its "EU exit" on two personal blogs. If only a blog has it, leave it out.
    Label every source's "publisherType": "primary" (the platform, regulator,
    exchange, protocol or data publisher), "press" (independent trade or news
    press) or "vendor" (ANY company that sells marketing, ads, SEO, PPC, PR,
