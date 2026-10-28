@@ -2276,7 +2276,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
       parsed.body = stripImagePlaceholders(parsed.body);
       parsed.body = repairInternalLinks(parsed.body, knownPages);
       parsed.body = cryptoAnchors(nameAnchors(parsed.body, knownPages), knownPages);
-      parsed.body = shortenAnchors(parsed.body);
+      parsed.body = shortenAnchors(parsed.body, knownPages);
 
       // The connective openers Liam flagged as the AI tell come off. A
       // deletion, so it is not worth a paid attempt — see stripAiOpeners.
@@ -2291,7 +2291,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
           ...f,
           a: tidyPunctuation(
             stripAiOpeners(
-              shortenAnchors(cryptoAnchors(nameAnchors(repairInternalLinks(unlinkCompetitors(americanize(f.a)), knownPages), knownPages), knownPages))
+              shortenAnchors(cryptoAnchors(nameAnchors(repairInternalLinks(unlinkCompetitors(americanize(f.a)), knownPages), knownPages), knownPages), knownPages)
             )
           ),
         }))
@@ -3063,13 +3063,38 @@ function pickAnchor(words: string[], internal: boolean): [number, number] {
   return [0, cut];
 }
 
-export function shortenAnchors(body: string): string {
+/** The shortest run of at most ANCHOR_MAX_WORDS words that names the page. */
+function namingWindow(words: string[], topic: string): [number, number] | null {
+  for (let len = ANCHOR_MIN_WORDS; len <= ANCHOR_MAX_WORDS; len++) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const w = words.slice(i, i + len).join(" ");
+      const edge = (x?: string) => /^(a|an|the|to|of|for|your|our|and|or|in|on|with)$/i.test((x ?? "").replace(/[^A-Za-z]/g, ""));
+      if (edge(words[i]) || edge(words[i + len - 1])) continue;
+      if (fullyNames(w, topic)) {
+        // Take a "crypto" or "Web3" just before it along, as the house anchors do.
+        const prev = words[i - 1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const start = i > 0 && len < ANCHOR_MAX_WORDS && (prev === "crypto" || prev === "web3") ? i - 1 : i;
+        return [start, i + len];
+      }
+    }
+  }
+  return null;
+}
+
+export function shortenAnchors(body: string, known?: Map<string, string>): string {
   const isInternal = (u: string) => /^https?:\/\/(www\.)?coinpresso\.io(\/|$)/i.test(u);
   const fix = (prose: string) =>
     prose.replace(/\[([^\]]+)\]\(([^)]*)\)/g, (whole, text: string, url: string) => {
       const words = text.trim().split(/\s+/);
       if (words.length <= ANCHOR_MAX_WORDS) return whole;
-      const [a, b] = pickAnchor(words, isInternal(url));
+      // An internal link keeps the words that NAME its page. Cutting from the
+      // front turned "[Ask Coinpresso to build a crypto PR playbook…]" into
+      // "[Ask Coinpresso to build a]" and failed the run three times (Crypto
+      // PR for exchanges, 28 Oct). The shortest window that names the page
+      // wins; the rest goes back to being prose.
+      const topic = isInternal(url) ? known?.get(normaliseUrl(url)) : undefined;
+      const named = topic ? namingWindow(words, topic) : null;
+      const [a, b] = named ?? pickAnchor(words, isInternal(url));
       const anchor = words.slice(a, b).join(" ").replace(/[,;:]+$/, "");
       const trail = words.slice(a, b).join(" ").match(/[,;:]+$/)?.[0] ?? "";
       const before = words.slice(0, a).join(" ");

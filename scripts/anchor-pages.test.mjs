@@ -1,4 +1,4 @@
-import { nameAnchors, enforceFaqLinks } from "../src/lib/agents/writer.ts";
+import { nameAnchors, enforceFaqLinks, shortenAnchors } from "../src/lib/agents/writer.ts";
 import { COINPRESSO_PAGES } from "../src/lib/blog.ts";
 
 let pass = 0, fail = 0;
@@ -32,6 +32,13 @@ console.log("Share of Model Voice, 5 Oct");
   ok("a blog link whose words name nothing about the post is unlinked", !out.includes("](https://coinpresso.io/blog/best-web3"), out);
   const ok2 = nameAnchors("our ranking of [the top GEO agencies](https://coinpresso.io/blog/best-web3-geo-agencies-in-2026-top-firms-for-ai-search-and-llm-visibility).", k);
   ok("a blog link that does name the post stays", ok2.includes("[the top GEO agencies](https://coinpresso.io/blog/best-web3"), ok2);
+}
+
+console.log("Crypto PR for exchanges, 28 Oct");
+{
+  const out = shortenAnchors("[Ask Coinpresso to build a crypto PR playbook for your exchange](https://coinpresso.io/crypto-pr) today.", known);
+  ok("a long internal anchor keeps the words that name its page", out.includes("[crypto PR](https://coinpresso.io/crypto-pr)"), out);
+  ok("…and the rest stays as prose", out.startsWith("Ask Coinpresso to build a [crypto PR]") && out.includes("playbook for your exchange today."), out);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
