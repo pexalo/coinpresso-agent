@@ -303,6 +303,13 @@ ORIGINALITY — the draft must contain at least one of these, and you must name
 which one it contains or report that it contains none:
 ${(research.proofPoints ?? []).map((p) => `- ${p}`).join("\n") || "- the brief supplied none, so the writer was told to write around the gap honestly. Check that it did rather than inventing."}
 ${houseData ? `\nThe writer was also given the following. Figures from it are NOT invented — they are\nCoinpresso's own, and a post that uses them to answer the question is doing its job:\n${houseData}\n` : ""}
+ON TOPIC. Liam, 28 Oct: "starting to get a bit off topic across the board…
+The heading and supporting content underneath should be about presale red
+flags, not the pricing model for a marketing team." Every section must serve
+the title's question and its own heading. A section — or a paragraph — that
+imports figures or arguments from another subject is a MAJOR finding: name
+it and say to cut it.
+
 THE ANSWER. Liam, 5 Oct: "We always need to give an answer." If the reader's
 question has a number in it — a cost, a budget, a retainer, a timeline, a
 result — and the draft never gives one (a figure or a range, from the

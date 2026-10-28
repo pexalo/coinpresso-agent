@@ -133,17 +133,14 @@ export function relevantInsights(
   limit = 10,
   to: { topicId?: string; runId?: string } = {}
 ): Insight[] {
-  const want = new Set(words(subject));
-  const scored = all
-    .map((x) => {
-      const tagHits = x.tags.filter((t) => words(t).some((w) => want.has(w))).length;
-      const textHits = new Set(words(`${x.title} ${x.body}`).filter((w) => want.has(w))).size;
-      // Attached to this post or its topic: first, always.
-      return { x, score: isAttached(x, to) ? 2000 : tagHits * 2 + textHits };
-    })
-    .filter((s) => s.score >= 2)
-    .sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit).map((s) => s.x);
+  // ATTACHED ONLY. Matching by topic words put Liam's presale-budget figures
+  // into "Presale Red Flags Investors Actually Search For" as its first
+  // section (28 Oct). Liam: "This is context I gave for a presale pricing
+  // blog and now the agent is using it as context for this piece when it
+  // isn't relevant." Bernard: "the point of this feature is unique context
+  // per article." `subject` is kept in the signature for callers.
+  void subject;
+  return all.filter((x) => isAttached(x, to)).slice(0, limit);
 }
 
 /** The prompt block. Empty string when there is nothing relevant. */

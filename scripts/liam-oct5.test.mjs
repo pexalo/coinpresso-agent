@@ -15,12 +15,13 @@ const mk = (o) => ({ id: o.title, createdAt: t, updatedAt: t, tags: [], kind: "f
 
 console.log("insights");
 const all = [
-  mk({ title: "Presale marketing budgets", body: "Retainers run $15k-$40k a month.", tags: ["presale", "budget"] }),
+  mk({ title: "Presale marketing budgets", body: "Retainers run $15k-$40k a month.", tags: ["presale", "budget"], runIds: ["budget-post"] }),
   mk({ title: "GEO results", body: "AI citations up 3x in 60 days for one client.", tags: ["geo"] }),
-  mk({ kind: "link", title: "Presale timeline post", body: "", url: "https://coinpresso.io/blog/presale-timeline", tags: ["presale"] }),
+  mk({ kind: "link", title: "Presale timeline post", body: "", url: "https://coinpresso.io/blog/presale-timeline", tags: ["presale"], runIds: ["budget-post"] }),
 ];
-const got = relevantInsights(all, "How much does crypto presale marketing cost in 2026 presale budget");
-ok("presale post gets the presale finding", got.some((x) => x.title === "Presale marketing budgets"));
+const got = relevantInsights(all, "How much does crypto presale marketing cost in 2026 presale budget", 10, { runId: "budget-post" });
+ok("the post it is attached to gets the finding", got.some((x) => x.title === "Presale marketing budgets"));
+ok("28 Oct: another presale post does NOT get it by topic words", relevantInsights(all, "Presale Red Flags Investors Actually Search For presale", 10, { runId: "red-flags" }).length === 0);
 ok("…not the GEO one", !got.some((x) => x.title === "GEO results"));
 ok("block says the figures are allowed", /ALLOWED/.test(houseDataBlock(got)) && /\$15k-\$40k/.test(houseDataBlock(got)));
 ok("coinpresso.io link becomes linkable", insightPages(got).some((p) => p.url.endsWith("presale-timeline")));

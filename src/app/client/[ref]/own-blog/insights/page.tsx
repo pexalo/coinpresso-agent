@@ -12,7 +12,7 @@ export default function InsightsPage() {
         <p className="text-[var(--ink-3)] text-sm mt-1 max-w-3xl">
           Every finding and link Liam has added. To tie one to a single post, add it from that
           post&apos;s page or its topic (Topics &amp; keywords → open the topic) — attached data always
-          reaches that post. Data added here without attaching is used by any post whose topic it matches.
+          reaches that post. Data added here is not used until it is attached to a post or topic — each insight is context for one article.
         </p>
       </div>
       <InsightsPanel clientRef={ref} />

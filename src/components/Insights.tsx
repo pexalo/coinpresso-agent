@@ -212,7 +212,7 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
           <h2 className="font-bold text-sm">Liam&apos;s insights &amp; data</h2>
           <p className="text-[12px] text-[var(--ink-3)] leading-relaxed mt-1">
             Figures, retainers, spends and case-study results that aren&apos;t public. The writer
-            uses the ones that match a post&apos;s topic to give a direct answer, credited to
+            uses them only in the post or topic they are attached to, to give a direct answer, credited to
             Coinpresso. Blog links from coinpresso.io become pages the writer can link.
             Applies to posts written from now on.
           </p>
@@ -224,7 +224,7 @@ export function InsightsPanel({ clientRef }: { clientRef: string }) {
         )}
       </div>
       {adding && (
-        <InsightModal title="Add an insight" subtitle="Used by every post whose topic it matches. To tie it to one post, add it from that post's page or its topic." onClose={() => setAdding(false)}>
+        <InsightModal title="Add an insight" subtitle="Saved to the library. The writer uses it only once it is attached to a post or topic — from that post's page, or with Attach from library." onClose={() => setAdding(false)}>
           <InsightForm
             clientRef={clientRef}
             onSaved={(x) => { setItems((xs) => [x, ...(xs ?? [])]); setAdding(false); }}
@@ -426,7 +426,8 @@ export function PostInsights({ clientRef, runId, topicId, written, onRewrite, re
           ))}
           {alsoUsed.length > 0 && (
             <div className="text-[11.5px] text-[var(--ink-3)]">
-              Also picked up from the library by topic: {alsoUsed.map((x) => x.title).join(" · ")}
+              {/* Nothing is picked up by topic any more — attached data only (28 Oct). */}
+              {alsoUsed.map((x) => x.title).join(" · ")}
             </div>
           )}
           {adding && (

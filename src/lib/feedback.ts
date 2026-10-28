@@ -176,6 +176,15 @@ export const SEED_FEEDBACK: Omit<FeedbackEntry, "addedAt">[] = [
     active: true,
   },
   {
+    id: "liam-stay-on-topic",
+    source: "Liam, Presale Red Flags Doc comment (28 Oct)",
+    date: "2026-10-28",
+    rule: "Liam: \"Starting to get a bit off topic across the board. This is context I gave for a presale pricing blog and now the agent is using it as context for this piece when it isn't relevant to the heading. The heading and supporting content underneath should be about presale red flags, not the pricing model for a marketing team.\" Every section serves the title's question and its own heading. Context from another post — figures, arguments, a neighbouring topic — stays out unless this post's question needs it. (Enforced in code: Liam's data now reaches only the post or topic it is attached to; the reviewer flags off-topic sections.)",
+    before: "## Crypto Presale Red Flags: What Investors Actually Check\nA presale needs a minimum of $50,000 in month one…",
+    after: "## Crypto Presale Red Flags: What Investors Actually Check\nThe first things a buyer checks are who controls the contract and where the allocation sits…",
+    active: true,
+  },
+  {
     id: "liam-answer-section",
     source: "Liam, presale budget post (6 Oct)",
     date: "2026-10-06",
