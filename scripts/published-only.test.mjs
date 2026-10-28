@@ -1,0 +1,12 @@
+import { enforceOnlyPublishedPosts } from "../src/lib/agents/writer.ts";
+let pass = 0, fail = 0;
+const ok = (n, c, x = "") => { if (c) { pass++; console.log("  ok  ", n); } else { fail++; console.log("  FAIL", n, x); } };
+const err = (f) => { try { f(); return ""; } catch (e) { return String(e); } };
+const known = new Map([["https://coinpresso.io/blog/crypto-discord-moderator-burnout", "Crypto Discord Moderator Burnout"], ["https://coinpresso.io/blog", "the Coinpresso blog"]]);
+console.log("only published posts (28 Oct)");
+ok("a piece linked only to the blog index is flagged", /without linking a published one/.test(err(() => enforceOnlyPublishedPosts("This is adjacent territory to Coinpresso's piece on [the Coinpresso blog](https://coinpresso.io/blog) AI moderation bots vs human moderators.", [], known))));
+ok("a piece named with no link is flagged", /without linking/.test(err(() => enforceOnlyPublishedPosts("A pattern covered in Coinpresso's piece on crypto Discord moderator burnout.", [], known))));
+ok("a published post linked to its own URL passes", err(() => enforceOnlyPublishedPosts("A pattern covered in our [crypto Discord moderator burnout guide](https://coinpresso.io/blog/crypto-discord-moderator-burnout).", [], known)) === "");
+ok("ordinary prose passes", err(() => enforceOnlyPublishedPosts("Our view is that two-factor is the floor.", [], known)) === "");
+console.log(`\n${pass} passed, ${fail} failed`);
+if (fail) process.exit(1);

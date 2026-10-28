@@ -149,7 +149,10 @@ yourself.`,
         .join("\n\n")}`
     );
   }
-  if (b.linking) parts.push(`WHERE IT SHOULD LINK, AND THE CALL TO ACTION\n${b.linking}`);
+  if (b.linking)
+    parts.push(
+      `WHERE IT SHOULD LINK, AND THE CALL TO ACTION\n${b.linking}\n(A Coinpresso post named here that is NOT in the list of published posts you are given has not been published yet. Do not link it, name it or describe it — Liam, 28 Oct: "if still in the pile to be completed, can't talk about those topics yet.")`
+    );
 
   return parts.join("\n\n");
 }

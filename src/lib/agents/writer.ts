@@ -313,6 +313,66 @@ export function enforceDataAnswer(body: string, findings: string[]): void {
   if (problems.length) throw new Error(`Coinpresso's data: ${problems.join("; ")}.`);
 }
 
+/**
+ * Titles of posts that are planned or in progress but not published: the
+ * queued topics and the posts in the queue. Liam, 28 Oct: the writer cited
+ * "Coinpresso's piece on AI moderation bots vs human moderators", which was
+ * still in the pile.
+ */
+async function unpublishedPostTitles(clientRef: string, ownTitle: string): Promise<string[]> {
+  const out = new Set<string>();
+  try {
+    const { listSeeds } = await import("../blog-seed");
+    const seeds = await listSeeds(clientRef);
+    for (const t of seeds.topics) if (t.status === "queued") out.add(t.topic.split(" · ")[0].trim());
+  } catch {
+    /* no topic list */
+  }
+  try {
+    for (const r of await listRuns(clientRef)) {
+      if (r.brief.track !== "blog" || r.removedAt) continue;
+      if ((r as { publishedAt?: string }).publishedAt) continue;
+      out.add(r.brief.title);
+    }
+  } catch {
+    /* no runs */
+  }
+  out.delete(ownTitle);
+  return [...out];
+}
+
+/**
+ * A sentence that refers to a Coinpresso post must link that post, by its own
+ * URL, from the published list. "Coinpresso's piece on X" with no link, or
+ * linked to the blog index, is a reference to something the reader cannot
+ * open — and, on 28 Oct, to a post that had not been written.
+ */
+const POST_REFERENCE =
+  /\b(?:coinpresso['’]s|our)\s+(?:\w+\s+){0,3}?(?:piece|post|guide|article|breakdown|deep[- ]dive|write-?up|explainer|analysis)\b/i;
+
+export function enforceOnlyPublishedPosts(
+  body: string,
+  faqs: Array<{ q: string; a: string }>,
+  known: Map<string, string>
+): void {
+  const text = proseOf(body) + "\n" + faqs.map((f) => f.a).join("\n");
+  const bad: string[] = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+    if (!POST_REFERENCE.test(sentence)) continue;
+    const links = [...sentence.matchAll(/\]\((https?:\/\/(?:www\.)?coinpresso\.io\/blog\/[^)\s]+)\)/gi)]
+      .map((m) => normaliseUrl(m[1]))
+      .filter((u) => !/\/blog\/category\//.test(u) && known.has(u));
+    if (!links.length) bad.push(sentence.trim().slice(0, 160));
+  }
+  if (bad.length) {
+    throw new Error(
+      `${bad.length === 1 ? "a sentence refers" : `${bad.length} sentences refer`} to a Coinpresso post without linking a published one: ${bad
+        .map((b) => `"${b}"`)
+        .join("; ")}. Refer only to posts in the RECENT POSTS list, linked to their own URL — or drop the reference. A post in the queue is not published.`
+    );
+  }
+}
+
 export function enforceIntro(body: string, floor = 110): void {
   body = proseOf(body);
   const firstH2 = body.search(/^##\s+/m);
@@ -1697,6 +1757,7 @@ otherwise would, and do not invent house conventions it does not state.\n`;
       )
     : [];
   const houseData = houseDataBlock(insights);
+  const unpublishedTitles = input.ctx?.clientRef ? await unpublishedPostTitles(input.ctx.clientRef, brief.title) : [];
   const recentOpeners = input.ctx?.clientRef ? await recentOpenings(input.ctx.clientRef, input.ctx.runId) : [];
   const recentPosts = [
     ...insightPages(insights).map((x) => `- (added by Liam) · ${x.topic} — ${x.url}`),
@@ -1975,6 +2036,16 @@ before the final section.
 AT LEAST ONE must be a post from the RECENT POSTS list below, not only service
 pages — the client asked for landing pages AND blogs.
 
+ONLY PUBLISHED POSTS EXIST. Liam, 28 Oct: a post referred to "Coinpresso's
+piece on AI moderation bots vs human moderators" — a post still in the queue,
+not yet written. Mention a Coinpresso post ONLY if it is in the RECENT POSTS
+list (or the pages list) and link it there, to its own URL — never to the
+blog index. A topic in the queue, in a brief's linking notes, or in the list
+of unpublished titles below does not exist yet: do not name it, describe it
+or allude to it ("a piece we're working on").${unpublishedTitles.length ? `
+NOT PUBLISHED — never mention:
+${unpublishedTitles.slice(0, 60).map((t) => `- ${t}`).join("\n")}` : ""}
+
 THE FAQ ANSWERS LINK INWARD. The client's note: "we want to keep users within
 our website hierarchy as much as possible as opposed to sending them
 elsewhere. We can be using contact us page, case studies page, about page,
@@ -2218,6 +2289,7 @@ that clears one of these and leaves another fails again:\n${rejection}\n\nWrite 
         () => enforceLinks(parsed.body, research.sources.length, knownPages, pillar?.hub, "hard"),
         () => enforceFaqLinks(parsed.faqs ?? [], knownPages, "hard"),
         () => enforceFaqAnswers(parsed.faqs ?? []),
+        () => enforceOnlyPublishedPosts(parsed.body, parsed.faqs ?? [], knownPages),
         () => enforceAnchorLength(parsed.body),
         () => enforcePromisedStructures(parsed.body),
       ]);
